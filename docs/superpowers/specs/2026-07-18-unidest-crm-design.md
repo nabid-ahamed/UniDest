@@ -88,6 +88,11 @@ Lead  ──convert──►  Student  ──►  Application  ──►  Course
    from the request body).
 5. `activity_log` entry written; response returned.
 
+> **Note — this is the eventual SaaS flow.** In the current single-tenant build,
+> `TenantGuard` is a **no-op** (`tenant_id` is always `1`) and step 4's tenant
+> injection just stamps `1`. `PermissionGuard` (RBAC) **is active now**.
+> Tenant-scoped query filtering is turned on in Phase 5 (see §3, §7).
+
 ---
 
 ## 3. Tenancy Strategy (single-tenant now, SaaS-ready)
@@ -236,18 +241,60 @@ id, tenant_id, name, permissions JSONB, is_system BOOLEAN
 id, tenant_id, name, address, phone
 ```
 
-### 5.3 Lead → Student funnel
+### 5.3 Configurable lookups (admin-editable status & type)
+
+Lead/application status and document type are **not** hardcoded database ENUMs.
+Each consultancy runs a different pipeline, and changing a Postgres ENUM later
+means `ALTER TYPE` + migration — the exact pain our `tenant_id` strategy exists
+to avoid. EduCtrl itself keeps these admin-configurable. So they live in lookup
+tables the tenant can edit.
+
+**lead_statuses**
+```
+id, public_id, tenant_id, key, label, color, sort_order,
+is_won BOOLEAN, is_lost BOOLEAN, is_system BOOLEAN
+UNIQUE (tenant_id, key)
+```
+
+**application_statuses**
+```
+id, public_id, tenant_id, key, label, color, sort_order,
+is_terminal BOOLEAN, is_won BOOLEAN, is_system BOOLEAN
+UNIQUE (tenant_id, key)
+```
+
+**document_types**
+```
+id, public_id, tenant_id, key, label,
+applies_to ENUM(student | application),   -- internal, safe to keep as ENUM
+sort_order, is_system BOOLEAN
+UNIQUE (tenant_id, key, applies_to)
+```
+
+**Why the `is_won` / `is_lost` / `is_terminal` flags?** A tenant can rename or
+reorder statuses freely, so labels are unreliable for analytics. Reports compute
+"converted %", "lost %", etc. by reading these **flags**, never by matching a
+label. `is_terminal` marks statuses that end a workflow (enrolled / rejected /
+withdrawn).
+
+**Why `is_system`?** Seeded default statuses/types have `is_system = true`.
+Tenants may **add** their own rows but cannot delete the system ones, guaranteeing
+every tenant always has a valid baseline pipeline.
+
+### 5.4 Lead → Student funnel
 
 **leads**
 ```
 id, public_id, tenant_id, branch_id, assigned_to → users,
 name, phone, email,
 source ENUM(facebook | website | walkin | referral | other),
-status ENUM(new | contacted | counselling | applied | enrolled | lost),
-interested_country_id → countries, interested_level ENUM(...),
+status_id → lead_statuses,
+primary_interest_country_id → countries  (optional; lightweight hint at lead
+                                           stage — full multi-preference is
+                                           captured on the student after convert),
 next_follow_up_at,
 converted_student_id → students  (NULL until converted)
-INDEX (tenant_id, status)
+INDEX (tenant_id, status_id)
 INDEX (tenant_id, assigned_to)
 INDEX (tenant_id, next_follow_up_at)
 ```
@@ -259,20 +306,45 @@ first_name, last_name, dob, gender, nationality,
 phone, email, address JSONB,
 passport_no, passport_expiry,
 academic_history JSONB,   -- [{degree, institution, year, gpa}, ...]
-test_scores JSONB,        -- {ielts:6.5, toefl:null, ...}
 assigned_to → users, status ENUM(active | inactive)
 INDEX (tenant_id, assigned_to)
+```
+> `academic_history` stays JSONB for now (we rarely filter on it). If GPA-based
+> filtering is needed later, break it out into a structured `student_academics`
+> table — same reasoning as `student_test_scores` below.
+
+**student_preferences** — a student can target multiple country/course/intake
+combinations (EduCtrl: "more than one selection can be done")
+```
+id, public_id, tenant_id, student_id → students,
+country_id → countries,
+level ENUM(bachelor | master | phd | diploma),
+intake_year INT, intake_month INT,
+priority INT   -- 1 = top choice
+INDEX (tenant_id, student_id)
+```
+
+**student_test_scores** — one row per test, so Course Finder can filter fast
+(e.g. "IELTS 6.5+"); JSONB can't be indexed efficiently for that
+```
+id, public_id, tenant_id, student_id → students,
+test_type ENUM(ielts | toefl | pte | duolingo | gre | gmat | sat),
+overall NUMERIC(4,1),   -- the filterable/indexable value
+sub_scores JSONB,       -- listening/reading/writing/speaking — display only
+test_date DATE, expiry_date DATE
+INDEX (tenant_id, student_id)
+INDEX (tenant_id, test_type, overall)   -- fast "IELTS 6.5+" filter
 ```
 
 **student_documents**
 ```
 id, tenant_id, student_id → students, uploaded_by → users,
-type ENUM(passport | transcript | sop | ielts | photo | other),
+document_type_id → document_types,
 file_url, file_size, status ENUM(pending | verified | rejected)
 INDEX (tenant_id, student_id)
 ```
 
-### 5.4 University catalog (`tenant_id` nullable — see §3)
+### 5.5 University catalog (`tenant_id` nullable — see §3)
 
 ```
 countries     : id, tenant_id?, name, code, flag_url
@@ -287,33 +359,33 @@ intakes       : id, tenant_id?, course_id → courses, month, year,
 ```
 `tenant_id?` = nullable (NULL means global).
 
-### 5.5 Applications (core)
+### 5.6 Applications (core)
 
 **applications**
 ```
 id, public_id, tenant_id, student_id → students,
 course_id → courses, intake_id → intakes, assigned_to → users,
-status ENUM(draft | submitted | offer_received | offer_accepted |
-            visa_applied | enrolled | rejected | withdrawn),
+status_id → application_statuses,
 priority ENUM(low | normal | high),
 submitted_at, decision_at
-INDEX (tenant_id, status)
+INDEX (tenant_id, status_id)
 INDEX (tenant_id, student_id)
 ```
 
 **application_status_history** — timeline
 ```
 id, tenant_id, application_id → applications,
-from_status, to_status, note, changed_by → users, changed_at
+from_status_id → application_statuses, to_status_id → application_statuses,
+note, changed_by → users, changed_at
 ```
 
 **application_documents**
 ```
 id, tenant_id, application_id → applications,
-type, file_url, status
+document_type_id → document_types, file_url, status
 ```
 
-### 5.6 Tasks, communication, audit
+### 5.7 Tasks, communication, audit
 
 **tasks**
 ```
@@ -346,7 +418,7 @@ meta JSONB, created_at
 INDEX (tenant_id, entity_type, entity_id)
 ```
 
-### 5.7 Agents & finance (schema now, features later)
+### 5.8 Agents & finance (schema now, features later)
 
 ```
 agents      : id, tenant_id, name, company, email, commission_rate
@@ -358,16 +430,20 @@ invoices    : id, tenant_id, student_id → students, amount, currency,
 payments    : id, tenant_id, invoice_id → invoices, amount, method, paid_at
 ```
 
-### 5.8 Relationship summary
+### 5.9 Relationship summary
 
 ```
-tenant ─< users, roles, branches, leads, students, applications,
+tenant ─< users, roles, branches, lead_statuses, application_statuses,
+          document_types, leads, students, applications,
           tasks, appointments, notes, activity_log, agents, invoices
 lead   ──(convert)──► student
-student ─< applications, student_documents, appointments, invoices
+lead   >─ lead_statuses (status_id)
+student ─< student_preferences, student_test_scores, student_documents,
+          applications, appointments, invoices
 application ─< application_status_history, application_documents, commissions
+application >─ application_statuses (status_id), >─ course, >─ intake
 course  >─ university >─ country
-application >─ course, >─ intake
+student_preference >─ country
 user   ─< tasks (assigned), appointments (counsellor), activity_log
 agent  ─< commissions
 invoice ─< payments
@@ -381,8 +457,10 @@ invoice ─< payments
    queries stay fast even on multi-million-row tables.
 2. **Keyset / cursor pagination** (`WHERE (tenant_id, id) < (:t, :cursor)
    ORDER BY id DESC LIMIT 50`) instead of `OFFSET` → constant-time on deep pages.
-3. **JSONB** for flexible fields (academic history, test scores, settings,
-   permissions) → extend without schema migrations.
+3. **JSONB** for flexible, non-filtered fields (academic history, settings,
+   permissions, test sub-scores) → extend without schema migrations. Fields we
+   filter on (e.g. test `overall` score) are real indexed columns, not JSONB —
+   see `student_test_scores` (§5.4).
 4. **PostgreSQL RLS** — deferred; added only when SaaS/multi-tenant is enabled.
 5. **Redis cache** for dashboard aggregates, permission lookups, and sessions,
    with event-based invalidation on writes.
@@ -431,3 +509,27 @@ exists on every table.
 - **Hosting/deployment target** (VPS vs. managed cloud) — decide at Phase 2.
 - **Notification channels priority** (email → SMS → WhatsApp) — confirm at
   Phase 3.
+
+---
+
+## 9. Changelog
+
+**2026-07-18 — schema alignment with EduCtrl behaviour & SaaS-ready reasoning**
+
+1. **Status/type ENUMs → lookup tables.** `leads.status`, `applications.status`,
+   and `student_documents.type` / `application_documents.type` are now FKs to
+   admin-editable `lead_statuses`, `application_statuses`, and `document_types`.
+   Reason: per-tenant pipelines + no `ALTER TYPE` migrations; reports use
+   `is_won`/`is_lost`/`is_terminal` flags, not labels. (§5.3, §5.4, §5.6)
+2. **Single → multiple student preference.** Removed `leads.interested_country_id`
+   / `interested_level`; added `student_preferences` (country + level + intake +
+   priority, many per student). A lead keeps only an optional
+   `primary_interest_country_id`. Reason: students target multiple destinations.
+   (§5.4, §5.9)
+3. **`test_scores` JSONB → structured `student_test_scores`.** Filterable
+   `overall` is now an indexed column (`(tenant_id, test_type, overall)`) for fast
+   "IELTS 6.5+" Course Finder queries; sub-scores stay JSONB (display only).
+   `academic_history` remains JSONB for now (noted for future split). (§5.4, §6)
+4. **Tenant-flow clarity.** Added a note under §2 that `TenantGuard` is a no-op in
+   the current single-tenant build (RBAC active now, tenant filtering in Phase 5).
+   (§2)
