@@ -1,0 +1,17 @@
+export default function ApplicationsPage() {
+  return (
+    <div>
+      <h1 className="text-xl font-bold text-slate-900">Applications</h1>
+      <p className="mt-1 text-sm text-slate-500">
+        Track university applications from draft to enrolment.
+      </p>
+
+      <div className="mt-8 rounded-xl border border-dashed border-slate-300 bg-white p-12 text-center">
+        <p className="text-slate-500">
+          Application pipeline comes next — send the reference screenshot for
+          this page.
+        </p>
+      </div>
+    </div>
+  )
+}
