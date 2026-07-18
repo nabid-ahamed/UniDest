@@ -12,6 +12,7 @@ import {
   Play,
 } from 'lucide-react'
 import { cn } from '../lib/cn'
+import { useAttendance } from '../store/attendance'
 import { ConfirmDialog } from './ui/ConfirmDialog'
 import { OtherBreakDialog } from './ui/OtherBreakDialog'
 import { SuccessDialog } from './ui/SuccessDialog'
@@ -52,7 +53,8 @@ const formatTime = (total: number) => {
 
 /** Staff attendance: check-in timer, breaks, check-out confirm + toast (mock, front-end only). */
 export function CheckInTimer() {
-  const [checkedIn, setCheckedIn] = useState(false)
+  const checkedIn = useAttendance((s) => s.checkedIn)
+  const setCheckedIn = useAttendance((s) => s.setCheckedIn)
   const [seconds, setSeconds] = useState(0)
   const [brk, setBrk] = useState<Break | null>(null)
   const [toast, setToast] = useState<Toast | null>(null)

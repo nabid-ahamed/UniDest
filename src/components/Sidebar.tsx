@@ -1,4 +1,5 @@
-import { useState, type ComponentType } from 'react'
+import { useState, type ComponentType, type MouseEvent } from 'react'
+import { createPortal } from 'react-dom'
 import { NavLink } from 'react-router-dom'
 import {
   LayoutGrid,
@@ -121,13 +122,45 @@ const NAV: NavGroup[] = [
 ]
 
 const itemBase =
-  'group flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2.5 text-[13px] font-medium whitespace-nowrap transition-colors'
+  'group flex w-full items-center gap-2.5 rounded-lg py-2.5 text-[13px] font-medium whitespace-nowrap transition-colors'
 const itemIdle = 'text-slate-300 hover:bg-slate-800 hover:text-white'
 const itemActive = 'bg-brand-600 text-white'
+const iconClass = 'h-5 w-5 shrink-0 text-slate-400 group-hover:text-slate-200'
 
-function SidebarItem({ item, onNavigate }: { item: NavItem; onNavigate: () => void }) {
-  const [open, setOpen] = useState(false)
+function SidebarItem({
+  item,
+  collapsed,
+  onNavigate,
+}: {
+  item: NavItem
+  collapsed: boolean
+  onNavigate: () => void
+}) {
+  const [expanded, setExpanded] = useState(false)
+  const [tip, setTip] = useState<{ top: number; left: number } | null>(null)
   const Icon = item.icon
+  const rowClass = cn(itemBase, collapsed ? 'justify-center px-0' : 'px-2.5')
+
+  const showTip = (e: MouseEvent<HTMLElement>) => {
+    if (!collapsed) return
+    const r = e.currentTarget.getBoundingClientRect()
+    setTip({ top: r.top + r.height / 2, left: r.right + 10 })
+  }
+  const hideTip = () => setTip(null)
+  const hoverProps = { onMouseEnter: showTip, onMouseLeave: hideTip }
+
+  const tooltip =
+    collapsed && tip
+      ? createPortal(
+          <div
+            style={{ top: tip.top, left: tip.left }}
+            className="pointer-events-none fixed z-[70] -translate-y-1/2 whitespace-nowrap rounded-lg bg-slate-800 px-3 py-2 text-sm font-medium text-white shadow-lg"
+          >
+            {item.label}
+          </div>,
+          document.body,
+        )
+      : null
 
   // Expandable item (has children)
   if (item.children) {
@@ -135,19 +168,22 @@ function SidebarItem({ item, onNavigate }: { item: NavItem; onNavigate: () => vo
       <div>
         <button
           type="button"
-          onClick={() => setOpen((v) => !v)}
-          className={cn(itemBase, itemIdle)}
+          onClick={() => !collapsed && setExpanded((v) => !v)}
+          className={cn(rowClass, itemIdle)}
+          {...hoverProps}
         >
-          <Icon className="h-5 w-5 shrink-0 text-slate-400 group-hover:text-slate-200" />
-          <span className="flex-1 truncate text-left">{item.label}</span>
-          <ChevronDown
-            className={cn(
-              'h-5 w-5 shrink-0 text-slate-400 transition-transform duration-300 ease-in-out',
-              open && 'rotate-180',
-            )}
-          />
+          <Icon className={iconClass} />
+          {!collapsed && <span className="flex-1 truncate text-left">{item.label}</span>}
+          {!collapsed && (
+            <ChevronDown
+              className={cn(
+                'h-5 w-5 shrink-0 text-slate-400 transition-transform duration-300 ease-in-out',
+                expanded && 'rotate-180',
+              )}
+            />
+          )}
         </button>
-        {open && (
+        {!collapsed && expanded && (
           <div className="mt-1 space-y-1 pl-9">
             {item.children.map((child) =>
               child.to ? (
@@ -178,6 +214,7 @@ function SidebarItem({ item, onNavigate }: { item: NavItem; onNavigate: () => vo
             )}
           </div>
         )}
+        {tooltip}
       </div>
     )
   }
@@ -185,29 +222,37 @@ function SidebarItem({ item, onNavigate }: { item: NavItem; onNavigate: () => vo
   // Real routed item
   if (item.to) {
     return (
-      <NavLink
-        to={item.to}
-        onClick={onNavigate}
-        className={({ isActive }) => cn(itemBase, isActive ? itemActive : itemIdle)}
-      >
-        <Icon className="h-5 w-5 shrink-0 text-slate-400 group-hover:text-slate-200" />
-        <span>{item.label}</span>
-      </NavLink>
+      <>
+        <NavLink
+          to={item.to}
+          onClick={onNavigate}
+          {...hoverProps}
+          className={({ isActive }) => cn(rowClass, isActive ? itemActive : itemIdle)}
+        >
+          <Icon className={iconClass} />
+          {!collapsed && <span>{item.label}</span>}
+        </NavLink>
+        {tooltip}
+      </>
     )
   }
 
   // Placeholder item (not wired yet)
   return (
-    <button type="button" className={cn(itemBase, itemIdle)}>
-      <Icon className="h-5 w-5 shrink-0 text-slate-400 group-hover:text-slate-200" />
-      <span>{item.label}</span>
-    </button>
+    <>
+      <button type="button" className={cn(rowClass, itemIdle)} {...hoverProps}>
+        <Icon className={iconClass} />
+        {!collapsed && <span>{item.label}</span>}
+      </button>
+      {tooltip}
+    </>
   )
 }
 
 export function Sidebar() {
   const open = useUI((s) => s.sidebarOpen)
   const close = useUI((s) => s.closeSidebar)
+  const collapsed = !open
 
   // Close on navigation only on small screens; keep it open on desktop.
   const handleNavigate = () => {
@@ -216,7 +261,7 @@ export function Sidebar() {
 
   return (
     <>
-      {/* Backdrop — starts below the header */}
+      {/* Backdrop — mobile only */}
       <div
         onClick={close}
         className={cn(
@@ -225,23 +270,31 @@ export function Sidebar() {
         )}
       />
 
-      {/* Drawer — sits under the header nav */}
+      {/* Sidebar: overlay drawer on mobile, collapsible rail on desktop */}
       <aside
         className={cn(
-          'fixed left-0 top-16 z-30 flex h-[calc(100vh-4rem)] w-60 flex-col bg-slate-900 shadow-xl transition-transform',
-          open ? 'translate-x-0' : '-translate-x-full',
+          'fixed left-0 top-16 z-30 flex h-[calc(100vh-4rem)] w-60 flex-col bg-slate-900 shadow-xl transition-all duration-300',
+          open ? 'translate-x-0' : '-translate-x-full', // mobile slide in/out
+          'lg:translate-x-0', // desktop always visible
+          open ? 'lg:w-60' : 'lg:w-16', // desktop width toggle
         )}
       >
-        {/* Scrollable nav */}
-        <nav className="flex-1 overflow-y-auto px-2 py-4">
+        <nav className="flex-1 overflow-x-hidden overflow-y-auto px-2 py-4">
           {NAV.map((group) => (
             <div key={group.title} className="mb-4">
-              <p className="px-3 pb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
-                {group.title}
-              </p>
+              {!collapsed && (
+                <p className="px-3 pb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  {group.title}
+                </p>
+              )}
               <div className="space-y-1">
                 {group.items.map((item) => (
-                  <SidebarItem key={item.label} item={item} onNavigate={handleNavigate} />
+                  <SidebarItem
+                    key={item.label}
+                    item={item}
+                    collapsed={collapsed}
+                    onNavigate={handleNavigate}
+                  />
                 ))}
               </div>
             </div>
