@@ -8,11 +8,18 @@
 
 ## 1. Overview
 
-UniDest is a **multi-tenant SaaS CRM** for study-abroad / overseas-education
-consultancies (comparable to eductrl). Many independent agencies sign up; each
-has its own staff, leads, students, applications, and (optionally) its own
-university catalog. Target scale: **~100,000–150,000 total users** across all
-tenants.
+UniDest is a CRM for study-abroad / overseas-education consultancies
+(comparable to eductrl).
+
+**Current scope: single-tenant, multi-tenant-ready.** The system is built and
+hosted now for **one organization** — no tenant sign-up, no subdomains, no
+tenant switching. However, the schema keeps a `tenant_id` column on every table
+(defaulting to `1`) so the product can become a multi-tenant SaaS **later with
+no data migration** — only sign-up, tenant filtering, and RLS need to be turned
+on. Eventual target scale (once SaaS): **~100,000–150,000 users** across tenants.
+
+Everything a developer builds now looks and behaves as a plain single-tenant
+app; the `tenant_id` column is the only concession to the future.
 
 The system manages the core funnel:
 
@@ -83,47 +90,46 @@ Lead  ──convert──►  Student  ──►  Application  ──►  Course
 
 ---
 
-## 3. Multi-Tenancy Strategy
+## 3. Tenancy Strategy (single-tenant now, SaaS-ready)
 
-**Chosen model: shared database, shared schema, `tenant_id` column
-(row-level isolation).**
+**Current build: single tenant.** All rows use a fixed `tenant_id = 1`. There is
+**no** tenant sign-up, subdomain routing, tenant switching, or Row-Level
+Security in the current scope. The app is, for all practical purposes, a plain
+single-organization CRM.
 
-| Option | Verdict |
-|--------|---------|
-| Shared DB + `tenant_id` column | ✅ **Chosen** — cheapest and simplest at 150k users |
-| Schema-per-tenant | ⚠️ Hard to manage/migrate across thousands of tenants |
-| Database-per-tenant | ❌ Wasteful at this scale |
+**Why keep `tenant_id` at all?** Adding a tenant discriminator to a populated
+production database later is risky and painful (schema migration + backfill on
+every table). Including the column now — defaulted to `1` — is nearly free and
+makes the eventual SaaS switch a matter of turning features on, not migrating
+data.
 
-### Enforcement — three layers of defense
+### What is built now vs. deferred
 
-1. **Application layer** — every query is filtered by the current `tenant_id`,
-   injected from the JWT via a request-scoped tenant context. The `tenant_id` is
-   **never** read from the request body.
-2. **PostgreSQL Row-Level Security (RLS)** — policies on every tenant-scoped
-   table so that even a buggy query cannot cross tenants. The app sets
-   `SET app.current_tenant = :id` per connection/transaction.
-3. **Indexing** — every index on a tenant-scoped table begins with `tenant_id`,
-   so a tenant's rows are physically clustered and queries stay fast even on
-   large tables.
+| Concern | Now (single-tenant) | Later (SaaS) |
+|---------|---------------------|--------------|
+| `tenant_id` column on every table | ✅ present, always `1` | reused as-is |
+| Tenant sign-up / onboarding | ❌ skipped | add |
+| Subdomain / tenant routing | ❌ skipped | add |
+| Query filtering by tenant | not needed (single value) | enable |
+| PostgreSQL Row-Level Security | ❌ skipped | enable |
+| `(tenant_id, …)` composite indexes | ✅ present (harmless now) | already optimal |
 
-### Shared vs. tenant-specific catalog (deferred decision)
+### Future SaaS model (for reference, not built now)
 
-The university/course catalog scope (global vs. per-tenant) is **not decided
-yet**. The schema is built to support all three options without change by making
-`tenant_id` **nullable** on catalog tables:
+When SaaS is turned on, the chosen model is **shared database, shared schema,
+`tenant_id` column (row-level isolation)** — cheapest and simplest at ~150k
+users, versus schema-per-tenant (hard to manage) or database-per-tenant
+(wasteful). Isolation will then be enforced in three layers: application-layer
+filtering (tenant from JWT, never from the request body), PostgreSQL RLS, and
+`tenant_id`-leading indexes. None of this is implemented in the current phase.
 
-```
-universities.tenant_id  IS NULL   → global row (visible to all tenants)
-universities.tenant_id  = 42      → private to tenant 42
-```
+### Catalog scope (single-tenant now)
 
-Read query: `WHERE tenant_id IS NULL OR tenant_id = :current_tenant`.
-
-- All rows global → **Global shared catalog**
-- All rows tenant-scoped → **Per-tenant catalog**
-- Mixed → **Global + custom**
-
-The choice becomes purely a data-entry decision later; no migration needed.
+In the current single-tenant build the university/course catalog simply belongs
+to the one organization (`tenant_id = 1`). The catalog tables still keep a
+**nullable** `tenant_id` so that, when SaaS is enabled later, the same schema can
+express a global shared catalog (`NULL`), per-tenant catalogs (`tenant_id` set),
+or a mix — with no migration. Not a concern for the current phase.
 
 ---
 
@@ -191,8 +197,8 @@ locate.
 ```
 id           BIGINT        PRIMARY KEY (auto-increment)
 public_id    UUID          UNIQUE, used in URLs/API (avoids leaking sequential ids)
-tenant_id    BIGINT        NOT NULL → tenants(id)   [except: tenants itself;
-                                                     nullable on catalog tables]
+tenant_id    BIGINT        NOT NULL DEFAULT 1 → tenants(id)   [single-tenant now:
+                                                always 1; except tenants itself]
 created_at   TIMESTAMPTZ   DEFAULT now()
 updated_at   TIMESTAMPTZ
 deleted_at   TIMESTAMPTZ   NULL   (soft delete)
@@ -377,7 +383,7 @@ invoice ─< payments
    ORDER BY id DESC LIMIT 50`) instead of `OFFSET` → constant-time on deep pages.
 3. **JSONB** for flexible fields (academic history, test scores, settings,
    permissions) → extend without schema migrations.
-4. **PostgreSQL RLS** as a safety net beneath the application filter.
+4. **PostgreSQL RLS** — deferred; added only when SaaS/multi-tenant is enabled.
 5. **Redis cache** for dashboard aggregates, permission lookups, and sessions,
    with event-based invalidation on writes.
 6. **Background workers (BullMQ)** for anything slow: notifications, report
@@ -394,9 +400,10 @@ invoice ─< payments
 Layout (sidebar + topbar), auth screens, Dashboard, Leads, Students,
 Applications, Universities — all against mock data.
 
-**Phase 2 — Backend core**
-NestJS setup, Prisma schema (tables above), auth + JWT + RBAC, tenancy + RLS,
-CRUD APIs for the core funnel. Wire the SPA to real APIs.
+**Phase 2 — Backend core (single-tenant)**
+NestJS setup, Prisma schema (tables above, `tenant_id` fixed to `1`),
+auth + JWT + RBAC, CRUD APIs for the core funnel. Wire the SPA to real APIs.
+No tenant filtering or RLS yet.
 
 **Phase 3 — Supporting modules**
 Tasks / follow-ups, appointments, documents (object storage), activity log,
@@ -405,12 +412,20 @@ notifications (email first).
 **Phase 4 — Monetization & extras**
 Agents & commissions, invoicing & payments, reports, form builder, WhatsApp/SMS.
 
+**Phase 5 — SaaS switch (only if/when needed)**
+Tenant sign-up & onboarding, subdomain routing, tenant-scoped query filtering,
+PostgreSQL RLS, billing/plans. No data migration required — `tenant_id` already
+exists on every table.
+
 ---
 
 ## 8. Open Questions / Deferred Decisions
 
-- **Catalog scope** (global vs. per-tenant vs. mixed) — deferred; schema already
-  supports all three via nullable `tenant_id` (§3).
+- **SaaS / multi-tenancy** — deferred to Phase 5. Current build is single-tenant;
+  `tenant_id` column is retained on every table (default `1`) so no migration is
+  needed later (§1, §3).
+- **Catalog scope** (global vs. per-tenant vs. mixed) — only relevant once SaaS
+  is enabled; schema already supports all three via nullable `tenant_id` (§3).
 - **Object storage provider** (AWS S3 vs. Cloudflare R2 vs. self-hosted MinIO) —
   decide at Phase 2.
 - **Hosting/deployment target** (VPS vs. managed cloud) — decide at Phase 2.
