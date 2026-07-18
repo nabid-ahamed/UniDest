@@ -14,8 +14,9 @@ export default function AdminLayout() {
       <main
         className={cn(
           'py-6 transition-[padding] duration-300',
-          // Full width, left-hugging. When open on desktop, clear the w-60 (15rem) sidebar.
-          open ? 'px-4 sm:px-6 lg:pl-64 lg:pr-8' : 'px-4 sm:px-6 lg:px-8',
+          // Desktop: clear the sidebar — full w-60 when open, icon rail (w-16) when collapsed.
+          // Mobile: sidebar overlays, so no left shift.
+          open ? 'px-4 sm:px-6 lg:pl-64 lg:pr-8' : 'px-4 sm:px-6 lg:pl-20 lg:pr-8',
         )}
       >
         <Outlet />

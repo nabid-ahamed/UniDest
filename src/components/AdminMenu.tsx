@@ -2,13 +2,17 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ChevronDown, User, Settings, LogOut } from 'lucide-react'
 import { useAuth } from '../store/auth'
+import { useAttendance } from '../store/attendance'
+import { AlertDialog } from './ui/AlertDialog'
 
 /** "Admin ▾" dropdown in the header. */
 export function AdminMenu() {
   const navigate = useNavigate()
   const user = useAuth((s) => s.user)
   const logout = useAuth((s) => s.logout)
+  const checkedIn = useAttendance((s) => s.checkedIn)
   const [open, setOpen] = useState(false)
+  const [blockedAlert, setBlockedAlert] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -20,6 +24,12 @@ export function AdminMenu() {
   }, [])
 
   const handleLogout = () => {
+    setOpen(false)
+    // Block sign-out while clocked in — must check out first.
+    if (checkedIn) {
+      setBlockedAlert(true)
+      return
+    }
     logout()
     navigate('/login')
   }
@@ -63,6 +73,13 @@ export function AdminMenu() {
           </button>
         </div>
       )}
+
+      <AlertDialog
+        open={blockedAlert}
+        title="You are Checked-in"
+        message="Please check-out before you can sign out."
+        onOk={() => setBlockedAlert(false)}
+      />
     </div>
   )
 }
