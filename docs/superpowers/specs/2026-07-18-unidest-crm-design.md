@@ -470,6 +470,47 @@ invoice ─< payments
    (`applications`, `activity_log`) by year; add a read replica for reporting.
    Not built up front (YAGNI).
 
+### 6.1 Capacity & non-functional requirements
+
+**Target load (eventual SaaS scale):**
+
+| Metric | Target |
+|--------|--------|
+| Total registered users (all tenants) | 100,000 – 150,000 |
+| Peak **concurrent** users | 1,000 – 1,500 |
+| Estimated peak request rate | ~150 – 300 req/s |
+
+**Key distinction:** concurrent users are mostly idle (reading, typing), so
+1,500 concurrent ≠ 1,500 req/s. Assuming ~1% of the user base is active at once
+(150k → ~1,500) and a typical think-time between requests, peak throughput lands
+in the low hundreds of requests per second — comfortably within reach of a small
+horizontally-scaled deployment.
+
+**What the architecture relies on to meet this (all already in the design):**
+
+1. **Stateless API + JWT** → no server-pinned sessions, so capacity scales by
+   adding API instances behind a load balancer.
+2. **Database connection pooling (PgBouncer)** → 1,500 concurrent users map to a
+   small pool (~20–50 Postgres connections), not one connection each. *This is
+   the single most important lever; without pooling, Postgres exhausts
+   connections long before CPU.*
+3. **`tenant_id`-leading composite indexes + keyset pagination** (§6, items
+   1–2) → queries stay fast as tables grow.
+4. **Redis cache** for hot reads (dashboard aggregates, permission lookups).
+5. **Background workers (BullMQ)** keep slow work (email/SMS, reports, bulk
+   import/export) off the request path.
+
+**Reference deployment (indicative, tune with load testing):** 2–3 API
+instances (~4 vCPU / 8 GB each) behind a load balancer, 1 primary PostgreSQL
+(4–8 GB, +read replica only if reporting load demands it), 1 Redis. Two API
+instances give redundancy; more are added horizontally as load grows.
+
+**Row volume, not user count, is the real scaling axis.** Over years, 150k users
+generate millions of leads/students/applications rows — fine for indexed
+PostgreSQL. Only at tens of millions of rows do table partitioning and a read
+replica become necessary (deferred; see item 7 above). Capacity should be
+confirmed with **load testing** before launch, not assumed.
+
 ---
 
 ## 7. Roadmap (phased)
