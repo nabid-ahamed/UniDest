@@ -2,6 +2,7 @@ import { createBrowserRouter, Navigate, Outlet } from 'react-router-dom'
 import LoginPage from '../features/auth/LoginPage'
 import AdminLayout from '../layouts/AdminLayout'
 import DashboardPage from '../features/dashboard/DashboardPage'
+import LeadsPage from '../features/leads/LeadsPage'
 import StudentsPage from '../features/students/StudentsPage'
 import ApplicationsPage from '../features/applications/ApplicationsPage'
 import { useAuth } from '../store/auth'
@@ -22,6 +23,7 @@ export const router = createBrowserRouter([
         element: <AdminLayout />,
         children: [
           { path: '/dashboard', element: <DashboardPage /> },
+          { path: '/leads', element: <LeadsPage /> },
           { path: '/students', element: <StudentsPage /> },
           { path: '/applications', element: <ApplicationsPage /> },
         ],
