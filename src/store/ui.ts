@@ -8,7 +8,7 @@ interface UIState {
 }
 
 export const useUI = create<UIState>((set) => ({
-  sidebarOpen: false,
+  sidebarOpen: true,
   openSidebar: () => set({ sidebarOpen: true }),
   closeSidebar: () => set({ sidebarOpen: false }),
   toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),

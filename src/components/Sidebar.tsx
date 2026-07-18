@@ -121,7 +121,7 @@ const NAV: NavGroup[] = [
 ]
 
 const itemBase =
-  'group flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors'
+  'group flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2.5 text-[13px] font-medium whitespace-nowrap transition-colors'
 const itemIdle = 'text-slate-300 hover:bg-slate-800 hover:text-white'
 const itemActive = 'bg-brand-600 text-white'
 
@@ -139,13 +139,16 @@ function SidebarItem({ item, onNavigate }: { item: NavItem; onNavigate: () => vo
           className={cn(itemBase, itemIdle)}
         >
           <Icon className="h-5 w-5 shrink-0 text-slate-400 group-hover:text-slate-200" />
-          <span className="flex-1 text-left">{item.label}</span>
+          <span className="flex-1 truncate text-left">{item.label}</span>
           <ChevronDown
-            className={cn('h-4 w-4 text-slate-400 transition-transform', open && 'rotate-180')}
+            className={cn(
+              'h-5 w-5 shrink-0 text-slate-400 transition-transform duration-300 ease-in-out',
+              open && 'rotate-180',
+            )}
           />
         </button>
         {open && (
-          <div className="mt-1 space-y-1 pl-11">
+          <div className="mt-1 space-y-1 pl-9">
             {item.children.map((child) =>
               child.to ? (
                 <NavLink
@@ -154,19 +157,21 @@ function SidebarItem({ item, onNavigate }: { item: NavItem; onNavigate: () => vo
                   onClick={onNavigate}
                   className={({ isActive }) =>
                     cn(
-                      'block rounded-md px-3 py-2 text-sm',
+                      'flex items-center gap-2.5 rounded-md px-3 py-2 text-sm',
                       isActive ? 'text-white' : 'text-slate-400 hover:text-white',
                     )
                   }
                 >
+                  <span className="h-2 w-2 shrink-0 rounded-full border-[1.5px] border-current opacity-70" />
                   {child.label}
                 </NavLink>
               ) : (
                 <button
                   key={child.label}
                   type="button"
-                  className="block w-full rounded-md px-3 py-2 text-left text-sm text-slate-400 hover:text-white"
+                  className="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-left text-sm text-slate-400 hover:text-white"
                 >
+                  <span className="h-2 w-2 shrink-0 rounded-full border-[1.5px] border-current opacity-70" />
                   {child.label}
                 </button>
               ),
@@ -204,13 +209,18 @@ export function Sidebar() {
   const open = useUI((s) => s.sidebarOpen)
   const close = useUI((s) => s.closeSidebar)
 
+  // Close on navigation only on small screens; keep it open on desktop.
+  const handleNavigate = () => {
+    if (window.innerWidth < 1024) close()
+  }
+
   return (
     <>
       {/* Backdrop — starts below the header */}
       <div
         onClick={close}
         className={cn(
-          'fixed inset-x-0 bottom-0 top-16 z-20 bg-slate-900/50 transition-opacity',
+          'fixed inset-x-0 bottom-0 top-16 z-20 bg-slate-900/50 transition-opacity lg:hidden',
           open ? 'opacity-100' : 'pointer-events-none opacity-0',
         )}
       />
@@ -218,7 +228,7 @@ export function Sidebar() {
       {/* Drawer — sits under the header nav */}
       <aside
         className={cn(
-          'fixed left-0 top-16 z-30 flex h-[calc(100vh-4rem)] w-72 flex-col bg-slate-900 shadow-xl transition-transform',
+          'fixed left-0 top-16 z-30 flex h-[calc(100vh-4rem)] w-60 flex-col bg-slate-900 shadow-xl transition-transform',
           open ? 'translate-x-0' : '-translate-x-full',
         )}
       >
@@ -231,7 +241,7 @@ export function Sidebar() {
               </p>
               <div className="space-y-1">
                 {group.items.map((item) => (
-                  <SidebarItem key={item.label} item={item} onNavigate={close} />
+                  <SidebarItem key={item.label} item={item} onNavigate={handleNavigate} />
                 ))}
               </div>
             </div>
