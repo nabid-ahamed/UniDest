@@ -7,10 +7,7 @@ export default function LeadsPage() {
       </p>
 
       <div className="mt-8 rounded-xl border border-dashed border-slate-300 bg-white p-12 text-center">
-        <p className="text-slate-500">
-          Lead pipeline &amp; list come next — send the reference screenshot for
-          this page.
-        </p>
+        <p className="text-slate-500">This page is still not built yet.</p>
       </div>
     </div>
   )
