@@ -28,8 +28,6 @@ import {
   ShieldCheck,
   Settings,
   ChevronDown,
-  GraduationCap,
-  X,
 } from 'lucide-react'
 import { cn } from '../lib/cn'
 import { useUI } from '../store/ui'
@@ -208,42 +206,22 @@ export function Sidebar() {
 
   return (
     <>
-      {/* Backdrop */}
+      {/* Backdrop — starts below the header */}
       <div
         onClick={close}
         className={cn(
-          'fixed inset-0 z-40 bg-slate-900/50 transition-opacity',
+          'fixed inset-x-0 bottom-0 top-16 z-20 bg-slate-900/50 transition-opacity',
           open ? 'opacity-100' : 'pointer-events-none opacity-0',
         )}
       />
 
-      {/* Drawer */}
+      {/* Drawer — sits under the header nav */}
       <aside
         className={cn(
-          'fixed left-0 top-0 z-50 flex h-full w-72 flex-col bg-slate-900 shadow-xl transition-transform',
+          'fixed left-0 top-16 z-30 flex h-[calc(100vh-4rem)] w-72 flex-col bg-slate-900 shadow-xl transition-transform',
           open ? 'translate-x-0' : '-translate-x-full',
         )}
       >
-        {/* Logo bar */}
-        <div className="flex h-16 shrink-0 items-center justify-between bg-white px-4">
-          <div className="flex items-center gap-2">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-600 text-white">
-              <GraduationCap className="h-5 w-5" />
-            </span>
-            <span className="text-xl font-extrabold tracking-tight text-brand-700">
-              UniDest
-            </span>
-          </div>
-          <button
-            type="button"
-            onClick={close}
-            className="rounded-lg p-2 text-slate-500 hover:bg-slate-100"
-            aria-label="Close menu"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-
         {/* Scrollable nav */}
         <nav className="flex-1 overflow-y-auto px-2 py-4">
           {NAV.map((group) => (

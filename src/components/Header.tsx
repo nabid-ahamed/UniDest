@@ -24,7 +24,7 @@ export function Header() {
   const toggleSidebar = useUI((s) => s.toggleSidebar)
 
   return (
-    <header className="sticky top-0 z-30 border-b border-slate-200 bg-white">
+    <header className="sticky top-0 z-40 border-b border-slate-200 bg-white">
       <div className="mx-auto flex h-16 max-w-7xl items-center gap-2 px-4 sm:px-6 lg:px-8">
         {/* Logo */}
         <NavLink to="/dashboard" className="flex items-center gap-2 pr-1">
