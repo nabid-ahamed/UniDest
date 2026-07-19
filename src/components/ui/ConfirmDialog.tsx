@@ -48,14 +48,14 @@ export function ConfirmDialog({
           <button
             type="button"
             onClick={onConfirm}
-            className="rounded-lg bg-brand-600 px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-700"
+            className="min-w-[128px] rounded-lg bg-brand-600 px-6 py-2.5 text-center text-sm font-semibold text-white transition-colors hover:bg-brand-700"
           >
             {confirmLabel}
           </button>
           <button
             type="button"
             onClick={onCancel}
-            className="rounded-lg bg-slate-500 px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-600"
+            className="min-w-[128px] rounded-lg bg-slate-500 px-6 py-2.5 text-center text-sm font-semibold text-white transition-colors hover:bg-slate-600"
           >
             {cancelLabel}
           </button>

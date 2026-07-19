@@ -1,6 +1,5 @@
 import { useState, type ComponentType, type MouseEvent } from 'react'
 import { createPortal } from 'react-dom'
-import { NavLink } from 'react-router-dom'
 import {
   LayoutGrid,
   Users,
@@ -139,12 +138,13 @@ function SidebarItem({
   const [expanded, setExpanded] = useState(false)
   const [tip, setTip] = useState<{ top: number; left: number } | null>(null)
   const Icon = item.icon
-  const rowClass = cn(itemBase, collapsed ? 'justify-center px-0' : 'px-2.5')
+  // Always left-align with px-3 so collapsed icons sit under the header logo icon.
+  const rowClass = cn(itemBase, 'px-3')
 
   const showTip = (e: MouseEvent<HTMLElement>) => {
     if (!collapsed) return
     const r = e.currentTarget.getBoundingClientRect()
-    setTip({ top: r.top + r.height / 2, left: r.right + 10 })
+    setTip({ top: r.top + r.height / 2, left: r.right })
   }
   const hideTip = () => setTip(null)
   const hoverProps = { onMouseEnter: showTip, onMouseLeave: hideTip }
@@ -154,7 +154,7 @@ function SidebarItem({
       ? createPortal(
           <div
             style={{ top: tip.top, left: tip.left }}
-            className="pointer-events-none fixed z-[70] -translate-y-1/2 whitespace-nowrap rounded-lg bg-slate-800 px-3 py-2 text-sm font-medium text-white shadow-lg"
+            className="pointer-events-none fixed z-[70] -translate-y-1/2 whitespace-nowrap rounded-r-lg bg-slate-900 py-2.5 pl-6 pr-5 text-sm font-medium text-white shadow-lg"
           >
             {item.label}
           </div>,
@@ -187,20 +187,20 @@ function SidebarItem({
           <div className="mt-1 space-y-1 pl-9">
             {item.children.map((child) =>
               child.to ? (
-                <NavLink
+                <a
                   key={child.label}
-                  to={child.to}
+                  href={child.to}
                   onClick={onNavigate}
-                  className={({ isActive }) =>
-                    cn(
-                      'flex items-center gap-2.5 rounded-md px-3 py-2 text-sm',
-                      isActive ? 'text-white' : 'text-slate-400 hover:text-white',
-                    )
-                  }
+                  className={cn(
+                    'flex items-center gap-2.5 rounded-md px-3 py-2 text-sm',
+                    window.location.pathname === child.to
+                      ? 'text-white'
+                      : 'text-slate-400 hover:text-white',
+                  )}
                 >
                   <span className="h-2 w-2 shrink-0 rounded-full border-[1.5px] border-current opacity-70" />
                   {child.label}
-                </NavLink>
+                </a>
               ) : (
                 <button
                   key={child.label}
@@ -219,19 +219,20 @@ function SidebarItem({
     )
   }
 
-  // Real routed item
+  // Real routed item — full page redirect/refresh on click.
   if (item.to) {
+    const active = window.location.pathname === item.to
     return (
       <>
-        <NavLink
-          to={item.to}
+        <a
+          href={item.to}
           onClick={onNavigate}
           {...hoverProps}
-          className={({ isActive }) => cn(rowClass, isActive ? itemActive : itemIdle)}
+          className={cn(rowClass, active ? itemActive : itemIdle)}
         >
           <Icon className={iconClass} />
           {!collapsed && <span>{item.label}</span>}
-        </NavLink>
+        </a>
         {tooltip}
       </>
     )
@@ -276,14 +277,19 @@ export function Sidebar() {
           'fixed left-0 top-16 z-30 flex h-[calc(100vh-4rem)] w-60 flex-col bg-slate-900 shadow-xl transition-all duration-300',
           open ? 'translate-x-0' : '-translate-x-full', // mobile slide in/out
           'lg:translate-x-0', // desktop always visible
-          open ? 'lg:w-60' : 'lg:w-16', // desktop width toggle
+          open ? 'lg:w-60' : 'lg:w-[68px]', // collapsed rail reaches up to the "U" of UniDest
         )}
       >
-        <nav className="flex-1 overflow-x-hidden overflow-y-auto px-2 py-4">
+        <nav
+          className={cn(
+            'flex-1 overflow-x-hidden overflow-y-auto px-3 pb-4 pt-6',
+            collapsed ? 'no-scrollbar' : 'sidebar-scroll',
+          )}
+        >
           {NAV.map((group) => (
             <div key={group.title} className="mb-4">
               {!collapsed && (
-                <p className="px-3 pb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                <p className="px-3 pb-2 pt-1 text-xs font-bold uppercase tracking-wider text-white">
                   {group.title}
                 </p>
               )}
