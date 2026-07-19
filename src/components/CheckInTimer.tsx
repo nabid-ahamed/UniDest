@@ -10,12 +10,14 @@ import {
   Utensils,
   Timer,
   Play,
+  Loader2,
 } from 'lucide-react'
 import { cn } from '../lib/cn'
 import { useAttendance } from '../store/attendance'
 import { ConfirmDialog } from './ui/ConfirmDialog'
 import { OtherBreakDialog } from './ui/OtherBreakDialog'
 import { SuccessDialog } from './ui/SuccessDialog'
+import { AlertDialog } from './ui/AlertDialog'
 
 type IconType = ComponentType<{ className?: string }>
 
@@ -27,7 +29,8 @@ interface Toast {
 interface Break {
   label: string
   icon: IconType
-  remaining: number
+  duration: number // seconds
+  startedAt: number // ms timestamp
 }
 
 const TOAST_BG: Record<Toast['type'], string> = {
@@ -51,37 +54,57 @@ const formatTime = (total: number) => {
   return h > 0 ? `${String(h).padStart(2, '0')}:${mm}:${ss}` : `${mm}:${ss}`
 }
 
-/** Staff attendance: check-in timer, breaks, check-out confirm + toast (mock, front-end only). */
+/** Staff attendance: persisted check-in timer, breaks, check-out confirm + toast. */
 export function CheckInTimer() {
   const checkedIn = useAttendance((s) => s.checkedIn)
-  const setCheckedIn = useAttendance((s) => s.setCheckedIn)
-  const [seconds, setSeconds] = useState(0)
+  const checkInAt = useAttendance((s) => s.checkInAt)
+  const checkInAction = useAttendance((s) => s.checkIn)
+  const checkOutAction = useAttendance((s) => s.checkOut)
+  const addPausedMs = useAttendance((s) => s.addPausedMs)
+
   const [brk, setBrk] = useState<Break | null>(null)
+  const [now, setNow] = useState(() => Date.now())
   const [toast, setToast] = useState<Toast | null>(null)
   const [menuOpen, setMenuOpen] = useState(false)
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [otherOpen, setOtherOpen] = useState(false)
   const [successOpen, setSuccessOpen] = useState(false)
+  const [locating, setLocating] = useState(false)
+  const [locationAlert, setLocationAlert] = useState(false)
   const toastRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const menuRef = useRef<HTMLDivElement>(null)
 
   const onBreak = brk !== null
 
-  // Work timer — runs while checked in and not on a break.
+  // Tick every second while checked in (drives both the work timer and break countdown).
   useEffect(() => {
-    if (!checkedIn || onBreak) return
-    const id = setInterval(() => setSeconds((s) => s + 1), 1000)
+    if (!checkedIn) return
+    const id = setInterval(() => setNow(Date.now()), 1000)
     return () => clearInterval(id)
-  }, [checkedIn, onBreak])
+  }, [checkedIn])
 
-  // Break countdown — auto-ends at zero.
+  // Derived times (timestamp-based → survive refresh).
+  const workSec = !checkInAt
+    ? 0
+    : brk
+      ? Math.max(0, Math.floor((brk.startedAt - checkInAt) / 1000))
+      : Math.max(0, Math.floor((now - checkInAt) / 1000))
+  const breakRemaining = brk
+    ? Math.max(0, brk.duration - Math.floor((now - brk.startedAt) / 1000))
+    : 0
+
+  const endBreak = (silent = false) => {
+    if (!brk) return
+    addPausedMs(Date.now() - brk.startedAt)
+    setBrk(null)
+    if (!silent) showToast({ message: 'Welcome back!', type: 'in' })
+  }
+
+  // Auto-end break when the countdown reaches zero.
   useEffect(() => {
-    if (!onBreak) return
-    const id = setInterval(() => {
-      setBrk((b) => (!b || b.remaining <= 1 ? null : { ...b, remaining: b.remaining - 1 }))
-    }, 1000)
-    return () => clearInterval(id)
-  }, [onBreak])
+    if (brk && breakRemaining <= 0) endBreak(true)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [brk, breakRemaining])
 
   // Close the break menu on outside click.
   useEffect(() => {
@@ -92,7 +115,6 @@ export function CheckInTimer() {
     return () => document.removeEventListener('mousedown', onClick)
   }, [])
 
-  // Clean up the toast timer on unmount.
   useEffect(() => () => {
     if (toastRef.current) clearTimeout(toastRef.current)
   }, [])
@@ -104,20 +126,36 @@ export function CheckInTimer() {
   }
 
   const checkIn = () => {
-    setCheckedIn(true)
-    showToast({ message: 'You have Clocked-In!', type: 'in' })
+    if (!navigator.geolocation) {
+      setLocationAlert(true)
+      return
+    }
+    setLocating(true)
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setLocating(false)
+        checkInAction({ lat: pos.coords.latitude, lng: pos.coords.longitude })
+        setNow(Date.now())
+        showToast({ message: 'You have Clocked-In!', type: 'in' })
+      },
+      () => {
+        setLocating(false)
+        setLocationAlert(true)
+      },
+      { enableHighAccuracy: true, timeout: 10000 },
+    )
   }
 
   const checkOut = () => {
     setConfirmOpen(false)
-    setCheckedIn(false)
     setBrk(null)
-    setSeconds(0)
+    checkOutAction()
     setSuccessOpen(true)
   }
 
   const beginBreak = (label: string, icon: IconType, durationSec: number, hint: string) => {
-    setBrk({ label, icon, remaining: durationSec })
+    setBrk({ label, icon, duration: durationSec, startedAt: Date.now() })
+    setNow(Date.now())
     showToast({ message: `${label} started (${hint})`, type: 'break' })
   }
 
@@ -128,11 +166,6 @@ export function CheckInTimer() {
     } else {
       beginBreak(b.label, b.icon, b.duration, b.hint)
     }
-  }
-
-  const endBreak = () => {
-    setBrk(null)
-    showToast({ message: 'Welcome back!', type: 'in' })
   }
 
   const BreakIcon = brk?.icon
@@ -148,14 +181,14 @@ export function CheckInTimer() {
           )}
         >
           <Clock className="h-3.5 w-3.5" />
-          {formatTime(seconds)}
+          {formatTime(workSec)}
         </div>
 
         {/* Break countdown pill */}
         {brk && BreakIcon && (
           <div className="hidden items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-[13px] font-semibold tabular-nums text-amber-600 sm:flex">
             <Clock className="h-3.5 w-3.5" />
-            {formatTime(brk.remaining)}
+            {formatTime(breakRemaining)}
             <BreakIcon className="h-3.5 w-3.5" />
           </div>
         )}
@@ -165,16 +198,21 @@ export function CheckInTimer() {
           <button
             type="button"
             onClick={checkIn}
-            className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-brand-600 px-3 py-1.5 text-[13px] font-semibold text-white transition-colors hover:bg-brand-700 sm:min-w-[104px]"
+            disabled={locating}
+            className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-brand-600 bg-white px-3 py-1.5 text-[13px] font-semibold text-brand-600 transition-colors hover:bg-brand-600 hover:text-white disabled:opacity-70 sm:min-w-[104px]"
           >
-            <LogIn className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Check-in</span>
+            {locating ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <LogIn className="h-3.5 w-3.5" />
+            )}
+            <span className="hidden sm:inline">{locating ? 'Locating…' : 'Check-in'}</span>
           </button>
         ) : onBreak ? (
           <button
             type="button"
-            onClick={endBreak}
-            className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-emerald-500 px-3 py-1.5 text-[13px] font-semibold text-white transition-colors hover:bg-emerald-600"
+            onClick={() => endBreak()}
+            className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-emerald-500 bg-white px-3 py-1.5 text-[13px] font-semibold text-emerald-600 transition-colors hover:bg-emerald-500 hover:text-white"
           >
             <Play className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">I&apos;m Back</span>
@@ -184,7 +222,7 @@ export function CheckInTimer() {
             <button
               type="button"
               onClick={() => setMenuOpen((v) => !v)}
-              className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-brand-600 px-3 py-1.5 text-[13px] font-semibold text-white transition-colors hover:bg-brand-700"
+              className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-brand-600 bg-white px-3 py-1.5 text-[13px] font-semibold text-brand-600 transition-colors hover:bg-brand-600 hover:text-white"
             >
               <span className="hidden sm:inline">Check-out/ Break</span>
               <LogOut className="h-3.5 w-3.5 sm:hidden" />
@@ -241,7 +279,6 @@ export function CheckInTimer() {
           >
             <X className="h-4 w-4" />
           </button>
-          {/* Auto-dismiss progress line */}
           <span className="animate-toast-progress absolute bottom-0 left-0 h-1 bg-white/40" />
         </div>
       )}
@@ -267,6 +304,13 @@ export function CheckInTimer() {
         open={successOpen}
         message="You have Clocked-Out!"
         onOk={() => setSuccessOpen(false)}
+      />
+
+      <AlertDialog
+        open={locationAlert}
+        title="Location required"
+        message="Please allow location access to check in, then try again."
+        onOk={() => setLocationAlert(false)}
       />
     </>
   )
