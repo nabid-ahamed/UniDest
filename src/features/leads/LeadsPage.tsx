@@ -567,12 +567,13 @@ export default function LeadsPage() {
           </div>
         </div>
 
-        {/* Table */}
-        <div className="overflow-x-auto">
+        {/* Table — horizontal scroll only below lg, so the sticky header can
+            anchor to the page (an overflow container would trap it). */}
+        <div className="overflow-x-auto lg:overflow-x-visible">
           <table className="w-full min-w-[900px]">
-            <thead>
-              <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
-                <th className="px-3 py-3">
+            <thead className="sticky top-16 z-10">
+              <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-600 shadow-[0_1px_0_0_rgb(226_232_240)]">
+                <th className="bg-slate-50 px-3 py-3">
                   <input
                     type="checkbox"
                     checked={allOnPageSelected}
@@ -580,13 +581,13 @@ export default function LeadsPage() {
                     className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
                   />
                 </th>
-                <th className="px-3 py-3">ID</th>
-                <th className="px-3 py-3">Lead</th>
-                <th className="px-3 py-3">Next Followup</th>
-                <th className="px-3 py-3">Status</th>
-                <th className="px-3 py-3">Assigned to</th>
-                <th className="px-3 py-3">Created</th>
-                <th className="px-3 py-3">Actions</th>
+                <th className="bg-slate-50 px-3 py-3">ID</th>
+                <th className="bg-slate-50 px-3 py-3">Lead</th>
+                <th className="bg-slate-50 px-3 py-3">Next Followup</th>
+                <th className="bg-slate-50 px-3 py-3">Status</th>
+                <th className="bg-slate-50 px-3 py-3">Assigned to</th>
+                <th className="bg-slate-50 px-3 py-3">Created</th>
+                <th className="bg-slate-50 px-3 py-3">Actions</th>
               </tr>
             </thead>
             <tbody>
