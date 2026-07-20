@@ -185,8 +185,15 @@ function SidebarItem({
             />
           )}
         </button>
-        {!collapsed && expanded && (
-          <div className="mt-1 space-y-1 pl-9">
+        {!collapsed && (
+          <div
+            className={cn(
+              'grid transition-all duration-300 ease-in-out',
+              expanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0',
+            )}
+          >
+            <div className="overflow-hidden">
+              <div className="mt-1 space-y-1 pl-9">
             {item.children.map((child) =>
               child.to ? (
                 <a
@@ -214,6 +221,8 @@ function SidebarItem({
                 </button>
               ),
             )}
+              </div>
+            </div>
           </div>
         )}
         {tooltip}
@@ -279,15 +288,19 @@ export function Sidebar() {
         // measured in Header) so the panel lines up exactly under the icon.
         style={open ? { width: 'var(--sidebar-w, 15rem)' } : undefined}
         className={cn(
-          'fixed left-0 top-16 z-30 flex h-[calc(100vh-4rem)] flex-col bg-slate-900 shadow-xl transition-all duration-300',
+          'fixed left-0 top-16 z-30 flex h-[calc(100vh-4rem)] flex-col overflow-hidden bg-slate-900 shadow-xl transition-all duration-300',
           open ? 'translate-x-0' : '-translate-x-full', // mobile slide in/out
           'lg:translate-x-0', // desktop always visible
           !open && 'w-60 lg:w-[68px]', // collapsed rail reaches up to the "U" of UniDest
         )}
       >
         <nav
+          // Pinned to the open width in BOTH states. If it tracked the panel's
+          // animating width instead, every label would re-wrap each frame while
+          // the sidebar slides open — that reflow is what looked like a stutter.
+          style={{ width: 'var(--sidebar-w, 15rem)' }}
           className={cn(
-            'flex-1 overflow-x-hidden overflow-y-auto px-3 pb-4 pt-6',
+            'flex-1 shrink-0 overflow-x-hidden overflow-y-auto px-3 pb-4 pt-6',
             collapsed ? 'no-scrollbar' : 'sidebar-scroll',
           )}
         >
