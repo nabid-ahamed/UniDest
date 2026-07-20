@@ -36,6 +36,7 @@ import {
 } from '../../mock/leads'
 import { LeadRow } from './components/LeadRow'
 import { AddTagDialog } from './components/AddTagDialog'
+import { AssignStaffDialog } from './components/AssignStaffDialog'
 import { AlertDialog } from '../../components/ui/AlertDialog'
 
 /** A lead may carry at most this many tags. */
@@ -133,6 +134,11 @@ export default function LeadsPage() {
   const [toast, setToast] = useState('')
   const [tagLead, setTagLead] = useState<Lead | null>(null)
   const [limitLead, setLimitLead] = useState<Lead | null>(null)
+  const [assignLead, setAssignLead] = useState<Lead | null>(null)
+  // Owner per lead id, seeded from the mock so re-assignment persists in the UI.
+  const [assignees, setAssignees] = useState<Record<number, string | null>>(() =>
+    Object.fromEntries(leads.map((l) => [l.id, l.assignedTo])),
+  )
   const [recentTags, setRecentTags] = useState<string[]>(initialRecentTags)
   // Tags per lead id, seeded from the mock. Kept in state so add/remove works.
   const [leadTags, setLeadTags] = useState<Record<number, string[]>>(() =>
@@ -181,7 +187,7 @@ export default function LeadsPage() {
       l.email,
       l.phone,
       l.status,
-      l.assignedTo ?? 'Unassigned',
+      assignees[l.id] ?? 'Unassigned',
       l.branch,
       l.created,
     ])
@@ -254,7 +260,15 @@ export default function LeadsPage() {
       if ((leadTags[lead.id] ?? []).length >= MAX_TAGS) return setLimitLead(lead)
       return setTagLead(lead)
     }
+    if (type === 'Assign') return setAssignLead(lead)
     showToast(`${type}: ${lead.name} (#${lead.id})`)
+  }
+
+  const saveAssignee = (member: string) => {
+    if (!assignLead) return
+    setAssignees((prev) => ({ ...prev, [assignLead.id]: member }))
+    showToast(`${assignLead.name} assigned to ${member}`)
+    setAssignLead(null)
   }
 
   /** Attach a tag to the lead and move it to the front of the recent list. */
@@ -288,7 +302,7 @@ export default function LeadsPage() {
       if (statuses.length && !statuses.includes(l.status)) return false
       if (countriesInterested.length && !countriesInterested.includes(l.countryInterested))
         return false
-      if (staff && l.assignedTo !== staff) return false
+      if (staff && (assignees[l.id] ?? null) !== staff) return false
       if (branch !== 'All Branch' && l.branch !== branch) return false
       if (q) {
         const hay = `${l.id} ${l.name} ${l.email} ${l.phone} ${l.phoneNote}`.toLowerCase()
@@ -296,7 +310,7 @@ export default function LeadsPage() {
       }
       return true
     })
-  }, [search, statuses, countriesInterested, staff, branch])
+  }, [search, statuses, countriesInterested, staff, branch, assignees])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
   const currentPage = Math.min(page, totalPages)
@@ -650,6 +664,7 @@ export default function LeadsPage() {
                       key={lead.id}
                       lead={lead}
                       tags={leadTags[lead.id] ?? []}
+                      assignedTo={assignees[lead.id] ?? null}
                       selected={selected.has(lead.id)}
                       onToggle={() => toggleOne(lead.id)}
                       onAction={(type) => rowAction(type, lead)}
@@ -746,6 +761,17 @@ export default function LeadsPage() {
           maxTags={MAX_TAGS}
           onClose={() => setTagLead(null)}
           onAdd={applyTag}
+        />
+      )}
+
+      {/* Assign staff */}
+      {assignLead && (
+        <AssignStaffDialog
+          lead={assignLead}
+          assignedTo={assignees[assignLead.id] ?? null}
+          staff={leadStaff}
+          onClose={() => setAssignLead(null)}
+          onSave={saveAssignee}
         />
       )}
 

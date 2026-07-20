@@ -6,6 +6,7 @@ import type { Lead } from '../../../mock/leads'
 export function LeadRow({
   lead,
   tags,
+  assignedTo,
   selected,
   onToggle,
   onAction,
@@ -13,6 +14,7 @@ export function LeadRow({
 }: {
   lead: Lead
   tags: string[]
+  assignedTo: string | null
   selected: boolean
   onToggle: () => void
   onAction: (type: string) => void
@@ -136,8 +138,15 @@ export function LeadRow({
 
       {/* Assigned to */}
       <td className="px-3 py-3">
-        {lead.assignedTo ? (
-          <span className="text-sm font-medium text-slate-700">{lead.assignedTo}</span>
+        {assignedTo ? (
+          <button
+            type="button"
+            onClick={() => onAction('Assign')}
+            title="Re-assign"
+            className="text-sm font-medium text-slate-700 hover:text-brand-600 hover:underline"
+          >
+            {assignedTo}
+          </button>
         ) : (
           <button
             type="button"
