@@ -1,33 +1,23 @@
-import {
-  Tag,
-  Plus,
-  Mail,
-  Phone,
-  PhoneCall,
-  MessageSquare,
-  MessageCircle,
-  Pencil,
-  UserPlus,
-  Eye,
-  Settings,
-} from 'lucide-react'
+import { Tag, Plus, X, Mail, Phone, Pencil, UserPlus, Eye, Settings } from 'lucide-react'
 import { cn } from '../../../lib/cn'
 import { pickTextColor } from '../../../lib/contrast'
 import type { Lead } from '../../../mock/leads'
 
 export function LeadRow({
   lead,
+  tags,
   selected,
   onToggle,
   onAction,
+  onRemoveTag,
 }: {
   lead: Lead
+  tags: string[]
   selected: boolean
   onToggle: () => void
   onAction: (type: string) => void
+  onRemoveTag: (tag: string) => void
 }) {
-  const digits = lead.phone.replace(/\D/g, '')
-
   return (
     <tr
       className={cn(
@@ -56,40 +46,43 @@ export function LeadRow({
 
       {/* Lead — 3 compact tiers: identity+actions / details / meta */}
       <td className="px-3 py-3">
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <button
-            type="button"
-            onClick={() => onAction('View')}
-            className="text-sm font-bold text-slate-900 hover:text-brand-600 hover:underline"
-          >
-            {lead.name}
-          </button>
+        <button
+          type="button"
+          onClick={() => onAction('View')}
+          className="text-sm font-bold text-slate-900 hover:text-brand-600 hover:underline"
+        >
+          {lead.name}
+        </button>
 
+        {/* Tags — removable chips, then the add button */}
+        <div className="mt-1 flex flex-wrap items-center gap-1.5">
+          <Tag className="h-3.5 w-3.5 shrink-0 text-slate-400" aria-hidden="true" />
+          {tags.map((t) => (
+            <span
+              key={t}
+              className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700"
+            >
+              {t}
+              <button
+                type="button"
+                onClick={() => onRemoveTag(t)}
+                aria-label={`Remove tag ${t}`}
+                title={`Remove ${t}`}
+                className="text-slate-500 hover:text-rose-600"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </span>
+          ))}
           <button
             type="button"
             onClick={() => onAction('Add tag')}
             aria-label="Add tag"
             title="Add tag"
-            className="flex items-center text-slate-400 hover:text-brand-600"
+            className="rounded p-0.5 text-brand-600 hover:bg-brand-50 hover:text-brand-700"
           >
-            <Tag className="h-3.5 w-3.5" />
-            <Plus className="h-3 w-3" />
+            <Plus className="h-4 w-4" />
           </button>
-
-          <span className="mx-0.5 h-3 w-px bg-slate-200" aria-hidden="true" />
-
-          <ContactLink icon={PhoneCall} label="Call" href={`tel:${digits}`} />
-          <ContactLink icon={MessageSquare} label="SMS" href={`sms:${digits}`} />
-          <ContactLink icon={Mail} label="Email" href={`mailto:${lead.email}`} />
-          {lead.whatsapp && (
-            <ContactLink
-              icon={MessageCircle}
-              label="WhatsApp"
-              href={`https://wa.me/${digits}`}
-              external
-              className="text-emerald-600 hover:text-emerald-700"
-            />
-          )}
         </div>
 
         <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-slate-500">
@@ -184,36 +177,6 @@ export function LeadRow({
         </div>
       </td>
     </tr>
-  )
-}
-
-function ContactLink({
-  icon: Icon,
-  label,
-  href,
-  external,
-  className,
-}: {
-  icon: typeof Phone
-  label: string
-  href: string
-  external?: boolean
-  className?: string
-}) {
-  return (
-    <a
-      href={href}
-      target={external ? '_blank' : undefined}
-      rel={external ? 'noreferrer' : undefined}
-      aria-label={label}
-      title={label}
-      className={cn(
-        'flex h-6 w-6 items-center justify-center rounded-md text-slate-500 hover:bg-slate-100 hover:text-slate-700',
-        className,
-      )}
-    >
-      <Icon className="h-3.5 w-3.5" />
-    </a>
   )
 }
 
