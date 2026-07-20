@@ -17,6 +17,8 @@ export interface Lead {
   created: string // e.g. "19 Jul 2026"
   nextFollowup: string | null
   countryInterested: string // destination country the lead wants to study in
+  /** Labels shown as removable chips on the row. Seeded on a few leads only. */
+  tags?: string[]
 }
 
 // Badge colours are the darker 700/800 shades so white text clears WCAG AA
@@ -123,6 +125,23 @@ export const phoneCountryCodes = [
 ]
 export const englishTests = ['IELTS', 'TOEFL', 'PTE', 'GRE', 'DUOLINGO']
 
+/**
+ * Most-recently-used tags, newest first. The Add-Tag dialog shows the last 10
+ * and moves a tag back to the front each time it is applied.
+ */
+export const recentTags = [
+  'Hot Lead',
+  'Follow Up',
+  'Scholarship Seeker',
+  'IELTS Pending',
+  'Document Pending',
+  'High Budget',
+  'Referral',
+  'Walk-in',
+  'Visa Query',
+  'Not Reachable',
+]
+
 /** Total leads in the system (the list below is one filtered page). */
 export const totalLeadCount = 190
 
@@ -130,11 +149,11 @@ const s = (label: string) =>
   leadStatuses.find((x) => x.label === label)?.color ?? '#06b6d4'
 
 export const leads: Lead[] = [
-  { id: 2379, name: 'Aarav Sharma', email: 'aarav.sharma@gmail.com', emailDate: '18 Jul', phone: '+91 98450 12345', phoneNote: 'at the time', whatsapp: true, leadAgeDays: 0, branch: 'Sylhet', status: 'New Lead', statusColor: s('New Lead'), assignedTo: null, created: '19 Jul 2026', nextFollowup: null, countryInterested: 'United Kingdom' },
+  { id: 2379, name: 'Aarav Sharma', email: 'aarav.sharma@gmail.com', emailDate: '18 Jul', phone: '+91 98450 12345', phoneNote: 'at the time', whatsapp: true, leadAgeDays: 0, branch: 'Sylhet', status: 'New Lead', statusColor: s('New Lead'), assignedTo: null, created: '19 Jul 2026', nextFollowup: null, countryInterested: 'United Kingdom', tags: ['High Commission', 'Mid Priority'] },
   { id: 2367, name: 'Fatima Rahman', email: 'fatima.r@gmail.com', emailDate: '21 Jun', phone: '+880 1712 445566', phoneNote: 'Human resource', whatsapp: false, leadAgeDays: 26, branch: 'Khulna', status: 'New Lead', statusColor: s('New Lead'), assignedTo: null, created: '23 Jun 2026', nextFollowup: '22 Jul 2026', countryInterested: 'Canada' },
-  { id: 2370, name: 'Rohan Das', email: 'rohan.das@gmail.com', emailDate: '24 Jun', phone: '+91 90080 11223', phoneNote: 'Column four', whatsapp: true, leadAgeDays: 26, branch: 'Dhaka', status: 'Contacted', statusColor: s('Contacted'), assignedTo: 'Sarah Ali', created: '23 Jun 2026', nextFollowup: null, countryInterested: 'Australia' },
+  { id: 2370, name: 'Rohan Das', email: 'rohan.das@gmail.com', emailDate: '24 Jun', phone: '+91 90080 11223', phoneNote: 'Column four', whatsapp: true, leadAgeDays: 26, branch: 'Dhaka', status: 'Contacted', statusColor: s('Contacted'), assignedTo: 'Sarah Ali', created: '23 Jun 2026', nextFollowup: null, countryInterested: 'Australia', tags: ['Hot Lead'] },
   { id: 2371, name: 'Ayesha Khan', email: 'ayesha.khan@gmail.com', emailDate: '26 Jun', phone: '+92 300 4455667', phoneNote: 'Agent created', whatsapp: false, leadAgeDays: 26, branch: 'Dhaka', status: 'New Lead', statusColor: s('New Lead'), assignedTo: null, created: '23 Jun 2026', nextFollowup: null, countryInterested: 'United States' },
-  { id: 2372, name: 'Vikram Patel', email: 'vikram.p@gmail.com', emailDate: '27 Jun', phone: '+91 98765 43210', phoneNote: 'IELTS test', whatsapp: false, leadAgeDays: 26, branch: 'Sylhet', status: 'Warm', statusColor: s('Warm'), assignedTo: 'Mohammed Saleh', created: '23 Jun 2026', nextFollowup: '25 Jul 2026', countryInterested: 'United Kingdom' },
+  { id: 2372, name: 'Vikram Patel', email: 'vikram.p@gmail.com', emailDate: '27 Jun', phone: '+91 98765 43210', phoneNote: 'IELTS test', whatsapp: false, leadAgeDays: 26, branch: 'Sylhet', status: 'Warm', statusColor: s('Warm'), assignedTo: 'Mohammed Saleh', created: '23 Jun 2026', nextFollowup: '25 Jul 2026', countryInterested: 'United Kingdom', tags: ['Scholarship Seeker', 'Follow Up'] },
   { id: 2374, name: 'Nabila Haque', email: 'nabila.h@gmail.com', emailDate: '29 Jun', phone: '+880 1811 223344', phoneNote: 'country wise', whatsapp: false, leadAgeDays: 26, branch: 'Chattogram', status: 'New Lead', statusColor: s('New Lead'), assignedTo: null, created: '23 Jun 2026', nextFollowup: null, countryInterested: 'Canada' },
   { id: 2375, name: 'Arjun Mehta', email: 'arjun.mehta@gmail.com', emailDate: '01 Jul', phone: '+91 99887 66554', phoneNote: 'university', whatsapp: false, leadAgeDays: 26, branch: 'Khulna', status: 'Counseling', statusColor: s('Counseling'), assignedTo: 'Moses Otieno', created: '23 Jun 2026', nextFollowup: null, countryInterested: 'Germany' },
   { id: 2376, name: 'Sadia Islam', email: 'sadia.islam@gmail.com', emailDate: '02 Jul', phone: '+880 1911 556677', phoneNote: 'Linking of', whatsapp: false, leadAgeDays: 26, branch: 'Dhaka', status: 'New Lead', statusColor: s('New Lead'), assignedTo: null, created: '23 Jun 2026', nextFollowup: null, countryInterested: 'Australia' },

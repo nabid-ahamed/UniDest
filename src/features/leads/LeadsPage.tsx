@@ -32,8 +32,14 @@ import {
   followupDateOptions,
   leadSources,
   services,
+  recentTags as initialRecentTags,
 } from '../../mock/leads'
 import { LeadRow } from './components/LeadRow'
+import { AddTagDialog } from './components/AddTagDialog'
+import { AlertDialog } from '../../components/ui/AlertDialog'
+
+/** A lead may carry at most this many tags. */
+const MAX_TAGS = 5
 
 const PAGE_SIZES = [
   { value: 10, label: '10' },
@@ -125,6 +131,13 @@ export default function LeadsPage() {
   const [loading, setLoading] = useState(true)
   const [bulkAction, setBulkAction] = useState('')
   const [toast, setToast] = useState('')
+  const [tagLead, setTagLead] = useState<Lead | null>(null)
+  const [limitLead, setLimitLead] = useState<Lead | null>(null)
+  const [recentTags, setRecentTags] = useState<string[]>(initialRecentTags)
+  // Tags per lead id, seeded from the mock. Kept in state so add/remove works.
+  const [leadTags, setLeadTags] = useState<Record<number, string[]>>(() =>
+    Object.fromEntries(leads.map((l) => [l.id, l.tags ?? []])),
+  )
 
   // Initial "fetch" preloader on mount.
   useEffect(() => {
@@ -234,7 +247,40 @@ export default function LeadsPage() {
     setBulkAction('')
   }
 
-  const rowAction = (type: string, lead: Lead) => showToast(`${type}: ${lead.name} (#${lead.id})`)
+  const rowAction = (type: string, lead: Lead) => {
+    if (type === 'Add tag') {
+      // Block at the limit before opening the dialog, so the warning is never
+      // stacked underneath it.
+      if ((leadTags[lead.id] ?? []).length >= MAX_TAGS) return setLimitLead(lead)
+      return setTagLead(lead)
+    }
+    showToast(`${type}: ${lead.name} (#${lead.id})`)
+  }
+
+  /** Attach a tag to the lead and move it to the front of the recent list. */
+  const applyTag = (tag: string) => {
+    if (!tagLead) return
+    const current = leadTags[tagLead.id] ?? []
+    const already = current.includes(tag)
+    if (current.length >= MAX_TAGS) {
+      setTagLead(null)
+      setLimitLead(tagLead)
+      return
+    }
+    if (already) {
+      showToast(`"${tag}" is already on ${tagLead.name}`)
+    } else {
+      setLeadTags((prev) => ({ ...prev, [tagLead.id]: [...(prev[tagLead.id] ?? []), tag] }))
+      setRecentTags((prev) => [tag, ...prev.filter((t) => t !== tag)].slice(0, 10))
+      showToast(`Tag "${tag}" added to ${tagLead.name}`)
+    }
+    setTagLead(null)
+  }
+
+  const removeTag = (leadId: number, tag: string) => {
+    setLeadTags((prev) => ({ ...prev, [leadId]: (prev[leadId] ?? []).filter((t) => t !== tag) }))
+    showToast(`Tag "${tag}" removed`)
+  }
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -603,9 +649,11 @@ export default function LeadsPage() {
                     <LeadRow
                       key={lead.id}
                       lead={lead}
+                      tags={leadTags[lead.id] ?? []}
                       selected={selected.has(lead.id)}
                       onToggle={() => toggleOne(lead.id)}
                       onAction={(type) => rowAction(type, lead)}
+                      onRemoveTag={(tag) => removeTag(lead.id, tag)}
                     />
                   ))}
                   {pageRows.length === 0 && (
@@ -688,6 +736,36 @@ export default function LeadsPage() {
         shown. It shows all leads except "Converted" / "Disqualified". To view those, select the
         status in the filter and click "Filter".
       </p>
+
+      {/* Add tag */}
+      {tagLead && (
+        <AddTagDialog
+          lead={tagLead}
+          recentTags={recentTags}
+          tagCount={(leadTags[tagLead.id] ?? []).length}
+          maxTags={MAX_TAGS}
+          onClose={() => setTagLead(null)}
+          onAdd={applyTag}
+        />
+      )}
+
+      {/* Tag limit warning */}
+      {limitLead &&
+        createPortal(
+          <AlertDialog
+            open
+            title="Tag limit reached"
+            message={
+              <>
+                <span className="font-medium text-slate-700">{limitLead.name}</span> already has all{' '}
+                {MAX_TAGS} tags. Remove one from the row before adding another.
+              </>
+            }
+            okLabel="Got it"
+            onOk={() => setLimitLead(null)}
+          />,
+          document.body,
+        )}
 
       {/* Toast */}
       {toast && (
