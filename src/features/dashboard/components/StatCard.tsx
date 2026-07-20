@@ -25,8 +25,10 @@ export function StatCard({ stat }: { stat: StatCardData }) {
       </span>
       <div className="min-w-0">
         <p className="text-sm font-semibold text-slate-500">{stat.label}</p>
-        <p className="text-2xl font-bold text-slate-900">{stat.value.toLocaleString()}</p>
-        <p className="mt-0.5 text-xs text-slate-400">{stat.sublabel}</p>
+        <p className="text-2xl font-bold tabular-nums text-slate-900">
+          {stat.value.toLocaleString()}
+        </p>
+        <p className="mt-0.5 text-xs text-slate-500">{stat.sublabel}</p>
       </div>
     </div>
   )

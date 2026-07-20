@@ -120,8 +120,10 @@ const NAV: NavGroup[] = [
   },
 ]
 
+// No `truncate`/`whitespace-nowrap`: long labels wrap onto a second line so
+// every menu item stays fully readable (WCAG: prefer wrapping over truncation).
 const itemBase =
-  'group flex w-full items-center gap-2.5 rounded-lg py-2.5 text-[13px] font-medium whitespace-nowrap transition-colors'
+  'group flex w-full items-center gap-2.5 rounded-lg py-2.5 text-[13px] font-medium leading-snug transition-colors'
 const itemIdle = 'text-slate-300 hover:bg-slate-800 hover:text-white'
 const itemActive = 'bg-brand-600 text-white'
 const iconClass = 'h-5 w-5 shrink-0 text-slate-400 group-hover:text-slate-200'
@@ -173,7 +175,7 @@ function SidebarItem({
           {...hoverProps}
         >
           <Icon className={iconClass} />
-          {!collapsed && <span className="flex-1 truncate text-left">{item.label}</span>}
+          {!collapsed && <span className="flex-1 text-left">{item.label}</span>}
           {!collapsed && (
             <ChevronDown
               className={cn(
@@ -273,11 +275,14 @@ export function Sidebar() {
 
       {/* Sidebar: overlay drawer on mobile, collapsible rail on desktop */}
       <aside
+        // When open, width comes from --sidebar-w (the hamburger's right edge,
+        // measured in Header) so the panel lines up exactly under the icon.
+        style={open ? { width: 'var(--sidebar-w, 15rem)' } : undefined}
         className={cn(
-          'fixed left-0 top-16 z-30 flex h-[calc(100vh-4rem)] w-60 flex-col bg-slate-900 shadow-xl transition-all duration-300',
+          'fixed left-0 top-16 z-30 flex h-[calc(100vh-4rem)] flex-col bg-slate-900 shadow-xl transition-all duration-300',
           open ? 'translate-x-0' : '-translate-x-full', // mobile slide in/out
           'lg:translate-x-0', // desktop always visible
-          open ? 'lg:w-60' : 'lg:w-[68px]', // collapsed rail reaches up to the "U" of UniDest
+          !open && 'w-60 lg:w-[68px]', // collapsed rail reaches up to the "U" of UniDest
         )}
       >
         <nav

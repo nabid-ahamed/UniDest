@@ -17,7 +17,7 @@ export function RemindersCard() {
         <h3 className="text-sm font-semibold text-slate-800">
           University/Visa Application Reminders
         </h3>
-        <span className="text-xs font-medium text-slate-400">{reminderCount} Reminder(s)</span>
+        <span className="text-xs font-medium text-slate-500">{reminderCount} Reminder(s)</span>
       </div>
 
       <ul className="max-h-64 snap-y snap-mandatory divide-y divide-slate-100 overflow-y-auto">

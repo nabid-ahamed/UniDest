@@ -8,9 +8,10 @@ import { cn } from '../lib/cn'
 export default function AdminLayout() {
   const open = useUI((s) => s.sidebarOpen)
 
-  // Clear the sidebar on desktop: full w-60 when open, icon rail when collapsed.
+  // Clear the sidebar on desktop. When open its width is --sidebar-w (measured
+  // from the header hamburger), so the content padding tracks the same value.
   const pad = open
-    ? 'px-4 sm:px-6 lg:pl-64 lg:pr-8'
+    ? 'px-4 sm:px-6 lg:pl-[calc(var(--sidebar-w,15rem)+1rem)] lg:pr-8'
     : 'px-4 sm:px-6 lg:pl-[92px] lg:pr-8'
 
   return (
@@ -25,7 +26,7 @@ export default function AdminLayout() {
 
       <footer
         className={cn(
-          'border-t border-slate-200 py-4 text-center text-xs text-slate-400 transition-[padding] duration-300',
+          'border-t border-slate-200 py-4 text-center text-xs text-slate-500 transition-[padding] duration-300',
           pad,
         )}
       >

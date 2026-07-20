@@ -137,10 +137,25 @@ export const branches: string[] = ['All Branch', 'Dhaka', 'Chattogram', 'Sylhet'
 
 // ── Breakdown sections (Students / Leads / Tickets / Your stats) ──
 
+/**
+ * Semantic status tone — maps to the `status.*` colour tokens in
+ * tailwind.config.js. Components resolve a tone to a class; they never receive
+ * a raw hex, so contrast stays guaranteed in one place.
+ */
+export type StatusTone =
+  | 'pending'
+  | 'progress'
+  | 'review'
+  | 'success'
+  | 'danger'
+  | 'neutral'
+  | 'info'
+  | 'total'
+
 export interface Breakdown {
   label: string
   count: number
-  color: string
+  tone: StatusTone
 }
 
 export interface SimpleStat {
@@ -156,9 +171,9 @@ export const ticketSummary: SimpleStat[] = [
 ]
 
 export const ticketsByPriority: Breakdown[] = [
-  { label: 'High', count: 23, color: '#ef4444' },
-  { label: 'Medium', count: 58, color: '#f59e0b' },
-  { label: 'Low', count: 56, color: '#10b981' },
+  { label: 'High', count: 23, tone: 'danger' },
+  { label: 'Medium', count: 58, tone: 'pending' },
+  { label: 'Low', count: 56, tone: 'success' },
 ]
 
 export const yourStats: SimpleStat[] = [
@@ -172,59 +187,61 @@ export const yourStats: SimpleStat[] = [
 export interface AppStatusStat {
   label: string
   count: number
-  color: string
+  tone: StatusTone
 }
 
+// Tones group statuses by pipeline stage, so colour actually carries meaning
+// (previously 11 of these 22 shared one identical blue).
 export const applicationStatusStats: AppStatusStat[] = [
-  { label: 'Pending', count: 87, color: '#ef4444' },
-  { label: 'Documents Ready', count: 19, color: '#f59e0b' },
-  { label: 'Admission Criteria Met', count: 11, color: '#2563eb' },
-  { label: 'EMGS Issued', count: 3, color: '#6ee7b7' },
-  { label: 'Application Fee', count: 6, color: '#2563eb' },
-  { label: 'Application Submitted', count: 14, color: '#0ea5e9' },
-  { label: 'Offer Letter Received', count: 16, color: '#15803d' },
-  { label: 'Conditional Offer Letter', count: 5, color: '#a21caf' },
-  { label: 'Funds Under Assessment', count: 4, color: '#2563eb' },
-  { label: 'COE Received', count: 3, color: '#2563eb' },
-  { label: 'Payment Received', count: 7, color: '#2563eb' },
-  { label: 'CAS Requested', count: 2, color: '#2563eb' },
-  { label: 'CAS Received', count: 3, color: '#2563eb' },
-  { label: 'I-20 Initiated', count: 1, color: '#2563eb' },
-  { label: 'I-20 Received', count: 2, color: '#2563eb' },
-  { label: 'AIP Received', count: 1, color: '#2563eb' },
-  { label: 'GIC Account Created', count: 2, color: '#5b7fa6' },
-  { label: 'Visa In Process', count: 12, color: '#2563eb' },
-  { label: 'Visa Received', count: 9, color: '#2563eb' },
-  { label: 'Admission Complete', count: 10, color: '#22c55e' },
-  { label: 'Rejected', count: 4, color: '#475569' },
-  { label: 'Total Applications', count: 234, color: '#1d4ed8' },
+  { label: 'Pending', count: 87, tone: 'pending' },
+  { label: 'Documents Ready', count: 19, tone: 'progress' },
+  { label: 'Admission Criteria Met', count: 11, tone: 'progress' },
+  { label: 'EMGS Issued', count: 3, tone: 'success' },
+  { label: 'Application Fee', count: 6, tone: 'pending' },
+  { label: 'Application Submitted', count: 14, tone: 'progress' },
+  { label: 'Offer Letter Received', count: 16, tone: 'success' },
+  { label: 'Conditional Offer Letter', count: 5, tone: 'review' },
+  { label: 'Funds Under Assessment', count: 4, tone: 'review' },
+  { label: 'COE Received', count: 3, tone: 'success' },
+  { label: 'Payment Received', count: 7, tone: 'success' },
+  { label: 'CAS Requested', count: 2, tone: 'progress' },
+  { label: 'CAS Received', count: 3, tone: 'success' },
+  { label: 'I-20 Initiated', count: 1, tone: 'progress' },
+  { label: 'I-20 Received', count: 2, tone: 'success' },
+  { label: 'AIP Received', count: 1, tone: 'success' },
+  { label: 'GIC Account Created', count: 2, tone: 'progress' },
+  { label: 'Visa In Process', count: 12, tone: 'review' },
+  { label: 'Visa Received', count: 9, tone: 'success' },
+  { label: 'Admission Complete', count: 10, tone: 'success' },
+  { label: 'Rejected', count: 4, tone: 'danger' },
+  { label: 'Total Applications', count: 234, tone: 'total' },
 ]
 
-// Students section — colored status tiles
+// Students section — status tiles
 export const studentStatusStats: AppStatusStat[] = [
-  { label: 'Pending for Registration', count: 1892, color: '#f59e0b' },
-  { label: 'Course Preference Added', count: 53, color: '#6366f1' },
-  { label: 'Onboarding', count: 6, color: '#111827' },
-  { label: 'Documents Uploaded', count: 14, color: '#8b5cf6' },
-  { label: 'Application Processing', count: 61, color: '#15803d' },
-  { label: 'Admission Complete', count: 18, color: '#6b7280' },
-  { label: 'Total Students', count: 1876, color: '#ffffff' },
+  { label: 'Pending for Registration', count: 1892, tone: 'pending' },
+  { label: 'Course Preference Added', count: 53, tone: 'progress' },
+  { label: 'Onboarding', count: 6, tone: 'info' },
+  { label: 'Documents Uploaded', count: 14, tone: 'progress' },
+  { label: 'Application Processing', count: 61, tone: 'review' },
+  { label: 'Admission Complete', count: 18, tone: 'success' },
+  { label: 'Total Students', count: 1876, tone: 'total' },
 ]
 
-// Leads section — colored status tiles
+// Leads section — status tiles
 export const leadStatusStats: AppStatusStat[] = [
-  { label: 'New Lead', count: 27, color: '#06b6d4' },
-  { label: 'Attempted', count: 12, color: '#111827' },
-  { label: 'Counseling', count: 9, color: '#2563eb' },
-  { label: 'SL Final Counseling', count: 4, color: '#22c55e' },
-  { label: 'Warm', count: 8, color: '#f97316' },
-  { label: 'Long Term Nurture', count: 5, color: '#c2b280' },
-  { label: 'Cold', count: 6, color: '#eab308' },
-  { label: 'Registered', count: 152, color: '#16a34a' },
-  { label: 'Rejected', count: 11, color: '#ef4444' },
-  { label: 'Potential', count: 7, color: '#2dd4bf' },
-  { label: 'Financials Outstanding', count: 3, color: '#e79aa0' },
-  { label: 'Non Responsive', count: 14, color: '#4a1e1a' },
-  { label: 'Testing', count: 2, color: '#dc2626' },
-  { label: 'Total Leads', count: 176, color: '#06b6d4' },
+  { label: 'New Lead', count: 27, tone: 'info' },
+  { label: 'Attempted', count: 12, tone: 'neutral' },
+  { label: 'Counseling', count: 9, tone: 'review' },
+  { label: 'SL Final Counseling', count: 4, tone: 'review' },
+  { label: 'Warm', count: 8, tone: 'pending' },
+  { label: 'Long Term Nurture', count: 5, tone: 'neutral' },
+  { label: 'Cold', count: 6, tone: 'neutral' },
+  { label: 'Registered', count: 152, tone: 'success' },
+  { label: 'Rejected', count: 11, tone: 'danger' },
+  { label: 'Potential', count: 7, tone: 'progress' },
+  { label: 'Financials Outstanding', count: 3, tone: 'pending' },
+  { label: 'Non Responsive', count: 14, tone: 'neutral' },
+  { label: 'Testing', count: 2, tone: 'neutral' },
+  { label: 'Total Leads', count: 176, tone: 'total' },
 ]

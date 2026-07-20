@@ -240,7 +240,7 @@ export function CheckInTimer() {
                   >
                     <b.icon className="h-4 w-4 shrink-0 text-brand-600" />
                     <span className="font-semibold">{b.label}</span>
-                    <span className="text-slate-400">({b.hint})</span>
+                    <span className="text-slate-500">({b.hint})</span>
                   </button>
                 ))}
                 <div className="my-1 border-t border-slate-100" />

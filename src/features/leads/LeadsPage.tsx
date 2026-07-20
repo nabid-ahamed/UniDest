@@ -345,7 +345,7 @@ export default function LeadsPage() {
             <h2 className="text-lg font-bold text-slate-800">Filter Leads</h2>
             <button
               onClick={() => setFilterOpen(false)}
-              className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+              className="rounded-lg p-1 text-slate-500 hover:bg-slate-100 hover:text-slate-600"
               aria-label="Close"
             >
               <X className="h-5 w-5" />
@@ -609,7 +609,7 @@ export default function LeadsPage() {
                   ))}
                   {pageRows.length === 0 && (
                     <tr>
-                      <td colSpan={8} className="px-3 py-10 text-center text-sm text-slate-400">
+                      <td colSpan={8} className="px-3 py-10 text-center text-sm text-slate-500">
                         No leads found.
                       </td>
                     </tr>
@@ -625,7 +625,7 @@ export default function LeadsPage() {
           <p className="text-sm text-slate-500">
             Showing {from} to {to} of {filtered.length} entries
             {filtered.length < leads.length && (
-              <span className="text-slate-400">
+              <span className="text-slate-500">
                 {' '}
                 (filtered from {leads.length} total entries)
               </span>
@@ -682,7 +682,7 @@ export default function LeadsPage() {
         )}
       </div>
 
-      <p className="text-xs text-slate-400">
+      <p className="text-xs text-slate-500">
         <span className="font-semibold text-slate-500">Notes:</span> By default "All open leads" are
         shown. It shows all leads except "Converted" / "Disqualified". To view those, select the
         status in the filter and click "Filter".
@@ -738,7 +738,7 @@ function SingleSelect({
         onClick={() => setOpen((v) => !v)}
         className="flex min-h-[38px] w-full items-center justify-between gap-2 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-left text-sm focus:border-brand-500"
       >
-        <span className={value ? 'text-slate-700' : 'text-slate-400'}>{value || placeholder}</span>
+        <span className={value ? 'text-slate-700' : 'text-slate-500'}>{value || placeholder}</span>
         <ChevronDown className={cn('h-4 w-4 shrink-0 text-slate-400 transition-transform', open && 'rotate-180')} />
       </button>
       {open && (
