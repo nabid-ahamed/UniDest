@@ -369,13 +369,19 @@ export default function LeadsPage() {
               </span>
             )}
           </button>
-          <button
-            onClick={handleRefresh}
-            aria-label="Refresh"
-            className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition-colors hover:bg-slate-50"
-          >
-            <RefreshCw className={cn('h-4 w-4', refreshing && 'animate-spin')} />
-          </button>
+          <div className="group relative">
+            <button
+              onClick={handleRefresh}
+              aria-label="Refresh List"
+              className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition-colors hover:bg-slate-50"
+            >
+              <RefreshCw className={cn('h-4 w-4', refreshing && 'animate-spin')} />
+            </button>
+            {/* Tooltip sits below — these buttons are near the top of the page. */}
+            <span className="pointer-events-none absolute left-1/2 top-full z-20 mt-1.5 -translate-x-1/2 whitespace-nowrap rounded bg-slate-700 px-2 py-1 text-xs font-medium text-white opacity-0 shadow-sm transition-opacity group-hover:opacity-100">
+              Refresh List
+            </span>
+          </div>
           <button
             onClick={() => showToast('Import — coming soon')}
             aria-label="Import"
