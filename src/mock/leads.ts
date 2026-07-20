@@ -19,14 +19,16 @@ export interface Lead {
   countryInterested: string // destination country the lead wants to study in
 }
 
+// Badge colours are the darker 700/800 shades so white text clears WCAG AA
+// (all verified >= 4.5:1). LeadRow still runs pickTextColor() as a safety net.
 export const leadStatuses = [
-  { label: 'New Lead', color: '#06b6d4' },
-  { label: 'Contacted', color: '#2563eb' },
-  { label: 'Counseling', color: '#8b5cf6' },
-  { label: 'Warm', color: '#f97316' },
-  { label: 'Cold', color: '#eab308' },
-  { label: 'Registered', color: '#16a34a' },
-  { label: 'Rejected', color: '#ef4444' },
+  { label: 'New Lead', color: '#0e7490' },
+  { label: 'Contacted', color: '#1d4ed8' },
+  { label: 'Counseling', color: '#6d28d9' },
+  { label: 'Warm', color: '#c2410c' },
+  { label: 'Cold', color: '#a16207' },
+  { label: 'Registered', color: '#15803d' },
+  { label: 'Rejected', color: '#b91c1c' },
 ]
 
 export const leadStaff = ['Sarah Ali', 'Mohammed Saleh', 'Moses Otieno', 'Admin Two Test']

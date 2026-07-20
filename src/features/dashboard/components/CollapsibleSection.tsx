@@ -18,7 +18,7 @@ export function CollapsibleSection({ title, children, defaultOpen = true }: Coll
         onClick={() => setOpen((v) => !v)}
         className="flex w-full items-center justify-between rounded-lg bg-brand-50 px-4 py-3"
       >
-        <span className="text-xs font-bold uppercase tracking-wider text-slate-600">{title}</span>
+        <span className="text-sm font-bold uppercase tracking-wider text-slate-700">{title}</span>
         <ChevronUp
           className={cn('h-4 w-4 text-slate-500 transition-transform duration-300', !open && 'rotate-180')}
         />

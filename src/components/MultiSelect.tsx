@@ -64,7 +64,7 @@ export function MultiSelect({
                 e.stopPropagation()
                 onChange(selected.filter((s) => s !== val))
               }}
-              className="text-slate-400 hover:text-rose-500"
+              className="text-slate-500 hover:text-rose-600"
               aria-label={`Remove ${val}`}
             >
               <X className="h-3 w-3" />
@@ -86,7 +86,7 @@ export function MultiSelect({
             }
           }}
           placeholder={selected.length === 0 ? placeholder : ''}
-          className="min-w-[60px] flex-1 border-0 bg-transparent p-0 text-sm text-slate-700 outline-none placeholder:text-slate-400"
+          className="min-w-[60px] flex-1 border-0 bg-transparent p-0 text-sm text-slate-700 outline-none placeholder:text-slate-500"
         />
       </div>
       {open && (
@@ -103,7 +103,7 @@ export function MultiSelect({
               </button>
             ))
           ) : (
-            <p className="px-3 py-2 text-sm text-slate-400">No matches</p>
+            <p className="px-3 py-2 text-sm text-slate-500">No matches</p>
           )}
         </div>
       )}

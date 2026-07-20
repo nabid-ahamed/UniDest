@@ -39,7 +39,7 @@ export function FollowUpCard({ title, buckets }: { title: string; buckets: Follo
       </div>
 
       {items.length === 0 ? (
-        <p className="py-10 text-center text-sm text-slate-400">No follow-ups for today!</p>
+        <p className="py-10 text-center text-sm text-slate-500">No follow-ups for today!</p>
       ) : (
         <ul className="mt-2 divide-y divide-slate-100">
           {items.map((f) => (
@@ -48,7 +48,7 @@ export function FollowUpCard({ title, buckets }: { title: string; buckets: Follo
                 <p className="text-sm font-semibold text-slate-800">{f.name}</p>
                 <p className="text-xs text-slate-500">{f.detail}</p>
               </div>
-              <span className="shrink-0 text-xs text-slate-400">{f.when}</span>
+              <span className="shrink-0 text-xs text-slate-500">{f.when}</span>
             </li>
           ))}
         </ul>

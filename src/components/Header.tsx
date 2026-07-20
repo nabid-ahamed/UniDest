@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import { GraduationCap, Menu, Bell, BookOpenCheck } from 'lucide-react'
 import { useUI } from '../store/ui'
 import { CheckInTimer } from './CheckInTimer'
@@ -5,6 +6,26 @@ import { AdminMenu } from './AdminMenu'
 
 export function Header() {
   const toggleSidebar = useUI((s) => s.toggleSidebar)
+  const hamburgerRef = useRef<HTMLButtonElement>(null)
+
+  // Publish the hamburger *icon's* right edge as --sidebar-w so the open sidebar
+  // ends flush with the visible glyph. We measure the <svg>, not the button —
+  // the button's p-2 padding would push the edge ~8px past the icon. Measured
+  // rather than hard-coded because the logo width (and so the hamburger's
+  // position) shifts with font loading and zoom.
+  useEffect(() => {
+    const apply = () => {
+      const icon = hamburgerRef.current?.querySelector('svg') ?? hamburgerRef.current
+      const rect = icon?.getBoundingClientRect()
+      if (rect) {
+        document.documentElement.style.setProperty('--sidebar-w', `${Math.round(rect.right)}px`)
+      }
+    }
+    apply()
+    window.addEventListener('resize', apply)
+    document.fonts?.ready.then(apply).catch(() => {})
+    return () => window.removeEventListener('resize', apply)
+  }, [])
 
   return (
     <header className="sticky top-0 z-40 border-b border-slate-200 bg-white">
@@ -21,6 +42,7 @@ export function Header() {
 
         {/* Hamburger — opens the full sidebar */}
         <button
+          ref={hamburgerRef}
           type="button"
           onClick={toggleSidebar}
           className="rounded-lg p-2 text-slate-500 hover:bg-slate-100"

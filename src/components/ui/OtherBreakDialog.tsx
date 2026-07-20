@@ -50,7 +50,7 @@ export function OtherBreakDialog({ open, onConfirm, onCancel }: OtherBreakDialog
           <button
             type="button"
             onClick={onCancel}
-            className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+            className="rounded-lg p-1 text-slate-500 hover:bg-slate-100 hover:text-slate-600"
             aria-label="Close"
           >
             <X className="h-5 w-5" />
@@ -87,7 +87,7 @@ export function OtherBreakDialog({ open, onConfirm, onCancel }: OtherBreakDialog
               onChange={(e) => setNotes(e.target.value)}
               rows={4}
               placeholder="Add a note (optional)"
-              className="w-full resize-y rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500"
+              className="w-full resize-y rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-500 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500"
             />
           </div>
         </div>
