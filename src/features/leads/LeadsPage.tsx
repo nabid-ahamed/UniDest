@@ -524,8 +524,8 @@ export default function LeadsPage() {
             entries
           </label>
 
-          <div className="flex justify-center">
-            <div className="relative">
+          <div className="flex justify-center md:flex-[2] md:px-2">
+            <div className="relative w-full max-w-xl">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <input
                 value={search}
@@ -534,7 +534,7 @@ export default function LeadsPage() {
                   resetToFirst()
                 }}
                 placeholder="ID, Name, Mobile, Email, Lead Source/Details..."
-                className="input w-72 max-w-full pl-9"
+                className="input w-full pl-9"
               />
             </div>
           </div>
