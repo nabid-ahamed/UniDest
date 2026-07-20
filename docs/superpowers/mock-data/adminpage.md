@@ -145,6 +145,7 @@ Rows for the leads data table.
 | created | string | created date |
 | nextFollowup | string \| null | next follow-up date |
 | countryInterested | string | destination country (drives the "Country Interested In" filter) |
+| tags | string[] \| undefined | removable chips on the row, max 5 (seeded on 3 leads) |
 
 - Records: **15** (one filtered page; `totalLeadCount = 190` shown as the full count).
 - **Maps to (future):** `leads` table joined to `lead_statuses` (status+color),
@@ -164,7 +165,19 @@ Filter dropdowns.
 
 Working now (frontend): search, **multi-select** Lead Status filter (chips with ×
 removal), staff/branch filters, page size, pagination, row selection +
-select-all. Export / row actions are UI-only placeholders.
+select-all, sticky table header, loading preloader.
+
+### Row dialogs
+- **Add Tags** (`components/AddTagDialog.tsx`) — combobox over `recentTags`
+  (last 10 used, MRU-reordered); suggestions open on click or typing, and a
+  `Create "…"` row adds a brand-new tag. Applied tags render as removable chips
+  on the row, capped at **5 per lead**; exceeding it shows an `AlertDialog`
+  warning instead of opening the dialog.
+- **Lead - Assign Staff** (`components/AssignStaffDialog.tsx`) — select from
+  `leadStaff`, pre-selects the current owner so it doubles as re-assignment.
+  Assignees live in page state, so the staff filter and exports follow changes.
+
+Export / status-edit / view / settings actions are still UI-only placeholders.
 
 ### Add New Lead form (`/leads/new`)
 - **Component:** `src/features/leads/AddLeadPage.tsx` (reached via the "New Lead"
