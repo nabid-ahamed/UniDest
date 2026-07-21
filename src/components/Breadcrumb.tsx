@@ -5,7 +5,7 @@ type Crumb = { label: string; to?: string }
 const TITLES: Record<string, string> = {
   '/dashboard': 'Dashboard',
   '/leads': 'Lead Management',
-  '/students': 'Students',
+  '/students': 'Student Management',
   '/applications': 'Applications',
 }
 

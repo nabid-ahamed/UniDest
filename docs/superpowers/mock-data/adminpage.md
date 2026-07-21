@@ -23,7 +23,8 @@ never inline in components. Types are exported alongside the data.
 |------|-----------|--------|
 | [Dashboard](#dashboard) | `src/mock/dashboard.ts` | ✅ done |
 | [Leads](#leads) | `src/mock/leads.ts` | ✅ done |
-| Students | `src/mock/students.ts` | ⬜ not started |
+| [Students](#students) | `src/mock/students.ts` | ✅ done |
+| [Applications](#applications) | `src/mock/applications.ts` | ✅ done |
 | Staff | `src/mock/staff.ts` | ⬜ not started |
 
 ---
@@ -194,6 +195,114 @@ Export / status-edit / view / settings actions are still UI-only placeholders.
 - Frontend-only: submit shows a success toast then redirects to `/leads` (no
   persistence yet). **Maps to (future):** `POST /leads` creating a `leads` row +
   related `student_preferences` / `student_test_scores`.
+
+---
+
+## Students
+
+- **Mock file:** `src/mock/students.ts`
+- **Used by:** `src/features/students/StudentsPage.tsx` (+ `components/StudentRow.tsx`)
+
+### `students: Student[]`
+Rows for the students data table.
+
+| Field | Type | Notes |
+|-------|------|-------|
+| id | number | shown in ID column |
+| studentNo | string | display reference, e.g. `STU-2026-1902` |
+| name | string | student name (bold) |
+| email / emailDate | string | contact email + short date |
+| phone / phoneNote | string | mobile + relation/label |
+| branch | string | branch badge |
+| status / statusColor | string | status badge label + hex |
+| assignedTo | string \| null | null → "Unassigned" |
+| created | string | created date |
+| countryOfResidence | string | drives the "Country Of Residence" filter |
+| countryInterested | string | study destination (multi-select filter) |
+| studyLevel / course / intake | string | shown in the "Study Interest" column |
+| university | string \| null | null → no university row yet |
+| applications | number | count badge in the "Apps" column |
+| source | string | how the student arrived |
+
+- Records: **15** (one filtered page; `totalStudentCount = 1876` is the full count).
+- **Maps to (future):** `students` joined to a student status lookup, `users`
+  (assignedTo), `branches`, `student_preferences` (country/level/course/intake),
+  and a `COUNT(*)` over `applications`.
+
+### Filter option lists
+`studentStatuses` (8, label+color) · `residenceCountries` (5) ·
+`universities` (6) · `studentSources` (6) · `studentBulkActions` (5).
+Re-exported from `leads.ts` so both pages share one lookup: `allCountries`,
+`studentBranches`, `studentStaff`, `intakes`, `studyLevels`.
+
+Unlike Leads, the filters sit **inline** on the page (matching the reference):
+Student Status / Assigned To Staff / Country Of Residence / Branch are always
+visible, and a **More** toggle reveals Country Interested In / Study Level /
+Intake / University / Source / Created Date. Active filters render as removable
+chips with a "Clear all" action, and the More button carries a count badge.
+
+Working now (frontend): search, all filters above, page size, pagination, row
+selection + select-all, sticky header, loading preloader, export cluster,
+**Student - Assign Staff** dialog (reuses `leads/components/AssignStaffDialog`,
+which now takes any `{ id, name }` record plus optional title/label).
+Status-edit / view / settings / applications actions are UI-only placeholders.
+
+### Shared table components
+Extracted while building this page so both data tables stay in sync:
+- `src/components/ExportButtons.tsx` — Copy/Excel/CSV/PDF/Print cluster; the
+  caller passes header + rows and gets a toast message back.
+- `src/components/DataTableUI.tsx` — `DotsLoader`, `Field`, `PageBtn`,
+  `SingleSelect`.
+
+---
+
+## Applications
+
+- **Mock file:** `src/mock/applications.ts`
+- **Used by:** `src/features/applications/ApplicationsPage.tsx`
+  (+ `components/ApplicationRow.tsx`)
+
+### `applications: Application[]`
+Rows for the "University Applications" data table.
+
+| Field | Type | Notes |
+|-------|------|-------|
+| id | number | 6-digit application id |
+| dateCreated | string | e.g. `27-04-2026` |
+| student / studentNo | string | applicant name + `STU-…` reference |
+| country | string | study destination (Study Country filter) |
+| university / course / intake | string | Details column; intake uses the shared "May 2026" format so the Intake filter matches |
+| agent | string \| null | counsellor shown with the 👤 icon (null = none) |
+| appliedThrough | string | channel, bold in Details (`applicationChannels`) |
+| status / statusColor | string | badge label + hex |
+| assignedTo | string \| null | null → "Unassigned" |
+| branch | string | drives the Branch filter |
+
+- Records: **14** (one filtered page; `totalApplicationCount = 193`).
+- **Maps to (future):** `applications` joined to `application_statuses`,
+  `students`, `universities`, `courses`, `intakes`, `users` (assignedTo),
+  `branches`; `applied_through` inline.
+
+### Filter option lists
+`applicationStatuses` (6, label+color: Pending / Funds Under Assessment /
+Admission Criteria Met / Payment Received / Offer Letter Received / Withdrawn) ·
+`applicationChannels` (4: DIRECT, Applyboard, Adventus, INTO Global) ·
+`applicationBulkActions` (4). Re-exported shared lookups: `allCountries`,
+`applicationBranches`, `applicationStaff`, `intakes`.
+
+Layout follows the reference: title card with a **filter toggle icon** (count
+badge when filters are active); the panel (open by default, animated) holds
+Study Country (multi) / Intake / Applications Status (multi) / Created Date /
+Assigned To / Branch / Applied Through Agent with centred **Filter** (collapses
+the panel — filtering is live) and **Clear** buttons, plus removable chips.
+Table columns: ID · Date Created · Student · Country · Details (University,
+Course, Intake, agent 👤, Applied Through) · Status · Assigned To · Actions
+(assign icon + labelled **View** button).
+
+Working now (frontend): search, all filters above, page size, pagination,
+selection, sticky header, preloader, export cluster, **Application - Assign
+Staff** dialog (shared `AssignStaffDialog`). View / status-edit / Created Date
+are UI-only placeholders.
 
 ---
 

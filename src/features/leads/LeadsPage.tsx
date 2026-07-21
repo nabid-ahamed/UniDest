@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import {
   Plus,
@@ -6,18 +6,14 @@ import {
   UploadCloud,
   Filter,
   Search,
-  Printer,
-  Copy,
-  Table,
-  ChevronDown,
   ChevronLeft,
   ChevronRight,
   X,
 } from 'lucide-react'
-import { jsPDF } from 'jspdf'
-import autoTable from 'jspdf-autotable'
 import { cn } from '../../lib/cn'
 import { MultiSelect } from '../../components/MultiSelect'
+import { ExportButtons } from '../../components/ExportButtons'
+import { DotsLoader, Field, PageBtn, SingleSelect } from '../../components/DataTableUI'
 import type { Lead } from '../../mock/leads'
 import {
   leads,
@@ -47,72 +43,6 @@ const PAGE_SIZES = [
   { value: 25, label: '25' },
   { value: 50, label: '50' },
   { value: 1000, label: '100+' },
-]
-
-/** Excel logo-style mark (lucide has no brand icon). */
-function ExcelIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.7"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-    >
-      <rect x="3.5" y="4" width="17" height="16" rx="2" />
-      <path d="M14 4v16" />
-      <path d="M6 8.5l5 7M11 8.5l-5 7" />
-    </svg>
-  )
-}
-
-/** PDF document mark with "PDF" label (lucide has no brand icon). */
-function PdfIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" className={className}>
-      <path
-        d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinejoin="round"
-      />
-      <path d="M14 3v5h5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
-      <text
-        x="12"
-        y="17.5"
-        textAnchor="middle"
-        fontSize="5.5"
-        fontWeight="700"
-        fill="currentColor"
-        stroke="none"
-      >
-        PDF
-      </text>
-    </svg>
-  )
-}
-
-function downloadFile(filename: string, content: string, type: string) {
-  const blob = new Blob([content], { type })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = filename
-  document.body.appendChild(a)
-  a.click()
-  a.remove()
-  URL.revokeObjectURL(url)
-}
-
-const EXPORTS = [
-  { label: 'Copy', icon: Copy, btn: 'hover:border-slate-600 hover:bg-slate-600', tip: 'bg-slate-700' },
-  { label: 'Excel', icon: ExcelIcon, btn: 'hover:border-emerald-600 hover:bg-emerald-600', tip: 'bg-emerald-600' },
-  { label: 'CSV', icon: Table, btn: 'hover:border-sky-600 hover:bg-sky-600', tip: 'bg-sky-600' },
-  { label: 'PDF', icon: PdfIcon, btn: 'hover:border-rose-600 hover:bg-rose-600', tip: 'bg-rose-600' },
-  { label: 'Print', icon: Printer, btn: 'hover:border-indigo-600 hover:bg-indigo-600', tip: 'bg-indigo-600' },
 ]
 
 export default function LeadsPage() {
@@ -177,73 +107,6 @@ export default function LeadsPage() {
       setLoading(false)
     }, 700)
     showToast('List refreshed')
-  }
-
-  const handleExport = (label: string) => {
-    const header = ['ID', 'Name', 'Email', 'Phone', 'Status', 'Assigned To', 'Branch', 'Created']
-    const rows = filtered.map((l) => [
-      l.id,
-      l.name,
-      l.email,
-      l.phone,
-      l.status,
-      assignees[l.id] ?? 'Unassigned',
-      l.branch,
-      l.created,
-    ])
-    if (label === 'Print') {
-      const style =
-        'body{font-family:Arial,sans-serif;padding:24px;color:#0f172a}h2{margin:0 0 12px}table{width:100%;border-collapse:collapse;font-size:12px}th,td{border:1px solid #cbd5e1;padding:6px 8px;text-align:left}th{background:#1f47f5;color:#fff}'
-      const table = `<h2>Leads</h2><table><thead><tr>${header
-        .map((h) => `<th>${h}</th>`)
-        .join('')}</tr></thead><tbody>${rows
-        .map((r) => `<tr>${r.map((c) => `<td>${c}</td>`).join('')}</tr>`)
-        .join('')}</tbody></table>`
-      const w = window.open('', '_blank', 'width=920,height=680')
-      if (!w) {
-        showToast('Allow pop-ups to print')
-        return
-      }
-      w.document.write(
-        `<!doctype html><html><head><title>Leads</title><style>${style}</style></head><body>${table}</body></html>`,
-      )
-      w.document.close()
-      w.focus()
-      w.print()
-      return
-    }
-    if (label === 'Copy') {
-      const text = [header, ...rows].map((r) => r.join('\t')).join('\n')
-      navigator.clipboard?.writeText(text)
-      showToast(`Copied ${filtered.length} rows`)
-    } else if (label === 'CSV') {
-      const cell = (v: string | number) => {
-        const s = String(v)
-        return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
-      }
-      const csv = [header, ...rows].map((r) => r.map(cell).join(',')).join('\n')
-      downloadFile('leads.csv', csv, 'text/csv;charset=utf-8')
-      showToast('CSV downloaded')
-    } else if (label === 'Excel') {
-      const html = `<table border="1">${[header, ...rows]
-        .map((r) => `<tr>${r.map((c) => `<td>${c}</td>`).join('')}</tr>`)
-        .join('')}</table>`
-      downloadFile('leads.xls', html, 'application/vnd.ms-excel')
-      showToast('Excel downloaded')
-    } else if (label === 'PDF') {
-      const doc = new jsPDF()
-      doc.setFontSize(14)
-      doc.text('Leads', 14, 15)
-      autoTable(doc, {
-        head: [header],
-        body: rows.map((r) => r.map(String)),
-        startY: 20,
-        styles: { fontSize: 8 },
-        headStyles: { fillColor: [31, 71, 245] },
-      })
-      doc.save('leads.pdf')
-      showToast('PDF downloaded')
-    }
   }
 
   const applyBulk = () => {
@@ -346,6 +209,18 @@ export default function LeadsPage() {
     (staff ? 1 : 0) +
     (country ? 1 : 0) +
     (branch !== 'All Branch' ? 1 : 0)
+
+  const exportHeader = ['ID', 'Name', 'Email', 'Phone', 'Status', 'Assigned To', 'Branch', 'Created']
+  const exportRows = filtered.map((l) => [
+    l.id,
+    l.name,
+    l.email,
+    l.phone,
+    l.status,
+    assignees[l.id] ?? 'Unassigned',
+    l.branch,
+    l.created,
+  ])
 
   return (
     <div className="space-y-4">
@@ -606,30 +481,13 @@ export default function LeadsPage() {
           </div>
 
           <div className="flex items-center gap-3 md:flex-1 md:justify-end">
-            <div className="hidden items-center gap-1.5 sm:flex">
-              {EXPORTS.map((ex) => (
-                <div key={ex.label} className="group relative">
-                  <button
-                    onClick={() => handleExport(ex.label)}
-                    aria-label={ex.label}
-                    className={cn(
-                      'flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 text-slate-500 transition-colors hover:text-white',
-                      ex.btn,
-                    )}
-                  >
-                    <ex.icon className="h-4 w-4" />
-                  </button>
-                  <span
-                    className={cn(
-                      'pointer-events-none absolute -top-8 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded px-2 py-1 text-xs font-medium text-white opacity-0 shadow-sm transition-opacity group-hover:opacity-100',
-                      ex.tip,
-                    )}
-                  >
-                    {ex.label}
-                  </span>
-                </div>
-              ))}
-            </div>
+            <ExportButtons
+              title="Leads"
+              filename="leads"
+              header={exportHeader}
+              rows={exportRows}
+              onDone={showToast}
+            />
           </div>
         </div>
 
@@ -806,101 +664,5 @@ export default function LeadsPage() {
         </div>
       )}
     </div>
-  )
-}
-
-function DotsLoader() {
-  return (
-    <div className="flex items-center justify-center gap-2" role="status" aria-label="Loading">
-      <span className="h-3.5 w-3.5 animate-bounce rounded-full bg-brand-600 [animation-delay:-0.3s]" />
-      <span className="h-3.5 w-3.5 animate-bounce rounded-full bg-brand-600 [animation-delay:-0.15s]" />
-      <span className="h-3.5 w-3.5 animate-bounce rounded-full bg-brand-600" />
-    </div>
-  )
-}
-
-function SingleSelect({
-  options,
-  value,
-  onChange,
-  placeholder = '- Select -',
-}: {
-  options: string[]
-  value: string
-  onChange: (val: string) => void
-  placeholder?: string
-}) {
-  const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    if (!open) return
-    const onClick = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
-    }
-    document.addEventListener('mousedown', onClick)
-    return () => document.removeEventListener('mousedown', onClick)
-  }, [open])
-
-  return (
-    <div ref={ref} className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="flex min-h-[38px] w-full items-center justify-between gap-2 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-left text-sm focus:border-brand-500"
-      >
-        <span className={value ? 'text-slate-700' : 'text-slate-500'}>{value || placeholder}</span>
-        <ChevronDown className={cn('h-4 w-4 shrink-0 text-slate-400 transition-transform', open && 'rotate-180')} />
-      </button>
-      {open && (
-        <div className="absolute z-20 mt-1 max-h-48 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
-          {options.map((o) => (
-            <button
-              key={o}
-              type="button"
-              onClick={() => {
-                onChange(o)
-                setOpen(false)
-              }}
-              className={cn(
-                'block w-full px-3 py-1.5 text-left text-sm hover:bg-brand-50 hover:text-brand-600',
-                o === value ? 'font-semibold text-brand-600' : 'text-slate-700',
-              )}
-            >
-              {o}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <label className="mb-1 block text-xs font-medium text-slate-600">{label}</label>
-      {children}
-    </div>
-  )
-}
-
-function PageBtn({
-  children,
-  onClick,
-  disabled,
-}: {
-  children: React.ReactNode
-  onClick: () => void
-  disabled: boolean
-}) {
-  return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      className="flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
-    >
-      {children}
-    </button>
   )
 }
