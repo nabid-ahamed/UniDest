@@ -53,7 +53,9 @@ export function StudentRow({
         </button>
         <p className="text-xs tabular-nums text-slate-500">{student.studentNo}</p>
 
-        <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-slate-500">
+        {/* overflow-wrap:anywhere lets long emails break when the sidebar
+            squeezes the table, instead of forcing the row past the card. */}
+        <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-slate-500 [overflow-wrap:anywhere]">
           <span className="inline-flex items-center gap-1">
             <Mail className="h-3.5 w-3.5 text-slate-400" />
             {student.email}

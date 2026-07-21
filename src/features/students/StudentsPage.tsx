@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
 import {
   Plus,
   RefreshCw,
@@ -7,7 +8,6 @@ import {
   Search,
   ChevronLeft,
   ChevronRight,
-  ChevronDown,
   X,
 } from 'lucide-react'
 import { cn } from '../../lib/cn'
@@ -49,7 +49,7 @@ export default function StudentsPage() {
   const [intake, setIntake] = useState('')
   const [university, setUniversity] = useState('')
   const [source, setSource] = useState('')
-  const [moreOpen, setMoreOpen] = useState(false)
+  const [filterOpen, setFilterOpen] = useState(false)
 
   const [pageSize, setPageSize] = useState(10)
   const [page, setPage] = useState(1)
@@ -222,6 +222,22 @@ export default function StudentsPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold text-slate-900">Students</h1>
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => setFilterOpen(true)}
+            className={cn(
+              'inline-flex items-center gap-1.5 rounded-lg border px-3.5 py-2 text-sm font-semibold transition-colors',
+              activeFilterCount > 0
+                ? 'border-brand-600 bg-brand-600 text-white hover:bg-brand-700'
+                : 'border-brand-300 bg-white text-brand-600 hover:bg-brand-50',
+            )}
+          >
+            <Filter className="h-4 w-4" /> Filter
+            {activeFilterCount > 0 && (
+              <span className="ml-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-white px-1.5 text-xs font-bold text-brand-600">
+                {activeFilterCount}
+              </span>
+            )}
+          </button>
           <div className="group relative">
             <button
               onClick={handleRefresh}
@@ -251,208 +267,178 @@ export default function StudentsPage() {
         </div>
       </div>
 
-      {/* Filter bar — inline on this page: the reference keeps the basic filters
-          always visible and hides the rest behind "More". */}
-      <div className="rounded-xl border border-brand-100 bg-brand-50/70 p-4">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <Field label="Student Status">
-            <MultiSelect
-              options={studentStatuses.map((s) => s.label)}
-              selected={statuses}
-              onChange={(next) => {
-                setStatuses(next)
-                resetToFirst()
-              }}
-              placeholder="- Select -"
+      {/* Filter modal */}
+      {filterOpen &&
+        createPortal(
+          <div className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto p-4">
+            <div
+              className="animate-fade-in absolute inset-0 bg-slate-500/60"
+              onClick={() => setFilterOpen(false)}
             />
-          </Field>
-          <Field label="Assigned To Staff">
-            <select
-              value={staff}
-              onChange={(e) => {
-                setStaff(e.target.value)
-                resetToFirst()
-              }}
-              className="input"
-            >
-              <option value="">- Select -</option>
-              {studentStaff.map((s) => (
-                <option key={s}>{s}</option>
-              ))}
-            </select>
-          </Field>
-          <Field label="Country Of Residence">
-            <select
-              value={residence}
-              onChange={(e) => {
-                setResidence(e.target.value)
-                resetToFirst()
-              }}
-              className="input"
-            >
-              <option value="">- Select -</option>
-              {residenceCountries.map((c) => (
-                <option key={c}>{c}</option>
-              ))}
-            </select>
-          </Field>
-          <div className="flex items-end gap-2">
-            <div className="min-w-0 flex-1">
-              <Field label="Branch">
-                <select
-                  value={branch}
-                  onChange={(e) => {
-                    setBranch(e.target.value)
-                    resetToFirst()
-                  }}
-                  className="input"
+            <div className="animate-dialog-in relative my-8 w-full max-w-5xl rounded-xl bg-white shadow-xl">
+              <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
+                <h2 className="text-lg font-bold text-slate-800">Filter Students</h2>
+                <button
+                  onClick={() => setFilterOpen(false)}
+                  className="rounded-lg p-1 text-slate-500 hover:bg-slate-100 hover:text-slate-600"
+                  aria-label="Close"
                 >
-                  {studentBranches.map((b) => (
-                    <option key={b}>{b}</option>
-                  ))}
-                </select>
-              </Field>
-            </div>
-            <button
-              onClick={() => setMoreOpen((v) => !v)}
-              aria-expanded={moreOpen}
-              className={cn(
-                'inline-flex h-[38px] shrink-0 items-center gap-1.5 rounded-lg border px-3 text-sm font-semibold transition-colors',
-                activeFilterCount > 0
-                  ? 'border-brand-600 bg-brand-600 text-white hover:bg-brand-700'
-                  : 'border-brand-300 bg-white text-brand-600 hover:bg-brand-100',
-              )}
-            >
-              <Filter className="h-4 w-4" />
-              More
-              {activeFilterCount > 0 && (
-                <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-white px-1.5 text-xs font-bold text-brand-600">
-                  {activeFilterCount}
-                </span>
-              )}
-              <ChevronDown className={cn('h-4 w-4 transition-transform', moreOpen && 'rotate-180')} />
-            </button>
-          </div>
-        </div>
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
 
-        {/* Advanced filters — the grid-rows 0fr→1fr trick animates height smoothly. */}
-        <div
-          className={cn(
-            'grid transition-all duration-300 ease-in-out',
-            moreOpen ? 'mt-4 grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0',
-          )}
-        >
-          <div className="overflow-hidden">
-            <div className="grid grid-cols-1 gap-3 border-t border-brand-100 pt-4 sm:grid-cols-2 lg:grid-cols-4">
-              <Field label="Country Interested In">
-                <MultiSelect
-                  options={allCountries}
-                  selected={countriesInterested}
-                  onChange={(next) => {
-                    setCountriesInterested(next)
-                    resetToFirst()
-                  }}
-                  placeholder="- Select -"
-                />
-              </Field>
-              <Field label="Study Level">
-                <select
-                  value={studyLevel}
-                  onChange={(e) => {
-                    setStudyLevel(e.target.value)
-                    resetToFirst()
-                  }}
-                  className="input"
-                >
-                  <option value="">Select Study Level</option>
-                  {studyLevels.map((x) => (
-                    <option key={x}>{x}</option>
-                  ))}
-                </select>
-              </Field>
-              <Field label="Intake">
-                <SingleSelect
-                  options={intakes}
-                  value={intake}
-                  onChange={(v) => {
-                    setIntake(v)
-                    resetToFirst()
-                  }}
-                  placeholder="Intake"
-                />
-              </Field>
-              <Field label="University">
-                <select
-                  value={university}
-                  onChange={(e) => {
-                    setUniversity(e.target.value)
-                    resetToFirst()
-                  }}
-                  className="input"
-                >
-                  <option value="">- Select -</option>
-                  {universities.map((x) => (
-                    <option key={x}>{x}</option>
-                  ))}
-                </select>
-              </Field>
-              <Field label="Source">
-                <select
-                  value={source}
-                  onChange={(e) => {
-                    setSource(e.target.value)
-                    resetToFirst()
-                  }}
-                  className="input"
-                >
-                  <option value="">- Select -</option>
-                  {studentSources.map((x) => (
-                    <option key={x}>{x}</option>
-                  ))}
-                </select>
-              </Field>
-              <Field label="Created Date">
-                <input type="date" className="input" />
-              </Field>
-            </div>
-          </div>
-        </div>
+              <div className="max-h-[70vh] space-y-4 overflow-y-auto px-6 py-5">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  <Field label="Student Status">
+                    <MultiSelect
+                      options={studentStatuses.map((s) => s.label)}
+                      selected={statuses}
+                      onChange={(next) => {
+                        setStatuses(next)
+                        resetToFirst()
+                      }}
+                      placeholder="- Select -"
+                    />
+                  </Field>
+                  <Field label="Assigned To Staff">
+                    <select
+                      value={staff}
+                      onChange={(e) => {
+                        setStaff(e.target.value)
+                        resetToFirst()
+                      }}
+                      className="input"
+                    >
+                      <option value="">- Select -</option>
+                      {studentStaff.map((s) => (
+                        <option key={s}>{s}</option>
+                      ))}
+                    </select>
+                  </Field>
+                  <Field label="Country Of Residence">
+                    <select
+                      value={residence}
+                      onChange={(e) => {
+                        setResidence(e.target.value)
+                        resetToFirst()
+                      }}
+                      className="input"
+                    >
+                      <option value="">- Select -</option>
+                      {residenceCountries.map((c) => (
+                        <option key={c}>{c}</option>
+                      ))}
+                    </select>
+                  </Field>
+                  <Field label="Branch">
+                    <select
+                      value={branch}
+                      onChange={(e) => {
+                        setBranch(e.target.value)
+                        resetToFirst()
+                      }}
+                      className="input"
+                    >
+                      {studentBranches.map((b) => (
+                        <option key={b}>{b}</option>
+                      ))}
+                    </select>
+                  </Field>
+                </div>
 
-        {/* Active filter chips — one click drops a single filter. */}
-        {activeFilterCount > 0 && (
-          <div className="mt-4 flex flex-wrap items-center gap-2">
-            {statuses.map((s) => (
-              <FilterChip
-                key={`st-${s}`}
-                label={s}
-                onRemove={() => setStatuses((p) => p.filter((x) => x !== s))}
-              />
-            ))}
-            {countriesInterested.map((c) => (
-              <FilterChip
-                key={`ci-${c}`}
-                label={c}
-                onRemove={() => setCountriesInterested((p) => p.filter((x) => x !== c))}
-              />
-            ))}
-            {staff && <FilterChip label={staff} onRemove={() => setStaff('')} />}
-            {residence && <FilterChip label={residence} onRemove={() => setResidence('')} />}
-            {branch !== 'All Branch' && (
-              <FilterChip label={branch} onRemove={() => setBranch('All Branch')} />
-            )}
-            {studyLevel && <FilterChip label={studyLevel} onRemove={() => setStudyLevel('')} />}
-            {intake && <FilterChip label={intake} onRemove={() => setIntake('')} />}
-            {university && <FilterChip label={university} onRemove={() => setUniversity('')} />}
-            {source && <FilterChip label={source} onRemove={() => setSource('')} />}
-            <button
-              onClick={clearFilters}
-              className="rounded-lg border border-brand-300 bg-white px-3 py-1 text-xs font-semibold text-brand-600 transition-colors hover:bg-brand-100"
-            >
-              Clear all
-            </button>
-          </div>
+                {/* Advanced filters */}
+                <div className="grid grid-cols-1 gap-3 border-t border-slate-200 pt-4 sm:grid-cols-2 lg:grid-cols-4">
+                  <Field label="Country Interested In">
+                    <MultiSelect
+                      options={allCountries}
+                      selected={countriesInterested}
+                      onChange={(next) => {
+                        setCountriesInterested(next)
+                        resetToFirst()
+                      }}
+                      placeholder="- Select -"
+                    />
+                  </Field>
+                  <Field label="Study Level">
+                    <select
+                      value={studyLevel}
+                      onChange={(e) => {
+                        setStudyLevel(e.target.value)
+                        resetToFirst()
+                      }}
+                      className="input"
+                    >
+                      <option value="">Select Study Level</option>
+                      {studyLevels.map((x) => (
+                        <option key={x}>{x}</option>
+                      ))}
+                    </select>
+                  </Field>
+                  <Field label="Intake">
+                    <SingleSelect
+                      options={intakes}
+                      value={intake}
+                      onChange={(v) => {
+                        setIntake(v)
+                        resetToFirst()
+                      }}
+                      placeholder="Intake"
+                    />
+                  </Field>
+                  <Field label="University">
+                    <select
+                      value={university}
+                      onChange={(e) => {
+                        setUniversity(e.target.value)
+                        resetToFirst()
+                      }}
+                      className="input"
+                    >
+                      <option value="">- Select -</option>
+                      {universities.map((x) => (
+                        <option key={x}>{x}</option>
+                      ))}
+                    </select>
+                  </Field>
+                  <Field label="Source">
+                    <select
+                      value={source}
+                      onChange={(e) => {
+                        setSource(e.target.value)
+                        resetToFirst()
+                      }}
+                      className="input"
+                    >
+                      <option value="">- Select -</option>
+                      {studentSources.map((x) => (
+                        <option key={x}>{x}</option>
+                      ))}
+                    </select>
+                  </Field>
+                  <Field label="Created Date">
+                    <input type="date" className="input" />
+                  </Field>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 border-t border-slate-200 px-6 py-4">
+                <button
+                  onClick={clearFilters}
+                  className="rounded-lg border border-brand-300 bg-white px-6 py-2 text-sm font-semibold text-brand-600 transition-colors hover:bg-brand-50"
+                >
+                  Clear
+                </button>
+                <button
+                  onClick={() => setFilterOpen(false)}
+                  className="rounded-lg bg-brand-600 px-6 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-700"
+                >
+                  Apply Filter
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body,
         )}
-      </div>
 
       {/* Table card */}
       <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
@@ -503,10 +489,11 @@ export default function StudentsPage() {
           </div>
         </div>
 
-        {/* Table — horizontal scroll only below lg, so the sticky header can
-            anchor to the page (an overflow container would trap it). */}
-        <div className="overflow-x-auto lg:overflow-x-visible">
-          <table className="w-full min-w-[1000px]">
+        {/* Table — horizontal scroll below xl so the expanded sidebar never
+            pushes the row icons past the card edge; from xl up the wrapper is
+            overflow-visible so the sticky header can anchor to the page. */}
+        <div className="overflow-x-auto xl:overflow-x-visible">
+          <table className="w-full min-w-[900px]">
             <thead className="sticky top-16 z-10">
               <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-600 shadow-[0_1px_0_0_rgb(226_232_240)]">
                 <th className="bg-slate-50 px-3 py-3">
@@ -657,21 +644,5 @@ export default function StudentsPage() {
         </div>
       )}
     </div>
-  )
-}
-
-function FilterChip({ label, onRemove }: { label: string; onRemove: () => void }) {
-  return (
-    <span className="inline-flex items-center gap-1 rounded-md border border-brand-200 bg-white px-2 py-1 text-xs font-medium text-brand-700">
-      {label}
-      <button
-        type="button"
-        onClick={onRemove}
-        aria-label={`Remove filter ${label}`}
-        className="hover:text-brand-900"
-      >
-        <X className="h-3 w-3" />
-      </button>
-    </span>
   )
 }
