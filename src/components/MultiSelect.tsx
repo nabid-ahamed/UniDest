@@ -90,21 +90,34 @@ export function MultiSelect({
         />
       </div>
       {open && (
-        <div className="absolute z-20 mt-1 max-h-52 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
-          {available.length > 0 ? (
-            available.map((o) => (
-              <button
-                key={o}
-                type="button"
-                onClick={() => add(o)}
-                className="block w-full px-3 py-1.5 text-left text-sm text-slate-700 hover:bg-brand-50 hover:text-brand-600"
-              >
-                {o}
-              </button>
-            ))
-          ) : (
-            <p className="px-3 py-2 text-sm text-slate-500">No matches</p>
-          )}
+        <div className="absolute z-20 mt-1 w-full rounded-lg border border-slate-200 bg-white shadow-lg">
+          {/* Close button stays put while the list below scrolls. */}
+          <div className="flex justify-end border-b border-slate-100 px-1.5 py-1">
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              aria-label="Close options"
+              className="rounded p-0.5 text-slate-500 hover:bg-slate-100 hover:text-slate-700"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+          <div className="max-h-72 overflow-y-auto py-1">
+            {available.length > 0 ? (
+              available.map((o) => (
+                <button
+                  key={o}
+                  type="button"
+                  onClick={() => add(o)}
+                  className="block w-full px-3 py-1.5 text-left text-sm text-slate-700 hover:bg-brand-50 hover:text-brand-600"
+                >
+                  {o}
+                </button>
+              ))
+            ) : (
+              <p className="px-3 py-2 text-sm text-slate-500">No matches</p>
+            )}
+          </div>
         </div>
       )}
     </div>

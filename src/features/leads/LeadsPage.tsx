@@ -525,9 +525,10 @@ export default function LeadsPage() {
           </div>
         </div>
 
-        {/* Table — horizontal scroll only below lg, so the sticky header can
-            anchor to the page (an overflow container would trap it). */}
-        <div className="overflow-x-auto lg:overflow-x-visible">
+        {/* Table — horizontal scroll below xl so the expanded sidebar never
+            pushes the row icons past the card edge; from xl up the wrapper is
+            overflow-visible so the sticky header can anchor to the page. */}
+        <div className="overflow-x-auto xl:overflow-x-visible">
           <table className="w-full min-w-[900px]">
             <thead className="sticky top-16 z-10">
               <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-600 shadow-[0_1px_0_0_rgb(226_232_240)]">

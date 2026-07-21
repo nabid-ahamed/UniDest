@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
 import {
   RefreshCw,
   Filter,
@@ -40,8 +41,7 @@ export default function ApplicationsPage() {
   const [staff, setStaff] = useState('')
   const [branch, setBranch] = useState('All Branch')
   const [channel, setChannel] = useState('')
-  // Reference keeps the filter panel open by default, with a toggle icon.
-  const [filtersOpen, setFiltersOpen] = useState(true)
+  const [filterOpen, setFilterOpen] = useState(false)
 
   const [pageSize, setPageSize] = useState(10)
   const [page, setPage] = useState(1)
@@ -188,183 +188,165 @@ export default function ApplicationsPage() {
 
   return (
     <div className="space-y-4">
-      {/* Header card — title + filter toggle, like the reference */}
-      <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
-        <div className="flex items-center justify-between px-4 py-4 sm:px-6">
-          <h1 className="text-xl font-bold text-slate-900">University Applications</h1>
-          <div className="flex items-center gap-2">
-            <div className="group relative">
-              <button
-                onClick={handleRefresh}
-                aria-label="Refresh List"
-                className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition-colors hover:bg-slate-50"
-              >
-                <RefreshCw className={cn('h-4 w-4', refreshing && 'animate-spin')} />
-              </button>
-              {/* Tooltip sits below — these buttons are near the top of the page. */}
-              <span className="pointer-events-none absolute left-1/2 top-full z-20 mt-1.5 -translate-x-1/2 whitespace-nowrap rounded bg-slate-700 px-2 py-1 text-xs font-medium text-white opacity-0 shadow-sm transition-opacity group-hover:opacity-100">
-                Refresh List
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-bold text-slate-900">University Applications</h1>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setFilterOpen(true)}
+            className={cn(
+              'inline-flex items-center gap-1.5 rounded-lg border px-3.5 py-2 text-sm font-semibold transition-colors',
+              activeFilterCount > 0
+                ? 'border-brand-600 bg-brand-600 text-white hover:bg-brand-700'
+                : 'border-brand-300 bg-white text-brand-600 hover:bg-brand-50',
+            )}
+          >
+            <Filter className="h-4 w-4" /> Filter
+            {activeFilterCount > 0 && (
+              <span className="ml-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-white px-1.5 text-xs font-bold text-brand-600">
+                {activeFilterCount}
               </span>
-            </div>
+            )}
+          </button>
+          <div className="group relative">
             <button
-              onClick={() => setFiltersOpen((v) => !v)}
-              aria-expanded={filtersOpen}
-              aria-label="Toggle filters"
-              className={cn(
-                'relative flex h-9 w-9 items-center justify-center rounded-lg border transition-colors',
-                filtersOpen || activeFilterCount > 0
-                  ? 'border-brand-600 bg-brand-600 text-white hover:bg-brand-700'
-                  : 'border-brand-300 bg-white text-brand-600 hover:bg-brand-50',
-              )}
+              onClick={handleRefresh}
+              aria-label="Refresh List"
+              className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition-colors hover:bg-slate-50"
             >
-              <Filter className="h-4 w-4" />
-              {activeFilterCount > 0 && (
-                <span className="absolute -right-1.5 -top-1.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full border border-brand-600 bg-white px-1 text-xs font-bold text-brand-600">
-                  {activeFilterCount}
-                </span>
-              )}
+              <RefreshCw className={cn('h-4 w-4', refreshing && 'animate-spin')} />
             </button>
+            {/* Tooltip sits below — these buttons are near the top of the page. */}
+            <span className="pointer-events-none absolute left-1/2 top-full z-20 mt-1.5 -translate-x-1/2 whitespace-nowrap rounded bg-slate-700 px-2 py-1 text-xs font-medium text-white opacity-0 shadow-sm transition-opacity group-hover:opacity-100">
+              Refresh List
+            </span>
           </div>
         </div>
+      </div>
 
-        {/* Filter panel — grid-rows 0fr→1fr animates the height smoothly. */}
-        <div
-          className={cn(
-            'grid transition-all duration-300 ease-in-out',
-            filtersOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0',
-          )}
-        >
-          <div className="overflow-hidden">
-            <div className="space-y-4 border-t border-slate-100 px-4 py-4 sm:px-6">
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                <Field label="Study Country">
-                  <MultiSelect
-                    options={allCountries}
-                    selected={countries}
-                    onChange={(next) => {
-                      setCountries(next)
-                      resetToFirst()
-                    }}
-                    placeholder="Study Country"
-                  />
-                </Field>
-                <Field label="Intake">
-                  <SingleSelect
-                    options={intakes}
-                    value={intake}
-                    onChange={(v) => {
-                      setIntake(v)
-                      resetToFirst()
-                    }}
-                    placeholder="Intake"
-                  />
-                </Field>
-                <Field label="Applications Status">
-                  <MultiSelect
-                    options={applicationStatuses.map((s) => s.label)}
-                    selected={statuses}
-                    onChange={(next) => {
-                      setStatuses(next)
-                      resetToFirst()
-                    }}
-                    placeholder="Applications Status"
-                  />
-                </Field>
-                <Field label="Created Date">
-                  <input type="date" className="input" />
-                </Field>
-                <Field label="Assigned To">
-                  <select
-                    value={staff}
-                    onChange={(e) => {
-                      setStaff(e.target.value)
-                      resetToFirst()
-                    }}
-                    className="input"
-                  >
-                    <option value="">- Assigned To -</option>
-                    {applicationStaff.map((s) => (
-                      <option key={s}>{s}</option>
-                    ))}
-                  </select>
-                </Field>
-                <Field label="Branch">
-                  <select
-                    value={branch}
-                    onChange={(e) => {
-                      setBranch(e.target.value)
-                      resetToFirst()
-                    }}
-                    className="input"
-                  >
-                    {applicationBranches.map((b) => (
-                      <option key={b}>{b}</option>
-                    ))}
-                  </select>
-                </Field>
-                <Field label="Applied Through Agent">
-                  <select
-                    value={channel}
-                    onChange={(e) => {
-                      setChannel(e.target.value)
-                      resetToFirst()
-                    }}
-                    className="input"
-                  >
-                    <option value="">Applied Through Agent</option>
-                    {applicationChannels.map((c) => (
-                      <option key={c}>{c}</option>
-                    ))}
-                  </select>
-                </Field>
+      {/* Filter modal */}
+      {filterOpen &&
+        createPortal(
+          <div className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto p-4">
+            <div
+              className="animate-fade-in absolute inset-0 bg-slate-500/60"
+              onClick={() => setFilterOpen(false)}
+            />
+            <div className="animate-dialog-in relative my-8 w-full max-w-5xl rounded-xl bg-white shadow-xl">
+              <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
+                <h2 className="text-lg font-bold text-slate-800">Filter Applications</h2>
+                <button
+                  onClick={() => setFilterOpen(false)}
+                  className="rounded-lg p-1 text-slate-500 hover:bg-slate-100 hover:text-slate-600"
+                  aria-label="Close"
+                >
+                  <X className="h-5 w-5" />
+                </button>
               </div>
 
-              {/* Centered Filter/Clear, per the reference. Filtering is live, so
-                  "Filter" just collapses the panel to show the results. */}
-              <div className="flex items-center justify-center gap-2">
-                <button
-                  onClick={() => setFiltersOpen(false)}
-                  className="rounded-lg bg-brand-600 px-6 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-700"
-                >
-                  Filter
-                </button>
+              <div className="max-h-[70vh] overflow-y-auto px-6 py-5">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  <Field label="Study Country">
+                    <MultiSelect
+                      options={allCountries}
+                      selected={countries}
+                      onChange={(next) => {
+                        setCountries(next)
+                        resetToFirst()
+                      }}
+                      placeholder="Study Country"
+                    />
+                  </Field>
+                  <Field label="Intake">
+                    <SingleSelect
+                      options={intakes}
+                      value={intake}
+                      onChange={(v) => {
+                        setIntake(v)
+                        resetToFirst()
+                      }}
+                      placeholder="Intake"
+                    />
+                  </Field>
+                  <Field label="Applications Status">
+                    <MultiSelect
+                      options={applicationStatuses.map((s) => s.label)}
+                      selected={statuses}
+                      onChange={(next) => {
+                        setStatuses(next)
+                        resetToFirst()
+                      }}
+                      placeholder="Applications Status"
+                    />
+                  </Field>
+                  <Field label="Created Date">
+                    <input type="date" className="input" />
+                  </Field>
+                  <Field label="Assigned To">
+                    <select
+                      value={staff}
+                      onChange={(e) => {
+                        setStaff(e.target.value)
+                        resetToFirst()
+                      }}
+                      className="input"
+                    >
+                      <option value="">- Assigned To -</option>
+                      {applicationStaff.map((s) => (
+                        <option key={s}>{s}</option>
+                      ))}
+                    </select>
+                  </Field>
+                  <Field label="Branch">
+                    <select
+                      value={branch}
+                      onChange={(e) => {
+                        setBranch(e.target.value)
+                        resetToFirst()
+                      }}
+                      className="input"
+                    >
+                      {applicationBranches.map((b) => (
+                        <option key={b}>{b}</option>
+                      ))}
+                    </select>
+                  </Field>
+                  <Field label="Applied Through Agent">
+                    <select
+                      value={channel}
+                      onChange={(e) => {
+                        setChannel(e.target.value)
+                        resetToFirst()
+                      }}
+                      className="input"
+                    >
+                      <option value="">Applied Through Agent</option>
+                      {applicationChannels.map((c) => (
+                        <option key={c}>{c}</option>
+                      ))}
+                    </select>
+                  </Field>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 border-t border-slate-200 px-6 py-4">
                 <button
                   onClick={clearFilters}
                   className="rounded-lg border border-brand-300 bg-white px-6 py-2 text-sm font-semibold text-brand-600 transition-colors hover:bg-brand-50"
                 >
                   Clear
                 </button>
+                <button
+                  onClick={() => setFilterOpen(false)}
+                  className="rounded-lg bg-brand-600 px-6 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-700"
+                >
+                  Apply Filter
+                </button>
               </div>
-
-              {/* Active filter chips — one click drops a single filter. */}
-              {activeFilterCount > 0 && (
-                <div className="flex flex-wrap items-center justify-center gap-2">
-                  {countries.map((c) => (
-                    <FilterChip
-                      key={`c-${c}`}
-                      label={c}
-                      onRemove={() => setCountries((p) => p.filter((x) => x !== c))}
-                    />
-                  ))}
-                  {statuses.map((s) => (
-                    <FilterChip
-                      key={`s-${s}`}
-                      label={s}
-                      onRemove={() => setStatuses((p) => p.filter((x) => x !== s))}
-                    />
-                  ))}
-                  {intake && <FilterChip label={intake} onRemove={() => setIntake('')} />}
-                  {staff && <FilterChip label={staff} onRemove={() => setStaff('')} />}
-                  {branch !== 'All Branch' && (
-                    <FilterChip label={branch} onRemove={() => setBranch('All Branch')} />
-                  )}
-                  {channel && <FilterChip label={channel} onRemove={() => setChannel('')} />}
-                </div>
-              )}
             </div>
-          </div>
-        </div>
-      </div>
+          </div>,
+          document.body,
+        )}
 
       {/* Table card */}
       <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
@@ -415,10 +397,11 @@ export default function ApplicationsPage() {
           </div>
         </div>
 
-        {/* Table — horizontal scroll only below lg, so the sticky header can
-            anchor to the page (an overflow container would trap it). */}
-        <div className="overflow-x-auto lg:overflow-x-visible">
-          <table className="w-full min-w-[1000px]">
+        {/* Table — horizontal scroll below xl so the expanded sidebar never
+            pushes the row icons past the card edge; from xl up the wrapper is
+            overflow-visible so the sticky header can anchor to the page. */}
+        <div className="overflow-x-auto xl:overflow-x-visible">
+          <table className="w-full min-w-[900px]">
             <thead className="sticky top-16 z-10">
               <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-600 shadow-[0_1px_0_0_rgb(226_232_240)]">
                 <th className="bg-slate-50 px-3 py-3">
@@ -563,21 +546,5 @@ export default function ApplicationsPage() {
         </div>
       )}
     </div>
-  )
-}
-
-function FilterChip({ label, onRemove }: { label: string; onRemove: () => void }) {
-  return (
-    <span className="inline-flex items-center gap-1 rounded-md border border-brand-200 bg-brand-50 px-2 py-1 text-xs font-medium text-brand-700">
-      {label}
-      <button
-        type="button"
-        onClick={onRemove}
-        aria-label={`Remove filter ${label}`}
-        className="hover:text-brand-900"
-      >
-        <X className="h-3 w-3" />
-      </button>
-    </span>
   )
 }
