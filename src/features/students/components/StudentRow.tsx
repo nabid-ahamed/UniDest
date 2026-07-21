@@ -166,19 +166,19 @@ export function StudentRow({
             icon={UserPlus}
             label="Assign"
             onClick={() => onAction('Assign')}
-            className="border-brand-300 text-brand-600 hover:bg-brand-50"
+            className="border-brand-300 text-brand-600 hover:border-brand-600 hover:bg-brand-600 hover:text-white"
           />
           <ActionIcon
             icon={Eye}
             label="View"
             onClick={() => onAction('View')}
-            className="border-emerald-300 text-emerald-600 hover:bg-emerald-50"
+            className="border-emerald-300 text-emerald-600 hover:border-emerald-600 hover:bg-emerald-600 hover:text-white"
           />
           <ActionIcon
             icon={Settings}
             label="Settings"
             onClick={() => onAction('Settings')}
-            className="border-slate-300 text-slate-600 hover:bg-slate-100"
+            className="border-slate-300 text-slate-600 hover:border-slate-600 hover:bg-slate-600 hover:text-white"
           />
         </div>
       </td>
@@ -197,18 +197,23 @@ function ActionIcon({
   onClick: () => void
   className?: string
 }) {
+  // Instant CSS tooltip — the native title attribute takes ~1s to appear.
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-label={label}
-      title={label}
-      className={cn(
-        'flex h-7 w-7 items-center justify-center rounded-md border transition-colors',
-        className,
-      )}
-    >
-      <Icon className="h-3.5 w-3.5" />
-    </button>
+    <div className="group relative">
+      <button
+        type="button"
+        onClick={onClick}
+        aria-label={label}
+        className={cn(
+          'flex h-7 w-7 items-center justify-center rounded-md border transition-colors',
+          className,
+        )}
+      >
+        <Icon className="h-3.5 w-3.5" />
+      </button>
+      <span className="pointer-events-none absolute -top-8 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded bg-slate-700 px-2 py-1 text-xs font-medium text-white opacity-0 shadow-sm transition-opacity group-hover:opacity-100">
+        {label}
+      </span>
+    </div>
   )
 }

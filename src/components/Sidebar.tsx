@@ -60,7 +60,7 @@ const NAV: NavGroup[] = [
       { label: 'Additional Services', icon: Layers },
       { label: 'Course Finder', icon: Search },
       { label: 'Broadcast', icon: Radio },
-      { label: 'Webinar & Events', icon: CalendarDays },
+      { label: 'Webinar & Events', icon: CalendarDays, to: '/webinars' },
       {
         label: 'Invoices',
         icon: FileText,

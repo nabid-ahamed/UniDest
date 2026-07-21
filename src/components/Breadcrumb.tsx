@@ -7,6 +7,7 @@ const TITLES: Record<string, string> = {
   '/leads': 'Lead Management',
   '/students': 'Student Management',
   '/applications': 'Applications',
+  '/webinars': 'Webinar',
 }
 
 // Multi-level trails for nested pages.
@@ -14,10 +15,24 @@ const TRAILS: Record<string, Crumb[]> = {
   '/leads/new': [{ label: 'Lead Management', to: '/leads' }, { label: 'Add New Lead' }],
 }
 
+// Dynamic (parameterised) routes that a static map can't cover.
+function dynamicTrail(pathname: string): Crumb[] | null {
+  if (/^\/webinars\/\d+$/.test(pathname))
+    return [{ label: 'Webinar', to: '/webinars' }, { label: 'View Webinar' }]
+  if (/^\/webinars\/\d+\/edit$/.test(pathname))
+    return [{ label: 'Webinar', to: '/webinars' }, { label: 'Edit Webinar' }]
+  if (/^\/webinars\/\d+\/enrolled$/.test(pathname))
+    return [{ label: 'Webinar', to: '/webinars' }, { label: 'Enrolled Users' }]
+  return null
+}
+
 export function Breadcrumb() {
   const { pathname } = useLocation()
   const isDashboard = pathname === '/dashboard'
-  const trail: Crumb[] = TRAILS[pathname] ?? (TITLES[pathname] ? [{ label: TITLES[pathname] }] : [])
+  const trail: Crumb[] =
+    TRAILS[pathname] ??
+    dynamicTrail(pathname) ??
+    (TITLES[pathname] ? [{ label: TITLES[pathname] }] : [])
 
   return (
     <nav className="mb-4 flex items-center gap-2 text-sm">
