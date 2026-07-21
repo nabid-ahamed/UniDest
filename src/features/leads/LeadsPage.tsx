@@ -14,6 +14,7 @@ import { cn } from '../../lib/cn'
 import { MultiSelect } from '../../components/MultiSelect'
 import { ExportButtons } from '../../components/ExportButtons'
 import { DotsLoader, Field, PageBtn, SingleSelect } from '../../components/DataTableUI'
+import { formatDateTime } from '../../components/DateTimePicker'
 import type { Lead } from '../../mock/leads'
 import {
   leads,
@@ -33,7 +34,9 @@ import {
 import { LeadRow } from './components/LeadRow'
 import { AddTagDialog } from './components/AddTagDialog'
 import { AssignStaffDialog } from './components/AssignStaffDialog'
+import { ConvertCounselingDialog } from './components/ConvertCounselingDialog'
 import { AlertDialog } from '../../components/ui/AlertDialog'
+import { SuccessDialog } from '../../components/ui/SuccessDialog'
 
 /** A lead may carry at most this many tags. */
 const MAX_TAGS = 5
@@ -65,11 +68,21 @@ export default function LeadsPage() {
   const [tagLead, setTagLead] = useState<Lead | null>(null)
   const [limitLead, setLimitLead] = useState<Lead | null>(null)
   const [assignLead, setAssignLead] = useState<Lead | null>(null)
+  const [counselLead, setCounselLead] = useState<Lead | null>(null)
+  const [successMsg, setSuccessMsg] = useState('')
   // Owner per lead id, seeded from the mock so re-assignment persists in the UI.
   const [assignees, setAssignees] = useState<Record<number, string | null>>(() =>
     Object.fromEntries(leads.map((l) => [l.id, l.assignedTo])),
   )
   const [recentTags, setRecentTags] = useState<string[]>(initialRecentTags)
+  // Status per lead id, seeded from the mock so "Change Status to" persists in the UI.
+  const [rowStatuses, setRowStatuses] = useState<Record<number, string>>(() =>
+    Object.fromEntries(leads.map((l) => [l.id, l.status])),
+  )
+  // Next follow-up per lead id — scheduling a counselling session updates it.
+  const [followups, setFollowups] = useState<Record<number, string | null>>(() =>
+    Object.fromEntries(leads.map((l) => [l.id, l.nextFollowup])),
+  )
   // Tags per lead id, seeded from the mock. Kept in state so add/remove works.
   const [leadTags, setLeadTags] = useState<Record<number, string[]>>(() =>
     Object.fromEntries(leads.map((l) => [l.id, l.tags ?? []])),
@@ -130,8 +143,8 @@ export default function LeadsPage() {
   const saveAssignee = (member: string) => {
     if (!assignLead) return
     setAssignees((prev) => ({ ...prev, [assignLead.id]: member }))
-    showToast(`${assignLead.name} assigned to ${member}`)
     setAssignLead(null)
+    setSuccessMsg('Lead Assigned Successfully')
   }
 
   /** Attach a tag to the lead and move it to the front of the recent list. */
@@ -154,6 +167,27 @@ export default function LeadsPage() {
     setTagLead(null)
   }
 
+  const changeStatus = (lead: Lead, next: string) => {
+    // Counseling needs a counsellor + date first — the dialog applies the
+    // status itself on Update. Re-selecting it re-opens the dialog to modify.
+    if (next === 'Counseling') return setCounselLead(lead)
+    if ((rowStatuses[lead.id] ?? lead.status) === next) return
+    setRowStatuses((prev) => ({ ...prev, [lead.id]: next }))
+    setSuccessMsg('Lead Status Changed Successfully')
+  }
+
+  const convertToCounseling = (counsellor: string, when: Date) => {
+    if (!counselLead) return
+    const formatted = formatDateTime(when)
+    setRowStatuses((prev) => ({ ...prev, [counselLead.id]: 'Counseling' }))
+    // The counselling slot becomes the lead's next follow-up, and the
+    // counsellor becomes the assignee.
+    setFollowups((prev) => ({ ...prev, [counselLead.id]: formatted }))
+    setAssignees((prev) => ({ ...prev, [counselLead.id]: counsellor }))
+    setCounselLead(null)
+    setSuccessMsg('Lead Status Changed Successfully')
+  }
+
   const removeTag = (leadId: number, tag: string) => {
     setLeadTags((prev) => ({ ...prev, [leadId]: (prev[leadId] ?? []).filter((t) => t !== tag) }))
     showToast(`Tag "${tag}" removed`)
@@ -162,7 +196,7 @@ export default function LeadsPage() {
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
     return leads.filter((l) => {
-      if (statuses.length && !statuses.includes(l.status)) return false
+      if (statuses.length && !statuses.includes(rowStatuses[l.id] ?? l.status)) return false
       if (countriesInterested.length && !countriesInterested.includes(l.countryInterested))
         return false
       if (staff && (assignees[l.id] ?? null) !== staff) return false
@@ -173,7 +207,7 @@ export default function LeadsPage() {
       }
       return true
     })
-  }, [search, statuses, countriesInterested, staff, branch, assignees])
+  }, [search, statuses, countriesInterested, staff, branch, assignees, rowStatuses])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
   const currentPage = Math.min(page, totalPages)
@@ -216,7 +250,7 @@ export default function LeadsPage() {
     l.name,
     l.email,
     l.phone,
-    l.status,
+    rowStatuses[l.id] ?? l.status,
     assignees[l.id] ?? 'Unassigned',
     l.branch,
     l.created,
@@ -527,12 +561,15 @@ export default function LeadsPage() {
                     <LeadRow
                       key={lead.id}
                       lead={lead}
+                      status={rowStatuses[lead.id] ?? lead.status}
+                      nextFollowup={followups[lead.id] ?? null}
                       tags={leadTags[lead.id] ?? []}
                       assignedTo={assignees[lead.id] ?? null}
                       selected={selected.has(lead.id)}
                       onToggle={() => toggleOne(lead.id)}
                       onAction={(type) => rowAction(type, lead)}
                       onRemoveTag={(tag) => removeTag(lead.id, tag)}
+                      onChangeStatus={(next) => changeStatus(lead, next)}
                     />
                   ))}
                   {pageRows.length === 0 && (
@@ -639,6 +676,17 @@ export default function LeadsPage() {
         />
       )}
 
+      {/* Convert to counselling */}
+      {counselLead && (
+        <ConvertCounselingDialog
+          lead={counselLead}
+          counsellors={leadStaff}
+          initialCounsellor={assignees[counselLead.id]}
+          onClose={() => setCounselLead(null)}
+          onUpdate={convertToCounseling}
+        />
+      )}
+
       {/* Tag limit warning */}
       {limitLead &&
         createPortal(
@@ -654,6 +702,13 @@ export default function LeadsPage() {
             okLabel="Got it"
             onOk={() => setLimitLead(null)}
           />,
+          document.body,
+        )}
+
+      {/* Status-change success */}
+      {successMsg &&
+        createPortal(
+          <SuccessDialog open message={successMsg} onOk={() => setSuccessMsg('')} />,
           document.body,
         )}
 
