@@ -1,25 +1,45 @@
-import { Tag, Plus, X, Mail, Phone, Pencil, UserPlus, Eye, Settings } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import {
+  Tag,
+  Plus,
+  X,
+  Mail,
+  Phone,
+  SquarePen,
+  ChevronDown,
+  UserPlus,
+  Eye,
+  Settings,
+} from 'lucide-react'
 import { cn } from '../../../lib/cn'
 import { pickTextColor } from '../../../lib/contrast'
-import type { Lead } from '../../../mock/leads'
+import { leadStatuses, type Lead } from '../../../mock/leads'
 
 export function LeadRow({
   lead,
+  status,
+  nextFollowup,
   tags,
   assignedTo,
   selected,
   onToggle,
   onAction,
   onRemoveTag,
+  onChangeStatus,
 }: {
   lead: Lead
+  status: string
+  nextFollowup: string | null
   tags: string[]
   assignedTo: string | null
   selected: boolean
   onToggle: () => void
   onAction: (type: string) => void
   onRemoveTag: (tag: string) => void
+  onChangeStatus: (next: string) => void
 }) {
+  // Colour follows the current status; the seeded hex is only the fallback.
+  const statusColor = leadStatuses.find((s) => s.label === status)?.color ?? lead.statusColor
   return (
     <tr
       className={cn(
@@ -110,7 +130,7 @@ export function LeadRow({
       </td>
 
       {/* Next Followup */}
-      <td className="px-3 py-3 text-sm text-slate-500">{lead.nextFollowup ?? '—'}</td>
+      <td className="px-3 py-3 text-sm text-slate-500">{nextFollowup ?? '—'}</td>
 
       {/* Status */}
       <td className="px-3 py-3">
@@ -118,35 +138,39 @@ export function LeadRow({
           <span
             className="rounded-md px-2 py-1 text-xs font-semibold"
             style={{
-              backgroundColor: lead.statusColor,
-              color: pickTextColor(lead.statusColor),
+              backgroundColor: statusColor,
+              color: pickTextColor(statusColor),
             }}
           >
-            {lead.status}
+            {status}
           </span>
-          <button
-            type="button"
-            onClick={() => onAction('Edit status')}
-            aria-label="Edit status"
-            title="Edit status"
-            className="text-brand-600 hover:text-brand-700"
-          >
-            <Pencil className="h-3.5 w-3.5" />
-          </button>
+          <StatusMenu current={status} onSelect={onChangeStatus} />
         </div>
       </td>
 
-      {/* Assigned to */}
+      {/* Assigned to — the assign icon stays visible after assignment so
+          re-assigning is one click, same as the Unassigned state. */}
       <td className="px-3 py-3">
         {assignedTo ? (
-          <button
-            type="button"
-            onClick={() => onAction('Assign')}
-            title="Re-assign"
-            className="text-sm font-medium text-slate-700 hover:text-brand-600 hover:underline"
-          >
-            {assignedTo}
-          </button>
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => onAction('Assign')}
+              title="Re-assign"
+              className="text-sm font-medium text-slate-700 hover:text-brand-600 hover:underline"
+            >
+              {assignedTo}
+            </button>
+            <button
+              type="button"
+              onClick={() => onAction('Assign')}
+              aria-label="Re-assign"
+              title="Re-assign"
+              className="text-brand-600 hover:text-brand-700"
+            >
+              <UserPlus className="h-4 w-4" />
+            </button>
+          </div>
         ) : (
           <button
             type="button"
@@ -186,6 +210,88 @@ export function LeadRow({
         </div>
       </td>
     </tr>
+  )
+}
+
+/**
+ * "Change Status to" dropdown behind the edit icon next to the status badge,
+ * matching the reference: light-blue square with a pencil + caret.
+ */
+function StatusMenu({
+  current,
+  onSelect,
+}: {
+  current: string
+  onSelect: (next: string) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const onClick = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('mousedown', onClick)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onClick)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [open])
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-label="Change status"
+        aria-expanded={open}
+        title="Change status"
+        className={cn(
+          'flex h-7 items-center gap-0.5 rounded-md px-1.5 transition-colors',
+          open
+            ? 'bg-brand-600 text-white'
+            : 'bg-brand-100 text-brand-600 hover:bg-brand-200',
+        )}
+      >
+        <SquarePen className="h-3.5 w-3.5" />
+        <ChevronDown className={cn('h-3 w-3 transition-transform', open && 'rotate-180')} />
+      </button>
+
+      {open && (
+        <div className="absolute left-0 top-full z-30 mt-1 w-56 rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
+          <p className="border-b border-slate-100 px-4 pb-2 pt-1.5 text-sm font-bold text-slate-800">
+            Change Status to
+          </p>
+          {leadStatuses.map((s) => (
+            <button
+              key={s.label}
+              type="button"
+              // Re-selecting the current status is allowed: for Counseling it
+              // re-opens the dialog so the counsellor/slot can be modified.
+              onClick={() => {
+                setOpen(false)
+                onSelect(s.label)
+              }}
+              className={cn(
+                'flex w-full items-center gap-2.5 px-4 py-2 text-left text-sm hover:bg-brand-50',
+                s.label === current ? 'font-semibold text-brand-600' : 'text-slate-700',
+              )}
+            >
+              <span
+                className="h-2.5 w-2.5 shrink-0 rounded-full"
+                style={{ backgroundColor: s.color }}
+              />
+              {s.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   )
 }
 

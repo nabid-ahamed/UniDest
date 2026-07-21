@@ -177,8 +177,27 @@ select-all, sticky table header, loading preloader.
 - **Lead - Assign Staff** (`components/AssignStaffDialog.tsx`) — select from
   `leadStaff`, pre-selects the current owner so it doubles as re-assignment.
   Assignees live in page state, so the staff filter and exports follow changes.
+  Save confirms with the shared `SuccessDialog` ("Lead Assigned Successfully"),
+  and the assigned cell keeps a 👤+ re-assign icon next to the name (same
+  affordance as the Unassigned state).
+- **Change Status to** (`StatusMenu` in `components/LeadRow.tsx`) — edit icon
+  beside the status badge opens a dropdown of `leadStatuses` (colour dot per
+  option, current one highlighted). Row statuses live in page state, so the
+  badge colour, status filter, and exports all follow changes. Every applied
+  change (direct or via the counselling dialog) confirms with the shared
+  `SuccessDialog` ("Lead Status Changed Successfully" + animated check + OK);
+  re-picking the same non-Counseling status is a silent no-op.
+- **Convert Lead to Counselling** (`components/ConvertCounselingDialog.tsx`) —
+  picking "Counseling" in the status menu opens this instead of switching
+  directly: required counsellor (`leadStaff`) + a custom
+  **`src/components/DateTimePicker.tsx`** popover (calendar with month/year
+  dropdowns, prev/next + home-to-today, 6-week grid, today ringed; hourly time
+  list 8 AM–10 PM with scroll arrows). Update applies the status, **writes the
+  slot into the row's Next Followup column**, and **sets the counsellor as the
+  row's Assigned To** (all three live in page state). Closing without Update
+  changes nothing.
 
-Export / status-edit / view / settings actions are still UI-only placeholders.
+View / settings actions are still UI-only placeholders.
 
 ### Add New Lead form (`/leads/new`)
 - **Component:** `src/features/leads/AddLeadPage.tsx` (reached via the "New Lead"
