@@ -2,20 +2,24 @@ import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
 import { cn } from '../../../lib/cn'
-import type { Lead } from '../../../mock/leads'
 
 /**
- * "Lead - Assign Staff" modal. Pre-selects the lead's current owner so the
- * dialog doubles as re-assignment.
+ * "Assign Staff" modal. Pre-selects the record's current owner so the dialog
+ * doubles as re-assignment. Shared by Leads and Students — it only needs the
+ * id + name, so both record types satisfy `lead`.
  */
 export function AssignStaffDialog({
   lead,
+  title = 'Lead - Assign Staff',
+  nameLabel = 'Lead Name',
   assignedTo,
   staff,
   onClose,
   onSave,
 }: {
-  lead: Lead
+  lead: { id: number; name: string }
+  title?: string
+  nameLabel?: string
   assignedTo: string | null
   staff: string[]
   onClose: () => void
@@ -54,7 +58,7 @@ export function AssignStaffDialog({
       >
         <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
           <h2 id="assign-title" className="text-lg font-bold text-slate-800">
-            Lead - Assign Staff
+            {title}
           </h2>
           <button
             type="button"
@@ -67,7 +71,7 @@ export function AssignStaffDialog({
         </div>
 
         <div className="px-6 py-6">
-          <p className="text-sm font-semibold text-slate-700">Lead Name</p>
+          <p className="text-sm font-semibold text-slate-700">{nameLabel}</p>
           <p className="mt-1 text-sm text-slate-600">
             {lead.name} <span className="text-slate-400">(#{lead.id})</span>
           </p>
