@@ -25,6 +25,7 @@ never inline in components. Types are exported alongside the data.
 | [Leads](#leads) | `src/mock/leads.ts` | ✅ done |
 | [Students](#students) | `src/mock/students.ts` | ✅ done |
 | [Applications](#applications) | `src/mock/applications.ts` | ✅ done |
+| [Webinar & Events](#webinar--events) | `src/mock/webinars.ts` | ✅ done |
 | Staff | `src/mock/staff.ts` | ⬜ not started |
 
 ---
@@ -323,6 +324,67 @@ Working now (frontend): search, all filters above, page size, pagination,
 selection, sticky header, preloader, export cluster, **Application - Assign
 Staff** dialog (shared `AssignStaffDialog`). View / status-edit / Created Date
 are UI-only placeholders.
+
+---
+
+## Webinar & Events
+
+- **Mock file:** `src/mock/webinars.ts`
+- **Used by:** `src/features/webinars/WebinarsPage.tsx` (route `/webinars`,
+  wired to the "Webinar & Events" sidebar item; breadcrumb "Dashboard / Webinar")
+
+### `webinars: Webinar[]`
+
+| Field | Type | Notes |
+|-------|------|-------|
+| id | number | |
+| topic | string | webinar/event title |
+| date | string | `11-06-2026 02:31 PM` |
+| venue | string | "Online" or a branch/hall name |
+| audienceType | `'Student' \| 'Agent' \| 'Student / Agent'` | `webinarAudienceTypes` |
+| enrolledUsers | number \| null | null → shown as `--` |
+
+- Records: **18**. **Maps to (future):** a `webinars` table + a
+  `webinar_enrolments` count.
+
+Simple bordered list table (zebra rows, no search/pagination — matches the
+reference). **Create** opens a modal (Topic / Date & Time via the shared
+`DateTimePicker` / Venue / Audience Type, required-field errors) that prepends
+a row; **Delete** confirms via `ConfirmDialog` then removes the row; both
+confirm with `SuccessDialog`. Rows live in page state.
+
+**View** (`WebinarViewPage.tsx`, route `/webinars/:id`, breadcrumb
+"Dashboard / Webinar / View Webinar") shows the detail card from the reference:
+Topic / Image (generated gradient banner until uploads exist) / Date / Venue /
+Copy Webinar Link (readonly input + Copy with clipboard fallback,
+`webinarShareLink()` builds the mock URL) / Audience Type / Webinar Link /
+Description / Notified Email / Enrolled Users, plus a back button. Extra
+optional `Webinar` fields: `webinarLink`, `description`, `notifiedEmail`
+(null → "--").
+
+**Edit** (`EditWebinarPage.tsx`, route `/webinars/:id/edit`, breadcrumb
+"Dashboard / Webinar / Edit Webinar") mirrors the reference form: Basic
+Information (Topic* / Audience Type* / Short Description) · Schedule & Venue
+(Date & Time* via the shared `DateTimePicker`, prefilled by parsing the mock
+date string / Mode-Venue* / Webinar Link) · Banner Image (current banner + file
+upload with live object-URL preview) · Full Description (minimal
+contentEditable editor: bold/italic/underline/lists/undo/redo via
+`execCommand`). Update validates, **saves via `updateWebinar()`**, then shows
+`SuccessDialog` and returns to the list.
+
+**Persistence:** webinars survive full page reloads via a localStorage working
+copy (key `unidest-webinars`) in `src/mock/webinars.ts` — `loadWebinars()` on
+module load (seed = first-run default), `saveWebinars()` / `updateWebinar()`
+called by create, delete and edit. Clearing the key resets to the seed.
+
+**Enrolled Users** (`WebinarEnrolledPage.tsx`, route `/webinars/:id/enrolled`,
+breadcrumb "Dashboard / Webinar / Enrolled Users") lists who enrolled: header
+with topic + date/venue + count badge, zebra table (# / Name / Email / Phone /
+User Type badge / Enrolled On), empty state when 0, back button. Data comes
+from `webinarEnrollments(w)` in the mock — generated **deterministically** from
+the webinar id (count = `enrolledUsers`; agent-audience webinars yield Agent
+rows). `parseWebinarDate()` also moved into the mock and is shared with the
+edit page. All four webinar row actions are now fully wired.
 
 ---
 

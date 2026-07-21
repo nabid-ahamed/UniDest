@@ -6,6 +6,10 @@ import LeadsPage from '../features/leads/LeadsPage'
 import AddLeadPage from '../features/leads/AddLeadPage'
 import StudentsPage from '../features/students/StudentsPage'
 import ApplicationsPage from '../features/applications/ApplicationsPage'
+import WebinarsPage from '../features/webinars/WebinarsPage'
+import WebinarViewPage from '../features/webinars/WebinarViewPage'
+import EditWebinarPage from '../features/webinars/EditWebinarPage'
+import WebinarEnrolledPage from '../features/webinars/WebinarEnrolledPage'
 import { useAuth } from '../store/auth'
 
 /** Guards routes that require authentication. */
@@ -28,6 +32,10 @@ export const router = createBrowserRouter([
           { path: '/leads/new', element: <AddLeadPage /> },
           { path: '/students', element: <StudentsPage /> },
           { path: '/applications', element: <ApplicationsPage /> },
+          { path: '/webinars', element: <WebinarsPage /> },
+          { path: '/webinars/:id', element: <WebinarViewPage /> },
+          { path: '/webinars/:id/edit', element: <EditWebinarPage /> },
+          { path: '/webinars/:id/enrolled', element: <WebinarEnrolledPage /> },
         ],
       },
     ],

@@ -135,15 +135,20 @@ export function ApplicationRow({
       {/* Actions — assign icon + a labelled View button, per the reference */}
       <td className="px-3 py-3">
         <div className="flex items-center gap-1.5">
-          <button
-            type="button"
-            onClick={() => onAction('Assign')}
-            aria-label="Assign"
-            title="Assign"
-            className="flex h-7 w-7 items-center justify-center rounded-md border border-brand-300 text-brand-600 transition-colors hover:bg-brand-50"
-          >
-            <UserPlus className="h-3.5 w-3.5" />
-          </button>
+          {/* Instant CSS tooltip — the native title attribute takes ~1s to appear. */}
+          <div className="group relative">
+            <button
+              type="button"
+              onClick={() => onAction('Assign')}
+              aria-label="Assign"
+              className="flex h-7 w-7 items-center justify-center rounded-md border border-brand-300 text-brand-600 transition-colors hover:border-brand-600 hover:bg-brand-600 hover:text-white"
+            >
+              <UserPlus className="h-3.5 w-3.5" />
+            </button>
+            <span className="pointer-events-none absolute -top-8 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded bg-slate-700 px-2 py-1 text-xs font-medium text-white opacity-0 shadow-sm transition-opacity group-hover:opacity-100">
+              Assign
+            </span>
+          </div>
           <button
             type="button"
             onClick={() => onAction('View')}
