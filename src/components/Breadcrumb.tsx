@@ -9,11 +9,13 @@ const TITLES: Record<string, string> = {
   '/applications': 'Applications',
   '/webinars': 'Webinar',
   '/course-finder': 'Course Finder',
+  '/broadcast': 'Broadcast',
 }
 
 // Multi-level trails for nested pages.
 const TRAILS: Record<string, Crumb[]> = {
   '/leads/new': [{ label: 'Lead Management', to: '/leads' }, { label: 'Add New Lead' }],
+  '/broadcast/history': [{ label: 'Broadcast', to: '/broadcast' }, { label: 'Broadcast History' }],
 }
 
 // Dynamic (parameterised) routes that a static map can't cover.

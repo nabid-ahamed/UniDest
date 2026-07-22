@@ -411,6 +411,33 @@ Extracted while building this page so both data tables stay in sync:
 
 ---
 
+## Broadcast (`/broadcast` + `/broadcast/history`)
+
+- **Mock file:** `src/mock/broadcast.ts`; **pages:**
+  `src/features/broadcast/BroadcastPage.tsx` and `BroadcastHistoryPage.tsx`.
+  Modeled on demo.eductrl.com/cn4/admin/broadcast (+ broadcast-history).
+- **Broadcast page:** "Broadcast History" button top-right · Target Group
+  select (Leads / Students / Agents\/Partners / Staff Members) · conditional
+  filters — Leads → Country Interested (+-ANY-) + Lead Status `MultiSelect`;
+  Students → Student Status `MultiSelect` + "Exclude agent students" checkbox
+  (drops `source === 'Agent'`) · live "Matching recipients: N" counter
+  (`resolveRecipients()` over the leads/students mocks; Agents/Partners and
+  Staff use small email lists) · **Email | SMS** radios — Email shows template
+  select (6 templates fill subject + body) + Subject + execCommand rich-text
+  editor; SMS shows template select (5) + textarea with a 160-char counter
+  (over-limit shows SMS parts) · **Continue** validates
+  (target/type/subject/message) then opens a **Confirm Broadcast** modal
+  (type, target + filters, subject, recipient count + scrollable email list) ·
+  Send appends to localStorage `unidest-broadcasts`, toasts and resets the
+  form.
+- **History page** (breadcrumb Dashboard / Broadcast / Broadcast History):
+  "Back to Broadcast page" button · Show 25/50/100 + search + `ExportButtons`
+  · table Date & Time / Type (email-blue, sms-amber badge) / Subject / Message
+  (line-clamped) / Sent To / Staff · seeded with 3 records (`seedHistory`),
+  new sends appear on top · "Showing X to Y of Z" + pagination.
+
+---
+
 ## Applications
 
 - **Mock file:** `src/mock/applications.ts`
