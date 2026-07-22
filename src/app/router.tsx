@@ -11,6 +11,8 @@ import StudentViewPage from '../features/students/StudentViewPage'
 import ApplicationsPage from '../features/applications/ApplicationsPage'
 import CourseFinderPage from '../features/courseFinder/CourseFinderPage'
 import BroadcastPage from '../features/broadcast/BroadcastPage'
+import AdditionalServicesPage from '../features/services/AdditionalServicesPage'
+import ServiceViewPage from '../features/services/ServiceViewPage'
 import BroadcastHistoryPage from '../features/broadcast/BroadcastHistoryPage'
 import WebinarsPage from '../features/webinars/WebinarsPage'
 import WebinarViewPage from '../features/webinars/WebinarViewPage'
@@ -42,6 +44,8 @@ export const router = createBrowserRouter([
           { path: '/students/:id', element: <StudentViewPage /> },
           { path: '/applications', element: <ApplicationsPage /> },
           { path: '/course-finder', element: <CourseFinderPage /> },
+          { path: '/services', element: <AdditionalServicesPage /> },
+          { path: '/services/:id', element: <ServiceViewPage /> },
           { path: '/broadcast', element: <BroadcastPage /> },
           { path: '/broadcast/history', element: <BroadcastHistoryPage /> },
           { path: '/webinars', element: <WebinarsPage /> },

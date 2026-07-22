@@ -411,6 +411,36 @@ Extracted while building this page so both data tables stay in sync:
 
 ---
 
+## Additional Services (`/services` + `/services/:id`)
+
+- **Mock file:** `src/mock/services.ts` (`ServiceRequest`, 12 seeded rows;
+  whole list persisted under localStorage `unidest-services` via
+  `updateService`/`deleteService`); **pages:**
+  `src/features/services/AdditionalServicesPage.tsx` and
+  `ServiceViewPage.tsx`. Modeled on
+  demo.eductrl.com/cn4/admin/service-and-visa/list (+ /view/:id).
+- **List page:** header filter icon → "Filter Services" modal (Select Service
+  (7 types) / Select Status (New File, Processing, Decision - Completed,
+  Decision - Rejected) / Country / Assigned To (+Unassigned) / Created Date) ·
+  Show 10/25/50/100 + search + `ExportButtons` · table ID / Date Created /
+  Status (coloured badge, blank allowed) / Student (person icon, bold) /
+  Service / Country (globe icon) / Description (truncated "…..") / Assigned to
+  / **Actions** (blue assign icon → shared `AssignStaffDialog` "Service -
+  Assign Staff"; blue **View** → detail; red **Delete** → `ConfirmDialog`,
+  actually removes + persists) · Showing/pagination footer.
+- **View page** (breadcrumb Dashboard / Additional Services / Visa & Services
+  Detail): "Service Request #id" + back button · tabs Application / Profile /
+  Documents / Reminders (0) / Chat (Application built, rest placeholders) ·
+  Application tab: service + country + description + student contact +
+  Current Status; **Notes** textarea + Save (persists) · **Send Message to
+  Student/Agent** (textarea + staff-to-notify select + attach file + Send →
+  prepends to **Message History**, persists) · **Update Service Status**
+  (Change Status to → Update → status + **Service Activity** entry
+  "STATUS CHANGED TO: X, Previous Status: Y", persists, reflected in the list
+  badge) · Message History / Service Activity lists with demo empty states.
+
+---
+
 ## Broadcast (`/broadcast` + `/broadcast/history`)
 
 - **Mock file:** `src/mock/broadcast.ts`; **pages:**

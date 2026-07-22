@@ -57,14 +57,14 @@ const NAV: NavGroup[] = [
       { label: 'Leads', icon: Users, to: '/leads' },
       { label: 'Students', icon: Contact, to: '/students' },
       { label: 'Applications', icon: ClipboardList, to: '/applications' },
-      { label: 'Additional Services', icon: Layers },
+      { label: 'Additional Services', icon: Layers, to: '/services' },
       { label: 'Course Finder', icon: Search, to: '/course-finder' },
       { label: 'Broadcast', icon: Radio, to: '/broadcast' },
       { label: 'Webinar & Events', icon: CalendarDays, to: '/webinars' },
       {
         label: 'Invoices',
         icon: FileText,
-        children: [{ label: 'All Invoices' }, { label: 'Create Invoice' }],
+        children: [{ label: 'University Invoices' }, { label: 'Student Invoices' }],
       },
       {
         label: 'Referral',

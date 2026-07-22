@@ -10,6 +10,7 @@ const TITLES: Record<string, string> = {
   '/webinars': 'Webinar',
   '/course-finder': 'Course Finder',
   '/broadcast': 'Broadcast',
+  '/services': 'Additional Services',
 }
 
 // Multi-level trails for nested pages.
@@ -24,6 +25,11 @@ function dynamicTrail(pathname: string): Crumb[] | null {
     return [{ label: 'Lead Management', to: '/leads' }, { label: 'View' }]
   if (/^\/leads\/\d+\/edit$/.test(pathname))
     return [{ label: 'Lead Management', to: '/leads' }, { label: 'Edit Profile' }]
+  if (/^\/services\/\d+$/.test(pathname))
+    return [
+      { label: 'Additional Services', to: '/services' },
+      { label: 'Visa & Services Detail' },
+    ]
   if (/^\/students\/\d+$/.test(pathname))
     return [{ label: 'Student Management', to: '/students' }, { label: 'View' }]
   if (/^\/webinars\/\d+$/.test(pathname))
