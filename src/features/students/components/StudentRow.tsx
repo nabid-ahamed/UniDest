@@ -1,4 +1,18 @@
-import { Mail, Phone, Pencil, UserPlus, Eye, Settings, GraduationCap, FileText } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import {
+  Mail,
+  Phone,
+  Pencil,
+  UserPlus,
+  UserRoundPen,
+  Eye,
+  Settings,
+  GraduationCap,
+  FileText,
+  EllipsisVertical,
+  ChevronDown,
+  Trash2,
+} from 'lucide-react'
 import { cn } from '../../../lib/cn'
 import { pickTextColor } from '../../../lib/contrast'
 import type { Student } from '../../../mock/students'
@@ -133,56 +147,112 @@ export function StudentRow({
         </div>
       </td>
 
-      {/* Assigned to */}
+      {/* Assigned to — name + a dedicated assign icon (like the reference) */}
       <td className="px-3 py-3">
-        {assignedTo ? (
-          <button
-            type="button"
-            onClick={() => onAction('Assign')}
-            title="Re-assign"
-            className="text-sm font-medium text-slate-700 hover:text-brand-600 hover:underline"
-          >
-            {assignedTo}
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={() => onAction('Assign')}
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-rose-600 hover:text-rose-700"
-          >
-            Unassigned
-            <UserPlus className="h-4 w-4" />
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {assignedTo ? (
+            <span className="text-sm font-medium text-slate-700">{assignedTo}</span>
+          ) : (
+            <span className="inline-flex items-center gap-1.5 text-sm font-medium text-rose-600">
+              Unassigned
+              <UserPlus className="h-4 w-4" />
+            </span>
+          )}
+          <div className="group relative">
+            <button
+              type="button"
+              onClick={() => onAction('Assign')}
+              aria-label={assignedTo ? 'Re-assign staff' : 'Assign staff'}
+              className="text-brand-600 hover:text-brand-700"
+            >
+              <UserRoundPen className="h-4 w-4" />
+            </button>
+            <span className="pointer-events-none absolute -top-8 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded bg-slate-700 px-2 py-1 text-xs font-medium text-white opacity-0 shadow-sm transition-opacity group-hover:opacity-100">
+              {assignedTo ? 'Re-assign staff' : 'Assign staff'}
+            </span>
+          </div>
+        </div>
       </td>
 
       {/* Created */}
       <td className="px-3 py-3 text-sm text-slate-500">{student.created}</td>
 
-      {/* Actions */}
+      {/* Actions — View + a 3-dot dropdown (like the reference) */}
       <td className="px-3 py-3">
         <div className="flex items-center gap-1.5">
-          <ActionIcon
-            icon={UserPlus}
-            label="Assign"
-            onClick={() => onAction('Assign')}
-            className="border-brand-300 text-brand-600 hover:border-brand-600 hover:bg-brand-600 hover:text-white"
-          />
           <ActionIcon
             icon={Eye}
             label="View"
             onClick={() => onAction('View')}
-            className="border-emerald-300 text-emerald-600 hover:border-emerald-600 hover:bg-emerald-600 hover:text-white"
+            className="border-brand-600 text-brand-600 hover:bg-brand-600 hover:text-white"
           />
-          <ActionIcon
-            icon={Settings}
-            label="Settings"
-            onClick={() => onAction('Settings')}
-            className="border-slate-300 text-slate-600 hover:border-slate-600 hover:bg-slate-600 hover:text-white"
-          />
+          <MoreMenu onAction={onAction} />
         </div>
       </td>
     </tr>
+  )
+}
+
+/** Red-accented 3-dot trigger opening the secondary row actions. */
+function MoreMenu({ onAction }: { onAction: (type: string) => void }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const onClick = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', onClick)
+    return () => document.removeEventListener('mousedown', onClick)
+  }, [open])
+
+  const ITEMS = [
+    { label: 'Assign Staff', icon: UserPlus, type: 'Assign' },
+    { label: 'Edit Status', icon: Pencil, type: 'Edit status' },
+    { label: 'Settings', icon: Settings, type: 'Settings' },
+    { label: 'Delete', icon: Trash2, type: 'Delete', danger: true },
+  ]
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-label="More actions"
+        aria-expanded={open}
+        className={cn(
+          'flex h-7 items-center justify-center gap-0.5 rounded-md border border-rose-300 px-1.5 transition-colors',
+          open ? 'bg-rose-50' : 'hover:bg-rose-50',
+        )}
+      >
+        <EllipsisVertical className="h-3.5 w-3.5 text-slate-700" />
+        <ChevronDown className="h-3 w-3 text-rose-600" />
+      </button>
+      {open && (
+        <div className="absolute right-0 top-full z-30 mt-1.5 w-40 rounded-lg border border-slate-200 bg-white py-1.5 shadow-lg">
+          {ITEMS.map((item) => (
+            <button
+              key={item.label}
+              type="button"
+              onClick={() => {
+                setOpen(false)
+                onAction(item.type)
+              }}
+              className={cn(
+                'flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm font-medium transition-colors',
+                item.danger
+                  ? 'text-rose-600 hover:bg-rose-50'
+                  : 'text-slate-700 hover:bg-brand-50 hover:text-brand-700',
+              )}
+            >
+              <item.icon className="h-4 w-4" />
+              {item.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   )
 }
 

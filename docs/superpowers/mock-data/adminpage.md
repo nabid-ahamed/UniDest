@@ -327,8 +327,13 @@ selection + select-all, sticky header, loading preloader, export cluster,
 **Student - Assign Staff** dialog (reuses `leads/components/AssignStaffDialog`,
 which now takes any `{ id, name }` record plus optional title/label), and the
 **View action / name click → `/students/:id`** detail page (below).
-Status-edit (list row) / settings / applications actions are UI-only
-placeholders.
+Status-edit (list row) / settings / delete actions are UI-only placeholders.
+
+Row actions match the reference: the **Assigned to** cell shows the name (or
+red "Unassigned") plus a blue `UserRoundPen` icon that opens the assign
+dialog; the **Actions** cell has just two controls — a blue-bordered **View**
+eye and a rose-bordered **3-dot dropdown** (⋮ + red caret) with Assign Staff /
+Edit Status / Settings / Delete.
 
 ### Student View page (`/students/:id`)
 - **Component:** `src/features/students/StudentViewPage.tsx`; breadcrumb
