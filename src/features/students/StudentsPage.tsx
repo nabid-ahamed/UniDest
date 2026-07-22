@@ -109,6 +109,7 @@ export default function StudentsPage() {
 
   const rowAction = (type: string, student: Student) => {
     if (type === 'Assign') return setAssignStudent(student)
+    if (type === 'View') return window.location.assign(`/students/${student.id}`)
     showToast(`${type}: ${student.name} (#${student.id})`)
   }
 

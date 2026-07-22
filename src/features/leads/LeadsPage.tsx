@@ -137,6 +137,7 @@ export default function LeadsPage() {
       return setTagLead(lead)
     }
     if (type === 'Assign') return setAssignLead(lead)
+    if (type === 'View') return window.location.assign(`/leads/${lead.id}`)
     showToast(`${type}: ${lead.name} (#${lead.id})`)
   }
 

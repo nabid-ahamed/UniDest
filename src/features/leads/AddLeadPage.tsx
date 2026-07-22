@@ -11,6 +11,8 @@ import {
   qualifications,
   phoneCountryCodes,
   englishTests,
+  leadStatuses,
+  addLead,
 } from '../../mock/leads'
 
 export default function AddLeadPage() {
@@ -27,8 +29,43 @@ export default function AddLeadPage() {
     setPassword(out)
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+    const fd = new FormData(e.currentTarget)
+    const get = (key: string) => String(fd.get(key) ?? '').trim()
+
+    const now = new Date()
+    const created = new Intl.DateTimeFormat('en-GB', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    }).format(now)
+    const emailDate = new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short' }).format(
+      now,
+    )
+
+    addLead({
+      name: `${get('firstName')} ${get('lastName')}`.trim(),
+      email: get('email'),
+      emailDate,
+      phone: `${get('mobileCode')} ${get('mobile')}`.trim(),
+      phoneNote: 'New lead',
+      whatsapp: sameAsMobile,
+      leadAgeDays: 0,
+      branch: 'Dhaka',
+      status: 'New Lead',
+      statusColor: leadStatuses.find((x) => x.label === 'New Lead')?.color ?? '#0e7490',
+      assignedTo: null,
+      created,
+      nextFollowup: null,
+      countryInterested: countriesInterested[0] ?? '-',
+      gender,
+      studyLevel: get('studyLevel') || undefined,
+      qualification: get('qualification') || undefined,
+      source: 'Walk-in',
+      countryOfResidence: get('country') || undefined,
+    })
+
     setSaved(true)
     window.setTimeout(() => {
       window.location.href = '/leads'
@@ -60,10 +97,10 @@ export default function AddLeadPage() {
       <Section title="Personal Details">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <Field label="First Name" required>
-            <input className="input" placeholder="First Name" required />
+            <input name="firstName" className="input" placeholder="First Name" required />
           </Field>
           <Field label="Last Name">
-            <input className="input" placeholder="Last Name" />
+            <input name="lastName" className="input" placeholder="Last Name" />
           </Field>
           <Field label="Gender">
             <div className="flex items-center gap-6 py-2">
@@ -83,7 +120,7 @@ export default function AddLeadPage() {
           </Field>
 
           <Field label="Email" required>
-            <input type="email" className="input" placeholder="Email" required />
+            <input name="email" type="email" className="input" placeholder="Email" required />
           </Field>
           <Field label="Date of Birth">
             <input type="date" className="input" />
@@ -93,7 +130,7 @@ export default function AddLeadPage() {
           </Field>
 
           <Field label="Mobile No." required>
-            <PhoneInput placeholder="Mobile No." />
+            <PhoneInput placeholder="Mobile No." name="mobile" codeName="mobileCode" required />
           </Field>
           <Field label="WhatsApp No.">
             <PhoneInput placeholder="WhatsApp No." disabled={sameAsMobile} />
@@ -110,7 +147,7 @@ export default function AddLeadPage() {
           <div className="hidden lg:block" />
 
           <Field label="Country" required>
-            <select className="input" defaultValue="" required>
+            <select name="country" className="input" defaultValue="" required>
               <option value="" disabled>
                 Select Country
               </option>
@@ -132,7 +169,7 @@ export default function AddLeadPage() {
       <Section title="Study Interest">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Field label="Intended Study Level">
-            <select className="input" defaultValue="">
+            <select name="studyLevel" className="input" defaultValue="">
               <option value="">Select Study Level</option>
               {studyLevels.map((x) => (
                 <option key={x}>{x}</option>
@@ -204,7 +241,7 @@ export default function AddLeadPage() {
             </div>
           </Field>
           <Field label="Qualification">
-            <select className="input" defaultValue="">
+            <select name="qualification" className="input" defaultValue="">
               <option value="">Select Qualification</option>
               {qualifications.map((x) => (
                 <option key={x}>{x}</option>
@@ -296,17 +333,35 @@ function Field({
   )
 }
 
-function PhoneInput({ placeholder, disabled }: { placeholder: string; disabled?: boolean }) {
+function PhoneInput({
+  placeholder,
+  disabled,
+  name,
+  codeName,
+  required,
+}: {
+  placeholder: string
+  disabled?: boolean
+  name?: string
+  codeName?: string
+  required?: boolean
+}) {
   return (
     <div className="flex items-center gap-2">
-      <select className="input w-28 shrink-0" defaultValue="+880" disabled={disabled}>
+      <select name={codeName} className="input w-28 shrink-0" defaultValue="+880" disabled={disabled}>
         {phoneCountryCodes.map((c) => (
           <option key={c.code} value={c.code}>
             {c.label}
           </option>
         ))}
       </select>
-      <input className="input flex-1" placeholder={placeholder} disabled={disabled} />
+      <input
+        name={name}
+        required={required}
+        className="input flex-1"
+        placeholder={placeholder}
+        disabled={disabled}
+      />
     </div>
   )
 }

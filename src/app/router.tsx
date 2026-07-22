@@ -4,7 +4,10 @@ import AdminLayout from '../layouts/AdminLayout'
 import DashboardPage from '../features/dashboard/DashboardPage'
 import LeadsPage from '../features/leads/LeadsPage'
 import AddLeadPage from '../features/leads/AddLeadPage'
+import LeadViewPage from '../features/leads/LeadViewPage'
+import EditLeadProfilePage from '../features/leads/EditLeadProfilePage'
 import StudentsPage from '../features/students/StudentsPage'
+import StudentViewPage from '../features/students/StudentViewPage'
 import ApplicationsPage from '../features/applications/ApplicationsPage'
 import WebinarsPage from '../features/webinars/WebinarsPage'
 import WebinarViewPage from '../features/webinars/WebinarViewPage'
@@ -30,7 +33,10 @@ export const router = createBrowserRouter([
           { path: '/dashboard', element: <DashboardPage /> },
           { path: '/leads', element: <LeadsPage /> },
           { path: '/leads/new', element: <AddLeadPage /> },
+          { path: '/leads/:id', element: <LeadViewPage /> },
+          { path: '/leads/:id/edit', element: <EditLeadProfilePage /> },
           { path: '/students', element: <StudentsPage /> },
+          { path: '/students/:id', element: <StudentViewPage /> },
           { path: '/applications', element: <ApplicationsPage /> },
           { path: '/webinars', element: <WebinarsPage /> },
           { path: '/webinars/:id', element: <WebinarViewPage /> },
