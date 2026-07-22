@@ -1,8 +1,9 @@
 import { useEffect, useRef } from 'react'
-import { GraduationCap, Menu, Bell, BookOpenCheck } from 'lucide-react'
+import { Menu, Bell, BookOpenCheck } from 'lucide-react'
 import { useUI } from '../store/ui'
 import { CheckInTimer } from './CheckInTimer'
 import { AdminMenu } from './AdminMenu'
+import logo from '../assets/globaled-logo.png'
 
 export function Header() {
   const toggleSidebar = useUI((s) => s.toggleSidebar)
@@ -31,13 +32,16 @@ export function Header() {
     <header className="sticky top-0 z-40 border-b border-slate-200 bg-white">
       <div className="flex h-16 items-center gap-2 px-4 sm:px-6">
         {/* Logo — full page refresh to dashboard */}
-        <a href="/dashboard" className="flex items-center gap-2 pr-1">
-          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-600 text-white">
-            <GraduationCap className="h-5 w-5" />
-          </span>
-          <span className="hidden text-4xl font-extrabold tracking-tight text-brand-700 sm:inline">
-            UniDest
-          </span>
+        <a href="/dashboard" className="flex items-center pr-1">
+          {/* width/height attrs keep the aspect ratio reserved before the file
+              loads, so the measured hamburger position doesn't shift. */}
+          <img
+            src={logo}
+            alt="GlobalEd — IELTS & Study Abroad Consultancy"
+            width={1198}
+            height={294}
+            className="h-9 w-auto sm:h-10"
+          />
         </a>
 
         {/* Hamburger — opens the full sidebar */}
