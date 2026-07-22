@@ -58,7 +58,7 @@ const NAV: NavGroup[] = [
       { label: 'Students', icon: Contact, to: '/students' },
       { label: 'Applications', icon: ClipboardList, to: '/applications' },
       { label: 'Additional Services', icon: Layers },
-      { label: 'Course Finder', icon: Search },
+      { label: 'Course Finder', icon: Search, to: '/course-finder' },
       { label: 'Broadcast', icon: Radio },
       { label: 'Webinar & Events', icon: CalendarDays, to: '/webinars' },
       {
