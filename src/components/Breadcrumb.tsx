@@ -17,6 +17,12 @@ const TRAILS: Record<string, Crumb[]> = {
 
 // Dynamic (parameterised) routes that a static map can't cover.
 function dynamicTrail(pathname: string): Crumb[] | null {
+  if (/^\/leads\/\d+$/.test(pathname))
+    return [{ label: 'Lead Management', to: '/leads' }, { label: 'View' }]
+  if (/^\/leads\/\d+\/edit$/.test(pathname))
+    return [{ label: 'Lead Management', to: '/leads' }, { label: 'Edit Profile' }]
+  if (/^\/students\/\d+$/.test(pathname))
+    return [{ label: 'Student Management', to: '/students' }, { label: 'View' }]
   if (/^\/webinars\/\d+$/.test(pathname))
     return [{ label: 'Webinar', to: '/webinars' }, { label: 'View Webinar' }]
   if (/^\/webinars\/\d+\/edit$/.test(pathname))

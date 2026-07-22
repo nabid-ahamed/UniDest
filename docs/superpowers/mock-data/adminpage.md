@@ -198,7 +198,62 @@ select-all, sticky table header, loading preloader.
   row's Assigned To** (all three live in page state). Closing without Update
   changes nothing.
 
-View / settings actions are still UI-only placeholders.
+### Lead detail page (`/leads/:id`)
+- **Component:** `src/features/leads/LeadViewPage.tsx` (View action / name
+  click on a row navigates here; breadcrumb "Dashboard / Lead Management /
+  View").
+- Layout per the reference: identity header (initials avatar, email/phone with
+  QR + chat icons, country, status badge, assignee top-right). The **QR icon
+  opens a "Contact QR Code" modal** — a real QR (`qrcode.react`) encoding
+  `tel:<phone>`, so scanning it dials the lead.
+- **Course Suggestion tab** (`components/LeadCourseSuggestionTab.tsx`) per the
+  reference: "Share course suggestions to student" (Title* + file input
+  restricted to xls/xlsx/csv/doc/docx/pdf with inline errors; Upload prepends a
+  row and persists per lead in localStorage `unidest-lead-suggestions`) ·
+  "Previous Course Suggestions" table (Date/File/Accepted?, "Record Not Found!"
+  when empty) · "Course Finder Suggestions/ Student Bookmarked" ("Open Course
+  Finder" toast link; empty table "No suggestions yet!").
+- **Course Preferences tab** (`components/LeadCoursePreferencesTab.tsx`) per the
+  reference: heading + "Student Study Level: <lead.studyLevel>" · blue "Add New
+  Program" bar · collapsible **"Search a Course and Select Program"** (open by
+  default) with Search Course / Search by Course ID radios — Search Course is a
+  cascading Country* → University* → Course* picker (small in-file `COURSE_DB`
+  demo catalogue) + Intake* + Priority*; Search by Course ID looks the ID up in
+  the same catalogue ("No course found with ID …" on miss) · collapsible
+  **"Manually Add a Program"** (closed by default; free-text Country*/
+  University*/Course* + Intake* + Priority*) · blue **"Selected Programs"** bar
+  with pink "No programs found!" alert, or a table
+  (Priority/Course/University/Country/Intake/Course ID/delete Action) —
+  duplicate program adds are rejected with a toast; the list persists per lead
+  in localStorage `unidest-lead-programs`.
+- **Profile tab** (`components/LeadProfileTab.tsx`) mirrors the reference:
+  "Student Profile Incomplete" banner · blue "Student Profile" bar ·
+  **Download Profile** (generates a real per-section PDF via jsPDF/autoTable) +
+  **Edit Profile** (`EditLeadProfilePage.tsx`, route `/leads/:id/edit`,
+  breadcrumb "… / Edit Profile" — a full page headed by the shared
+  `components/LeadIdentityHeader.tsx` (same avatar/contact/QR header as the
+  detail page; the QR dialog lives inside it), then the form:
+  name/gender/email/mobile/study level/country interested/qualification/
+  residence/source with required-field errors; Save runs `updateLead()` →
+  `SuccessDialog` → back to the detail page. The Actions-panel "Edit Lead
+  Details" navigates here too) ·
+  filled sections (Basic Information, Additional
+  Information, Current/Permanent Address, Passport, Nationality + Background
+  questions defaulting "No", Emergency Contacts — known lead fields filled,
+  rest "--") · ten "No Data Available" sections (Academic → Family Details,
+  Tests shows an "English" sub-link) · Created/Updated footer · tab bar
+  (all four tabs — Overview / Profile / Course Suggestion / Course
+  Preferences — are built) · Basic Details grid (3 groups with dividers; missing fields
+  show "-") · Invoices + Support Tickets empty tables with Create buttons ·
+  User Activity Log · Created/Updated footer.
+- Right rail: **Actions** panel (Reset Password → Convert To Student are toast
+  placeholders; Delete opens `ConfirmDialog`) and **Confidential Notes** —
+  notes persist per lead in localStorage (`unidest-lead-notes`), newest first,
+  "No Notes Found!" when empty.
+- New optional `Lead` fields for this page: `gender`, `studyLevel`,
+  `qualification`, `source`, `countryOfResidence` (seeded on ids 2379, 2370).
+
+The Settings row action is still a UI-only placeholder.
 
 ### Add New Lead form (`/leads/new`)
 - **Component:** `src/features/leads/AddLeadPage.tsx` (reached via the "New Lead"
@@ -212,8 +267,13 @@ View / settings actions are still UI-only placeholders.
 - Extra option lists in `src/mock/leads.ts`: `qualifications` (7) ·
   `phoneCountryCodes` (7, `{code,label}`) · `englishTests` (5: IELTS/TOEFL/PTE/
   GRE/DUOLINGO).
-- Frontend-only: submit shows a success toast then redirects to `/leads` (no
-  persistence yet). **Maps to (future):** `POST /leads` creating a `leads` row +
+- Submit **saves via `addLead()`**: named form fields are read with `FormData`,
+  a `Lead` is built (next id, status "New Lead", `created`/`emailDate` stamped,
+  first Country-Interested chip, gender/studyLevel/qualification/residence
+  captured) and prepended, then the toast redirects to `/leads` where the new
+  row shows on top. **Leads persist like webinars** — localStorage working copy
+  (key `unidest-leads`) loaded in `src/mock/leads.ts`; clearing the key resets
+  to the seed. **Maps to (future):** `POST /leads` creating a `leads` row +
   related `student_preferences` / `student_test_scores`.
 
 ---
@@ -265,8 +325,38 @@ live; Apply closes the modal.
 Working now (frontend): search, all filters above, page size, pagination, row
 selection + select-all, sticky header, loading preloader, export cluster,
 **Student - Assign Staff** dialog (reuses `leads/components/AssignStaffDialog`,
-which now takes any `{ id, name }` record plus optional title/label).
-Status-edit / view / settings / applications actions are UI-only placeholders.
+which now takes any `{ id, name }` record plus optional title/label), and the
+**View action / name click → `/students/:id`** detail page (below).
+Status-edit (list row) / settings / applications actions are UI-only
+placeholders.
+
+### Student View page (`/students/:id`)
+- **Component:** `src/features/students/StudentViewPage.tsx`; breadcrumb
+  "Dashboard / Student Management / View".
+- A `studentAsLead()` adapter maps the Student to the Lead shape so it reuses
+  the lead detail building blocks as-is: `LeadIdentityHeader` (avatar, contact
+  row, working QR dialog, chat icon → Chat tab), `LeadProfileTab`,
+  `LeadCourseSuggestionTab`, `LeadCoursePreferencesTab`.
+- **8 tabs** per the reference: Overview / Profile / Course Suggestion /
+  Course Preferences / Documents / Applications / Services / Chat (last four
+  are placeholders).
+- **Overview:** status row — badge + pencil opens a "Change Status to"
+  dropdown of the 8 student statuses; a change updates the badge, prepends a
+  "STUDENT STATUS CHANGED TO: X, Previous Status: Y" activity entry and
+  persists per student in localStorage `unidest-student-status` — plus
+  "Next Follow-up: --" and a "New Follow-up Record" button (toast). Then Basic
+  Details (3 divided groups incl. Course Interested to Study + Intake from the
+  student record), Invoices + Support Tickets empty tables, multi-entry User
+  Activity Log (LEAD CONVERTED / LEAD CREATED & ASSIGNED TO), Created/Updated
+  footer.
+- Right rail: **Actions** panel (View Support Tickets, Reset Password, Login as
+  User, Send email/sms/Whatsapp, Edit Basic Info, Edit Profile, Student
+  Agreement, Link to Agent, Country Info Permissions, Convert Back To Lead —
+  all toasts; Delete opens `ConfirmDialog`) and **Confidential Notes**
+  (persisted under `unidest-student-notes`).
+- The lead detail helpers (`Detail`, `DetailGrid`, `RecordsSection`,
+  `ConfidentialNotes` with a `storageKey` prop) were extracted to
+  `src/components/DetailSections.tsx` and are shared by both view pages.
 
 ### Shared table components
 Extracted while building this page so both data tables stay in sync:

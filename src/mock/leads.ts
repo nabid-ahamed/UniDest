@@ -19,6 +19,12 @@ export interface Lead {
   countryInterested: string // destination country the lead wants to study in
   /** Labels shown as removable chips on the row. Seeded on a few leads only. */
   tags?: string[]
+  // Profile fields shown on the lead detail page (missing → "-").
+  gender?: string
+  studyLevel?: string
+  qualification?: string
+  source?: string
+  countryOfResidence?: string
 }
 
 // Badge colours are the darker 700/800 shades so white text clears WCAG AA
@@ -148,10 +154,10 @@ export const totalLeadCount = 190
 const s = (label: string) =>
   leadStatuses.find((x) => x.label === label)?.color ?? '#06b6d4'
 
-export const leads: Lead[] = [
-  { id: 2379, name: 'Aarav Sharma', email: 'aarav.sharma@gmail.com', emailDate: '18 Jul', phone: '+91 98450 12345', phoneNote: 'at the time', whatsapp: true, leadAgeDays: 0, branch: 'Sylhet', status: 'New Lead', statusColor: s('New Lead'), assignedTo: null, created: '19 Jul 2026', nextFollowup: null, countryInterested: 'United Kingdom', tags: ['High Commission', 'Mid Priority'] },
+const seedLeads: Lead[] = [
+  { id: 2379, name: 'Aarav Sharma', email: 'aarav.sharma@gmail.com', emailDate: '18 Jul', phone: '+91 98450 12345', phoneNote: 'at the time', whatsapp: true, leadAgeDays: 0, branch: 'Sylhet', status: 'New Lead', statusColor: s('New Lead'), assignedTo: null, created: '19 Jul 2026', nextFollowup: null, countryInterested: 'United Kingdom', tags: ['High Commission', 'Mid Priority'], gender: 'Male', studyLevel: 'Short Term Programs', qualification: 'Bachelors', source: 'Facebook', countryOfResidence: 'India' },
   { id: 2367, name: 'Fatima Rahman', email: 'fatima.r@gmail.com', emailDate: '21 Jun', phone: '+880 1712 445566', phoneNote: 'Human resource', whatsapp: false, leadAgeDays: 26, branch: 'Khulna', status: 'New Lead', statusColor: s('New Lead'), assignedTo: null, created: '23 Jun 2026', nextFollowup: '22 Jul 2026', countryInterested: 'Canada' },
-  { id: 2370, name: 'Rohan Das', email: 'rohan.das@gmail.com', emailDate: '24 Jun', phone: '+91 90080 11223', phoneNote: 'Column four', whatsapp: true, leadAgeDays: 26, branch: 'Dhaka', status: 'Contacted', statusColor: s('Contacted'), assignedTo: 'Sarah Ali', created: '23 Jun 2026', nextFollowup: null, countryInterested: 'Australia', tags: ['Hot Lead'] },
+  { id: 2370, name: 'Rohan Das', email: 'rohan.das@gmail.com', emailDate: '24 Jun', phone: '+91 90080 11223', phoneNote: 'Column four', whatsapp: true, leadAgeDays: 26, branch: 'Dhaka', status: 'Contacted', statusColor: s('Contacted'), assignedTo: 'Sarah Ali', created: '23 Jun 2026', nextFollowup: null, countryInterested: 'Australia', tags: ['Hot Lead'], gender: 'Male', studyLevel: 'Masters', qualification: 'Bachelors', source: 'Website', countryOfResidence: 'India' },
   { id: 2371, name: 'Ayesha Khan', email: 'ayesha.khan@gmail.com', emailDate: '26 Jun', phone: '+92 300 4455667', phoneNote: 'Agent created', whatsapp: false, leadAgeDays: 26, branch: 'Dhaka', status: 'New Lead', statusColor: s('New Lead'), assignedTo: null, created: '23 Jun 2026', nextFollowup: null, countryInterested: 'United States' },
   { id: 2372, name: 'Vikram Patel', email: 'vikram.p@gmail.com', emailDate: '27 Jun', phone: '+91 98765 43210', phoneNote: 'IELTS test', whatsapp: false, leadAgeDays: 26, branch: 'Sylhet', status: 'Warm', statusColor: s('Warm'), assignedTo: 'Mohammed Saleh', created: '23 Jun 2026', nextFollowup: '25 Jul 2026', countryInterested: 'United Kingdom', tags: ['Scholarship Seeker', 'Follow Up'] },
   { id: 2374, name: 'Nabila Haque', email: 'nabila.h@gmail.com', emailDate: '29 Jun', phone: '+880 1811 223344', phoneNote: 'country wise', whatsapp: false, leadAgeDays: 26, branch: 'Chattogram', status: 'New Lead', statusColor: s('New Lead'), assignedTo: null, created: '23 Jun 2026', nextFollowup: null, countryInterested: 'Canada' },
@@ -165,3 +171,50 @@ export const leads: Lead[] = [
   { id: 2344, name: 'Sneha Reddy', email: 'sneha.reddy@gmail.com', emailDate: '01 Jun', phone: '+91 99555 44422', phoneNote: 'course finder', whatsapp: true, leadAgeDays: 45, branch: 'Khulna', status: 'Warm', statusColor: s('Warm'), assignedTo: 'Moses Otieno', created: '04 Jun 2026', nextFollowup: '21 Jul 2026', countryInterested: 'United Kingdom' },
   { id: 2338, name: 'Rahul Verma', email: 'rahul.verma@gmail.com', emailDate: '28 May', phone: '+91 90123 45678', phoneNote: 'intake 2026', whatsapp: false, leadAgeDays: 50, branch: 'Chattogram', status: 'New Lead', statusColor: s('New Lead'), assignedTo: null, created: '30 May 2026', nextFollowup: null, countryInterested: 'Germany' },
 ]
+
+// ---------------------------------------------------------------------------
+// Persistence (frontend-only): the Add New Lead form does a full page redirect
+// back to the list, so an in-memory array would lose the new lead. Until the
+// real API exists, the working copy lives in localStorage; the seed above is
+// only the first-run default.
+// ---------------------------------------------------------------------------
+
+const LEADS_KEY = 'unidest-leads'
+
+function loadLeads(): Lead[] {
+  try {
+    const raw = localStorage.getItem(LEADS_KEY)
+    if (raw) {
+      const parsed = JSON.parse(raw)
+      if (Array.isArray(parsed)) return parsed as Lead[]
+    }
+  } catch {
+    // Corrupt/blocked storage → fall back to the seed.
+  }
+  return seedLeads
+}
+
+/** Working list — seeded on first run, then whatever the user last saved. */
+export const leads: Lead[] = loadLeads()
+
+export function saveLeads(next: Lead[]) {
+  try {
+    localStorage.setItem(LEADS_KEY, JSON.stringify(next))
+  } catch {
+    // Storage full/blocked — the session still works, it just won't persist.
+  }
+}
+
+/** Prepend a new lead (assigning the next id) and persist. Returns it. */
+export function addLead(data: Omit<Lead, 'id'>): Lead {
+  const lead: Lead = { ...data, id: Math.max(0, ...leads.map((l) => l.id)) + 1 }
+  saveLeads([lead, ...leads])
+  return lead
+}
+
+/** Replace one lead (by id) in memory and persist. */
+export function updateLead(updated: Lead) {
+  const i = leads.findIndex((l) => l.id === updated.id)
+  if (i >= 0) leads[i] = updated
+  saveLeads([...leads])
+}
