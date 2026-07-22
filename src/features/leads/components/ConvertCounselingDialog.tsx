@@ -42,6 +42,7 @@ export function ConvertCounselingDialog({
     if (!when) next.when = 'Please pick a date & time.'
     setErrors(next)
     if (Object.keys(next).length) return
+    if (!when) return
     onUpdate(counsellor, when)
   }
 
