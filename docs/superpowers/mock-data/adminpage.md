@@ -372,6 +372,45 @@ Extracted while building this page so both data tables stay in sync:
 
 ---
 
+## Course Finder (`/course-finder`)
+
+- **Mock file:** `src/mock/courseFinder.ts` (`FinderCourse`, 22 courses;
+  `totalFinderCourseCount = 1190`); **page:**
+  `src/features/courseFinder/CourseFinderPage.tsx`. Modeled 1:1 on
+  demo.eductrl.com/cn4/admin/course-finder (inspected live via browser-use).
+- **Top card** "University Course Finder": Study Level select (11 levels,
+  default Undergraduate) · Country `MultiSelect` (derived from course data) ·
+  keyword input (course/university, Enter submits) · **Search** (applies the
+  three top fields with a loading pass) / **Clear** (resets everything).
+- **Filter sidebar** (live): Select Student (optgrouped Students + Leads —
+  prefills the modals) · Study Area → dependent Discipline Area · Intake month
+  `MultiSelect` · Duration buckets (Any/0-1/…/4+) · Sort (IELTS low/high,
+  Course Name, Fee low/high) · score accordions IELTS / TOEFL / PTE / GRE-GMAT
+  (each "score" + "no band less than"; courses requiring **at most** the
+  entered score match; blank = no filter).
+- **Results:** Show 25/50/100/200 + `ExportButtons` · **Select All** bar
+  (amber "Suggest Selected (N)" appears when N > 0) · course cards: gradient
+  initials logo + city/country left; title, Id/University/Country, Study
+  Level/Duration/Intakes, Tuition/Application fees, **Commission → "Show"**
+  (modal "Your Commission") · card footer: Select checkbox + amber **Suggest
+  to Student** + blue **Add to Student Course Preference** · "Showing X to Y
+  of Z entries" + pagination.
+- **Modals:** Suggest Course to Student (student* + Intake Month/Year) ·
+  Suggest Selected Courses to Student (student* only) · Add to Student Course
+  Preference (student* + intake* + priority). Student options span both
+  `students` and `leads` mocks (ids don't collide).
+- **Persistence / integration:** suggestions append to localStorage
+  `unidest-cf-suggestions[personId]` and show up in the **Course Suggestion
+  tab** ("Course Finder Suggestions/ Student Bookmarked" table — Date /
+  Course·University·Intake / Accepted? / Remove) on both the lead and student
+  view pages; that tab's "Open Course Finder" link now navigates to
+  `/course-finder`. Preferences append to `unidest-lead-programs[personId]`
+  (same shape as the Course Preferences tab, so they appear in its Selected
+  Programs table).
+- Wired: route in `router.tsx`, sidebar item link, breadcrumb title.
+
+---
+
 ## Applications
 
 - **Mock file:** `src/mock/applications.ts`

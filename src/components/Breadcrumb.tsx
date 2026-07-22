@@ -8,6 +8,7 @@ const TITLES: Record<string, string> = {
   '/students': 'Student Management',
   '/applications': 'Applications',
   '/webinars': 'Webinar',
+  '/course-finder': 'Course Finder',
 }
 
 // Multi-level trails for nested pages.

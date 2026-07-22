@@ -3,19 +3,11 @@ import { useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import {
-  GraduationCap,
-  Mail,
-  Lock,
-  Eye,
-  EyeOff,
-  Globe2,
-  Users,
-  FileCheck2,
-} from 'lucide-react'
+import { Mail, Lock, Eye, EyeOff, Globe2, Users, FileCheck2 } from 'lucide-react'
 import { Input } from '../../components/ui/Input'
 import { Button } from '../../components/ui/Button'
 import { useAuth } from '../../store/auth'
+import logo from '../../assets/globaled-logo.png'
 
 const schema = z.object({
   email: z.string().min(1, 'Email is required').email('Enter a valid email'),
@@ -59,11 +51,17 @@ export default function LoginPage() {
         <div className="absolute -right-24 -top-24 h-96 w-96 rounded-full bg-brand-500/30 blur-3xl" />
         <div className="absolute -bottom-32 -left-16 h-96 w-96 rounded-full bg-brand-400/20 blur-3xl" />
 
-        <div className="relative flex items-center gap-2.5">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15 backdrop-blur">
-            <GraduationCap className="h-6 w-6" />
-          </div>
-          <span className="text-xl font-bold tracking-tight">UniDest</span>
+        <div className="relative">
+          {/* White plate keeps the coloured wordmark readable on the blue panel. */}
+          <span className="inline-flex items-center rounded-xl bg-white px-4 py-2.5 shadow-sm">
+            <img
+              src={logo}
+              alt="GlobalEd — IELTS & Study Abroad Consultancy"
+              width={1198}
+              height={294}
+              className="h-9 w-auto"
+            />
+          </span>
         </div>
 
         <div className="relative">
@@ -88,7 +86,7 @@ export default function LoginPage() {
         </div>
 
         <p className="relative text-sm text-brand-200">
-          © {new Date().getFullYear()} UniDest. All rights reserved.
+          Copyright © {new Date().getFullYear()} GlobalEd All Rights Reserved.
         </p>
       </div>
 
@@ -96,13 +94,14 @@ export default function LoginPage() {
       <div className="flex w-full items-center justify-center px-6 py-12 lg:w-1/2">
         <div className="w-full max-w-sm">
           {/* Mobile logo */}
-          <div className="mb-8 flex items-center gap-2.5 lg:hidden">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-600 text-white">
-              <GraduationCap className="h-6 w-6" />
-            </div>
-            <span className="text-xl font-bold tracking-tight text-slate-900">
-              UniDest
-            </span>
+          <div className="mb-8 lg:hidden">
+            <img
+              src={logo}
+              alt="GlobalEd — IELTS & Study Abroad Consultancy"
+              width={1198}
+              height={294}
+              className="h-10 w-auto"
+            />
           </div>
 
           <h2 className="text-2xl font-bold text-slate-900">Welcome back</h2>

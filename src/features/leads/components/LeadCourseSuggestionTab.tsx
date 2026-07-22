@@ -10,7 +10,35 @@ interface Suggestion {
 }
 
 const SUGGESTIONS_KEY = 'unidest-lead-suggestions'
+const CF_SUGGESTIONS_KEY = 'unidest-cf-suggestions' // written by the Course Finder page
 const ALLOWED = ['xls', 'xlsx', 'csv', 'doc', 'docx', 'pdf']
+
+interface CfSuggestion {
+  date: string
+  course: string
+  university: string
+  intake: string
+  accepted: string
+}
+
+function loadCfSuggestions(personId: number): CfSuggestion[] {
+  try {
+    const all = JSON.parse(localStorage.getItem(CF_SUGGESTIONS_KEY) ?? '{}')
+    return Array.isArray(all[personId]) ? all[personId] : []
+  } catch {
+    return []
+  }
+}
+
+function saveCfSuggestions(personId: number, list: CfSuggestion[]) {
+  try {
+    const all = JSON.parse(localStorage.getItem(CF_SUGGESTIONS_KEY) ?? '{}')
+    all[personId] = list
+    localStorage.setItem(CF_SUGGESTIONS_KEY, JSON.stringify(all))
+  } catch {
+    // Storage blocked — removals just won't persist.
+  }
+}
 
 function loadSuggestions(leadId: number): Suggestion[] {
   try {
@@ -48,7 +76,17 @@ export function LeadCourseSuggestionTab({
   const [fileName, setFileName] = useState('')
   const [errors, setErrors] = useState<{ title?: string; file?: string }>({})
   const [suggestions, setSuggestions] = useState<Suggestion[]>(() => loadSuggestions(lead.id))
+  const [cfSuggestions, setCfSuggestions] = useState<CfSuggestion[]>(() =>
+    loadCfSuggestions(lead.id),
+  )
   const fileRef = useRef<HTMLInputElement>(null)
+
+  const removeCfSuggestion = (idx: number) => {
+    const list = cfSuggestions.filter((_, i) => i !== idx)
+    setCfSuggestions(list)
+    saveCfSuggestions(lead.id, list)
+    onToast('Suggestion removed')
+  }
 
   const upload = () => {
     const next: typeof errors = {}
@@ -181,13 +219,9 @@ export function LeadCourseSuggestionTab({
         <Bar>Course Finder Suggestions/ Student Bookmarked</Bar>
         <p className="text-sm text-slate-600">
           You can search for a course in course finder and suggest to student{' '}
-          <button
-            type="button"
-            onClick={() => onToast('Course Finder — coming soon')}
-            className="font-medium text-brand-600 hover:underline"
-          >
+          <a href="/course-finder" className="font-medium text-brand-600 hover:underline">
             Open Course Finder
-          </button>
+          </a>
         </p>
         <table className="w-full border border-slate-200">
           <thead>
@@ -199,11 +233,37 @@ export function LeadCourseSuggestionTab({
             </tr>
           </thead>
           <tbody>
-            <tr>
-              <td colSpan={4} className="px-4 py-4 text-center text-sm text-slate-600">
-                No suggestions yet!
-              </td>
-            </tr>
+            {cfSuggestions.length > 0 ? (
+              cfSuggestions.map((s, i) => (
+                <tr key={`${s.course}-${i}`} className="border-b border-slate-100 text-sm odd:bg-slate-50/70">
+                  <td className="whitespace-nowrap px-4 py-3 tabular-nums text-slate-600">
+                    {s.date}
+                  </td>
+                  <td className="px-4 py-3 font-medium text-slate-700 [overflow-wrap:anywhere]">
+                    {s.course} — {s.university}
+                    {s.intake !== '--' && (
+                      <span className="text-slate-500"> · Intake: {s.intake}</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-slate-600">{s.accepted}</td>
+                  <td className="px-4 py-3">
+                    <button
+                      type="button"
+                      onClick={() => removeCfSuggestion(i)}
+                      className="text-sm font-medium text-rose-600 hover:underline"
+                    >
+                      Remove
+                    </button>
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={4} className="px-4 py-4 text-center text-sm text-slate-600">
+                  No suggestions yet!
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </section>

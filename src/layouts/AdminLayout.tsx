@@ -26,11 +26,13 @@ export default function AdminLayout() {
 
       <footer
         className={cn(
-          'border-t border-slate-200 py-4 text-center text-xs text-slate-500 transition-[padding] duration-300',
+          'border-t border-slate-200 bg-white py-4 text-center text-sm text-slate-600 transition-[padding] duration-300',
           pad,
         )}
       >
-        © {new Date().getFullYear()} UniDest. All rights reserved.
+        Copyright © {new Date().getFullYear()}{' '}
+        <span className="font-semibold text-slate-700">GlobalEd</span> All Rights Reserved.{' '}
+        <span className="ml-1 text-xs text-slate-400">v1.0</span>
       </footer>
     </div>
   )
