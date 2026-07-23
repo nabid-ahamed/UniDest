@@ -88,9 +88,9 @@ const NAV: NavGroup[] = [
         label: 'Course Management',
         icon: Plane,
         children: [
-          { label: 'Countries' },
-          { label: 'Universities' },
           { label: 'Courses' },
+          { label: 'Course Categories' },
+          { label: 'Universities' },
         ],
       },
       { label: 'Student Resources', icon: UploadCloud },

@@ -17,6 +17,7 @@ import { StatCard } from './components/StatCard'
 import { CollapsibleSection } from './components/CollapsibleSection'
 import { ChartCard } from './components/ChartCard'
 import { TrendAreaCard } from './components/TrendAreaCard'
+import { OverviewDonut } from './components/OverviewDonut'
 import { FollowUpCard } from './components/FollowUpCard'
 import { RemindersCard } from './components/RemindersCard'
 import { BreakdownCard } from './components/BreakdownCard'
@@ -62,6 +63,9 @@ export default function DashboardPage() {
 
       {/* Charts */}
       <ChartsRow />
+
+      {/* Statistics overview donut */}
+      <OverviewDonut />
 
       {/* Follow-ups */}
       <CollapsibleSection title="Follow-ups">
