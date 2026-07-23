@@ -14,6 +14,12 @@ import BroadcastPage from '../features/broadcast/BroadcastPage'
 import AdditionalServicesPage from '../features/services/AdditionalServicesPage'
 import ServiceViewPage from '../features/services/ServiceViewPage'
 import BroadcastHistoryPage from '../features/broadcast/BroadcastHistoryPage'
+import UniversityInvoicesPage from '../features/invoices/UniversityInvoicesPage'
+import StudentInvoicesPage from '../features/invoices/StudentInvoicesPage'
+import StudentInvoiceFormPage from '../features/invoices/StudentInvoiceFormPage'
+import ReferralSignupsPage from '../features/referral/ReferralSignupsPage'
+import ReferralPayoutPage from '../features/referral/ReferralPayoutPage'
+import AnalyticsPage from '../features/analytics/AnalyticsPage'
 import WebinarsPage from '../features/webinars/WebinarsPage'
 import WebinarViewPage from '../features/webinars/WebinarViewPage'
 import EditWebinarPage from '../features/webinars/EditWebinarPage'
@@ -48,6 +54,13 @@ export const router = createBrowserRouter([
           { path: '/services/:id', element: <ServiceViewPage /> },
           { path: '/broadcast', element: <BroadcastPage /> },
           { path: '/broadcast/history', element: <BroadcastHistoryPage /> },
+          { path: '/invoices/university', element: <UniversityInvoicesPage /> },
+          { path: '/invoices/student', element: <StudentInvoicesPage /> },
+          { path: '/invoices/student/new', element: <StudentInvoiceFormPage /> },
+          { path: '/invoices/student/:id/edit', element: <StudentInvoiceFormPage /> },
+          { path: '/referral/signups', element: <ReferralSignupsPage /> },
+          { path: '/referral/payout', element: <ReferralPayoutPage /> },
+          { path: '/analytics', element: <AnalyticsPage /> },
           { path: '/webinars', element: <WebinarsPage /> },
           { path: '/webinars/:id', element: <WebinarViewPage /> },
           { path: '/webinars/:id/edit', element: <EditWebinarPage /> },

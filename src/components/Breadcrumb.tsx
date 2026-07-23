@@ -11,12 +11,21 @@ const TITLES: Record<string, string> = {
   '/course-finder': 'Course Finder',
   '/broadcast': 'Broadcast',
   '/services': 'Additional Services',
+  '/invoices/university': 'University Invoices',
+  '/invoices/student': 'Student Invoices',
+  '/referral/signups': 'Student Referral Signups',
+  '/referral/payout': 'Referral Payout',
+  '/analytics': 'Analytics',
 }
 
 // Multi-level trails for nested pages.
 const TRAILS: Record<string, Crumb[]> = {
   '/leads/new': [{ label: 'Lead Management', to: '/leads' }, { label: 'Add New Lead' }],
   '/broadcast/history': [{ label: 'Broadcast', to: '/broadcast' }, { label: 'Broadcast History' }],
+  '/invoices/student/new': [
+    { label: 'Student Invoices', to: '/invoices/student' },
+    { label: 'New Invoice' },
+  ],
 }
 
 // Dynamic (parameterised) routes that a static map can't cover.
@@ -25,6 +34,8 @@ function dynamicTrail(pathname: string): Crumb[] | null {
     return [{ label: 'Lead Management', to: '/leads' }, { label: 'View' }]
   if (/^\/leads\/\d+\/edit$/.test(pathname))
     return [{ label: 'Lead Management', to: '/leads' }, { label: 'Edit Profile' }]
+  if (/^\/invoices\/student\/\d+\/edit$/.test(pathname))
+    return [{ label: 'Student Invoices', to: '/invoices/student' }, { label: 'Edit Invoice' }]
   if (/^\/services\/\d+$/.test(pathname))
     return [
       { label: 'Additional Services', to: '/services' },

@@ -25,6 +25,14 @@ never inline in components. Types are exported alongside the data.
 | [Leads](#leads) | `src/mock/leads.ts` | ✅ done |
 | [Students](#students) | `src/mock/students.ts` | ✅ done |
 | [Applications](#applications) | `src/mock/applications.ts` | ✅ done |
+| [Course Finder](#course-finder-course-finder) | `src/mock/courseFinder.ts` | ✅ done |
+| [University Invoices](#university-invoices-invoicesuniversity) | `src/mock/invoices.ts` | ✅ done |
+| [Student Invoices](#student-invoices-invoicesstudent--new--idedit) | `src/mock/studentInvoices.ts` | ✅ done |
+| [Analytics](#analytics-analytics) | `src/mock/analytics.ts` | ✅ done |
+| [Referral Signups](#referral-signups-referralsignups) | `src/mock/referrals.ts` | ✅ done |
+| [Referral Payout](#referral-payout-referralpayout) | `src/mock/referrals.ts` | ✅ done |
+| [Additional Services](#additional-services-services--servicesid) | `src/mock/services.ts` | ✅ done |
+| [Broadcast](#broadcast-broadcast--broadcasthistory) | `src/mock/broadcast.ts` | ✅ done |
 | [Webinar & Events](#webinar--events) | `src/mock/webinars.ts` | ✅ done |
 | Staff | `src/mock/staff.ts` | ⬜ not started |
 
@@ -408,6 +416,133 @@ Extracted while building this page so both data tables stay in sync:
   (same shape as the Course Preferences tab, so they appear in its Selected
   Programs table).
 - Wired: route in `router.tsx`, sidebar item link, breadcrumb title.
+
+---
+
+## University Invoices (`/invoices/university`)
+
+- **Mock file:** `src/mock/invoices.ts` (`UniversityInvoice`, 5 seeded rows
+  persisted under localStorage `unidest-uni-invoices`); **page:**
+  `src/features/invoices/UniversityInvoicesPage.tsx`. Modeled on
+  demo.eductrl.com/cn4/admin/university-invoices (+ /applications), browser-use
+  reference. **Connected to the Applications module:** every invoice carries an
+  `applicationId` and reuses that application's student / university / country /
+  agent / channel; `invoiceableStatuses` = Offer Letter Received + Payment
+  Received drives which applications can be invoiced.
+- **Tab 1 – Invoices:** filter bar (Search by invoice-no/university,
+  University `SingleSelect`, Status All/Due/Paid, Clear) · Show 25/50/100 +
+  table search + `ExportButtons` · table Date / Invoice # (opens View modal) /
+  Invoice To (university+country, "(Master Agent)", payment label, Appl ID,
+  University, Student, Agent, Next Payment) / Amount (currency + value) /
+  Status (Paid green, Due red) / **Actions** (View, Record Payment [Due only],
+  Download PDF via jsPDF/autoTable, Send Email toast, Delete → `ConfirmDialog`)
+  + "Agent Invoice Requested" green badge on agent invoices.
+- **Tab 2 – University Applications:** lists applications with an
+  invoiceable status; filters Intake / University / Applied Through +
+  "Applications with no invoices" checkbox · table checkbox-less ID / Date /
+  Student / Country / Details (university, course, intake, applied-through,
+  "Invoices Created: N") / Status (reuses `applicationStatuses` colour badge) /
+  **Create Invoice** → modal (payment label, currency, amount, next payment,
+  "apply through agent" toggle) → `addInvoice()`, jumps to the Invoices tab.
+- **Modals:** View (detail grid + payment-history table + Download PDF),
+  Record Payment (amount/date/note → marks Paid, appends a payment, persists),
+  Create Invoice (from an application). All reuse the shared `Field`,
+  `SingleSelect`, `PageBtn`, `ExportButtons`, `ConfirmDialog`, `pickTextColor`.
+- Sidebar **Invoices ▸ University Invoices** now links here; the flyout/submenu
+  in the collapsed rail navigates too.
+
+## Student Invoices (`/invoices/student` + `/new` + `/:id/edit`)
+
+- **Mock file:** `src/mock/studentInvoices.ts` (`Business` ×2 with currency +
+  `StudentInvoice` ×6 seeded, persisted under localStorage
+  `unidest-student-invoices`); **pages:**
+  `src/features/invoices/StudentInvoicesPage.tsx` (list + modals) and
+  `StudentInvoiceFormPage.tsx` (one form reused for create + edit). Modeled on
+  demo.eductrl.com/cn4/admin/student-invoices (+ /student-invoice-generate),
+  browser-use reference. **Connected to the Students module:** each invoice is
+  billed to a student (studentNo) and reuses its name / email / phone; the form
+  "Select Student" reads straight from the `students` mock.
+- **Totals are always derived** (`invoiceSubTotal` / `invoiceGrandTotal` /
+  `invoicePaid` / `invoiceDue` / `invoiceStatus`) so list, view, form and PDF
+  never disagree. Status = Paid when due ≤ 0, else Due (list shows the
+  remaining amount under the Due badge).
+- **List:** "Create" button (→ /new) · filter bar (Search by invoice-no /
+  student, Status All/Due/Paid, Clear) · Show 25/50/100 + table search +
+  `ExportButtons` · table Invoice # / Date / Student / Amount / Status (badge +
+  due amount) / **Actions** (View, Record Payment [Due only], Email toast,
+  Download PDF, Edit → /:id/edit, Delete → `ConfirmDialog`).
+- **Form** (breadcrumb New Invoice / Edit Invoice + back button): Select
+  Business (fills the right-hand Options card + currency) · Select Student
+  (fills the Bill To card) · Due Date · line-items table (Sl.No / Item &
+  Description / Amount) with **Add More** + per-row remove · Terms &
+  Conditions · live **Sub Total / Discount (-) / Grand Total** · "Email invoice
+  to client" checkbox · Create / Save Changes / Cancel. Saving
+  `addStudentInvoice` / `updateStudentInvoice` then returns to the list.
+- **Modals:** View (Bill To + business header + line-item table + totals +
+  Download PDF) and Record Payment (amount/date/note → appends a payment,
+  recomputes status). PDF via shared jsPDF/autoTable.
+
+## Analytics (`/analytics`)
+
+- **Compute layer:** `src/mock/analytics.ts`; **page:**
+  `src/features/analytics/AnalyticsPage.tsx`. Modeled on
+  demo.eductrl.com/cn4/admin/analytics, browser-use reference. **No separate
+  dataset — every report is computed live from the existing module mocks**
+  (leads, students, applications, invoices, studentInvoices, referrals) so the
+  numbers always match those pages.
+- **View form:** report-type select (Leads / Students / Applications / Student
+  Referral / University Invoices / Sales), Date Range (From–To), Branch → Show
+  Report / Clear. Show Report without a type toasts a prompt.
+- **Report output** (`ReportView`, one reusable renderer): 4 summary tiles, a
+  recharts colored bar chart (reuses each module's status colours), and a
+  breakdown table with `ExportButtons`. Filters applied: branch (records with a
+  `branch` field) + date range (tolerant parser handles the mocks' mixed
+  "dd-mm-yyyy" / "dd Mon yyyy" formats). Empty results show a "No data" card.
+- Report specifics: Leads → by status + by country interested; Students → by
+  status + by residence country; Applications → by status + by channel;
+  Student Referral → by referrer (+ total reward in BDT `৳`); University
+  Invoices → Paid vs Due + amount by currency; Sales → Paid vs Due + collected/
+  outstanding from student invoices.
+- Sidebar **Analytics** links here.
+
+## Referral Signups (`/referral/signups`)
+
+- **Mock file:** `src/mock/referrals.ts` (`ReferralSignup` ×9 seeded, persisted
+  under localStorage `unidest-referral-signups`); **page:**
+  `src/features/referral/ReferralSignupsPage.tsx`. Modeled on
+  demo.eductrl.com/cn4/admin/referral-signups, browser-use reference.
+  **Connected to the Students module:** a signup = a student who joined through
+  another student's referral link, so both the Name and Refered By columns are
+  real `students` records; both names link to `/students/:id`.
+- **List** (heading "Student Referral Signups", breadcrumb same): Show
+  10/25/50/100 + search + `ExportButtons` · table SI No. / Date / Name (student
+  link + ID) / Refered By (referrer link + ID, or just ID when the name is
+  unknown) / Commission (`৳ n` BDT or "--") / **Action** = "Set/Update
+  Commission" · Showing/pagination footer.
+- **Set/Update Referral Amount modal:** single Amount* field → Submit sets the
+  commission via `setReferralCommission`, persists, toasts, and the row's
+  Commission cell updates from "--" to the amount.
+- Sidebar **Referral ▸ Referral Signups** links here.
+
+## Referral Payout (`/referral/payout`)
+
+- **Page:** `src/features/referral/ReferralPayoutPage.tsx`; data helpers added to
+  `src/mock/referrals.ts` (`payPreferences` per referrer, `payoutMonths()`,
+  `computePayouts(monthKey)`). Modeled on
+  demo.eductrl.com/cn4/admin/referral-payout, browser-use reference.
+  **Aggregates the Referral Signups data:** picks a month, groups that month's
+  signups by referrer, counts referrals and sums their commissions into a
+  payout — no separate dataset, so it always stays in sync with the signups.
+- **Flow:** "Select Month" dropdown (only months that actually have signups,
+  newest first) + **Continue** → payout table. Continue without a month toasts
+  "Please select a month".
+- **Table:** Referer (referrer student link + ID) / Pay Pref. Mode (bKash /
+  Bank Transfer / Nagad / Rocket / Cash badge) / Pay Pref. Details / No. of
+  Referrals / Reward (BDT `৳`). A summary strip shows the month, total
+  referrals and total reward, plus `ExportButtons`. Referer links to
+  `/students/:id`.
+- Sidebar **Referral ▸ Referral Payout** links here; both referral submenu
+  items are now built.
 
 ---
 
