@@ -22,7 +22,7 @@ export function ChartCard({ title, subtitle, data, color = '#3366ff', height = 2
     <div className="flex h-full flex-col rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
       <h3 className="text-base font-bold text-slate-800">{title}</h3>
       <div className="mt-3 flex-1" style={{ minHeight: height }}>
-        <ResponsiveContainer width="100%" height={height} debounce={200}>
+        <ResponsiveContainer width="100%" height="100%" debounce={200}>
           <BarChart data={data} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
             <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#eef2f7" />
             <XAxis
