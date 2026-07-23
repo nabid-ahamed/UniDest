@@ -8,7 +8,6 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  type TooltipProps,
 } from 'recharts'
 import { cn } from '../../../lib/cn'
 import type { TrendPoint } from '../../../mock/dashboard'
@@ -30,8 +29,23 @@ const TIMEFRAMES = [
   { label: 'Last 12 Months', months: 12 },
 ] as const
 
+// Minimal shape of the props recharts passes to a custom Tooltip `content`.
+// Typed locally so we don't depend on recharts' generic TooltipProps, whose
+// exported shape varies between versions and broke the production build.
+interface TooltipEntry {
+  dataKey?: string | number
+  name?: string | number
+  value?: number | string
+  color?: string
+}
+interface TrendTooltipProps {
+  active?: boolean
+  label?: string | number
+  payload?: TooltipEntry[]
+}
+
 /** Floating tooltip card styled like the reference (title + coloured rows). */
-function TrendTooltip({ active, payload, label }: TooltipProps<number, string>) {
+function TrendTooltip({ active, payload, label }: TrendTooltipProps) {
   if (!active || !payload?.length) return null
   return (
     <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-lg">
