@@ -16,6 +16,8 @@ const TITLES: Record<string, string> = {
   '/referral/signups': 'Student Referral Signups',
   '/referral/payout': 'Referral Payout',
   '/analytics': 'Analytics',
+  '/automation': 'Automation - Workflows',
+  '/staff': 'Staff',
 }
 
 // Multi-level trails for nested pages.
@@ -26,6 +28,16 @@ const TRAILS: Record<string, Crumb[]> = {
     { label: 'Student Invoices', to: '/invoices/student' },
     { label: 'New Invoice' },
   ],
+  '/automation/campaigns': [{ label: 'Automation - Campaigns' }],
+  '/automation/create/workflow': [
+    { label: 'Automation - Workflows', to: '/automation' },
+    { label: 'New Workflow' },
+  ],
+  '/automation/create/campaign': [
+    { label: 'Automation - Campaigns', to: '/automation/campaigns' },
+    { label: 'New Campaign' },
+  ],
+  '/staff/new': [{ label: 'Staff', to: '/staff' }, { label: 'Add Staff' }],
 }
 
 // Dynamic (parameterised) routes that a static map can't cover.
@@ -43,6 +55,14 @@ function dynamicTrail(pathname: string): Crumb[] | null {
     ]
   if (/^\/students\/\d+$/.test(pathname))
     return [{ label: 'Student Management', to: '/students' }, { label: 'View' }]
+  if (/^\/automation\/workflow\/\d+$/.test(pathname))
+    return [{ label: 'Automation - Workflows', to: '/automation' }, { label: 'Workflow Detail' }]
+  if (/^\/automation\/campaign\/\d+$/.test(pathname))
+    return [{ label: 'Automation - Campaigns', to: '/automation/campaigns' }, { label: 'Campaign Detail' }]
+  if (/^\/staff\/\d+$/.test(pathname))
+    return [{ label: 'Staff', to: '/staff' }, { label: 'View' }]
+  if (/^\/staff\/\d+\/edit$/.test(pathname))
+    return [{ label: 'Staff', to: '/staff' }, { label: 'Edit Staff' }]
   if (/^\/webinars\/\d+$/.test(pathname))
     return [{ label: 'Webinar', to: '/webinars' }, { label: 'View Webinar' }]
   if (/^\/webinars\/\d+\/edit$/.test(pathname))
