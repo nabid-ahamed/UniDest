@@ -18,6 +18,13 @@ const TITLES: Record<string, string> = {
   '/analytics': 'Analytics',
   '/automation': 'Automation - Workflows',
   '/staff': 'Staff',
+  '/courses': 'University Course Management',
+  '/course-categories': 'Course Categories',
+  '/universities': 'Universities',
+  '/student-resources': 'Student Resources',
+  '/media-library': 'Media Library',
+  '/announcements': 'Announcements',
+  '/user-management': 'User Management',
 }
 
 // Multi-level trails for nested pages.
@@ -38,6 +45,14 @@ const TRAILS: Record<string, Crumb[]> = {
     { label: 'New Campaign' },
   ],
   '/staff/new': [{ label: 'Staff', to: '/staff' }, { label: 'Add Staff' }],
+  '/courses/new': [{ label: 'University Course Management', to: '/courses' }, { label: 'Add Course' }],
+  '/universities/new': [{ label: 'Universities', to: '/universities' }, { label: 'Add University' }],
+  '/student-resources/categories': [
+    { label: 'Student Resources', to: '/student-resources' },
+    { label: 'Categories' },
+  ],
+  '/announcements/new': [{ label: 'Announcements', to: '/announcements' }, { label: 'Create Announcement' }],
+  '/user-management/new': [{ label: 'User Management', to: '/user-management' }, { label: 'Create User' }],
 }
 
 // Dynamic (parameterised) routes that a static map can't cover.
@@ -63,6 +78,24 @@ function dynamicTrail(pathname: string): Crumb[] | null {
     return [{ label: 'Staff', to: '/staff' }, { label: 'View' }]
   if (/^\/staff\/\d+\/edit$/.test(pathname))
     return [{ label: 'Staff', to: '/staff' }, { label: 'Edit Staff' }]
+  if (/^\/courses\/\d+$/.test(pathname))
+    return [{ label: 'University Course Management', to: '/courses' }, { label: 'Course Detail' }]
+  if (/^\/courses\/\d+\/edit$/.test(pathname))
+    return [{ label: 'University Course Management', to: '/courses' }, { label: 'Edit Course' }]
+  if (/^\/universities\/\d+$/.test(pathname))
+    return [{ label: 'Universities', to: '/universities' }, { label: 'University Detail' }]
+  if (/^\/universities\/\d+\/edit$/.test(pathname))
+    return [{ label: 'Universities', to: '/universities' }, { label: 'Edit University' }]
+  if (/^\/media-library\/\d+$/.test(pathname))
+    return [{ label: 'Media Library', to: '/media-library' }, { label: 'Media Details' }]
+  if (/^\/announcements\/\d+$/.test(pathname))
+    return [{ label: 'Announcements', to: '/announcements' }, { label: 'View' }]
+  if (/^\/announcements\/\d+\/edit$/.test(pathname))
+    return [{ label: 'Announcements', to: '/announcements' }, { label: 'Edit Announcement' }]
+  if (/^\/user-management\/\d+$/.test(pathname))
+    return [{ label: 'User Management', to: '/user-management' }, { label: 'View' }]
+  if (/^\/user-management\/\d+\/edit$/.test(pathname))
+    return [{ label: 'User Management', to: '/user-management' }, { label: 'Edit User' }]
   if (/^\/webinars\/\d+$/.test(pathname))
     return [{ label: 'Webinar', to: '/webinars' }, { label: 'View Webinar' }]
   if (/^\/webinars\/\d+\/edit$/.test(pathname))
