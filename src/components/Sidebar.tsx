@@ -1,4 +1,4 @@
-import { useRef, useState, type ComponentType, type MouseEvent } from 'react'
+import { useEffect, useRef, useState, type ComponentType, type MouseEvent } from 'react'
 import { createPortal } from 'react-dom'
 import {
   LayoutGrid,
@@ -17,7 +17,6 @@ import {
   Plane,
   UploadCloud,
   Image,
-  Cloud,
   AppWindow,
   Megaphone,
   Mail,
@@ -32,6 +31,16 @@ import { cn } from '../lib/cn'
 import { useUI } from '../store/ui'
 
 type IconType = ComponentType<{ className?: string }>
+
+// A nav target is active on its own page AND on any nested route beneath it —
+// e.g. "/courses" stays active on "/courses/34" or "/courses/34/edit". Because
+// navigation is a full page load, this keeps a parent submenu expanded and the
+// right item highlighted after landing on a detail/edit page (instead of the
+// menu collapsing and appearing to jump away).
+function pathIsActive(to: string): boolean {
+  const path = window.location.pathname
+  return path === to || path.startsWith(to + '/')
+}
 
 interface NavChild {
   label: string
@@ -88,26 +97,25 @@ const NAV: NavGroup[] = [
         label: 'Course Management',
         icon: Plane,
         children: [
-          { label: 'Courses' },
-          { label: 'Course Categories' },
-          { label: 'Universities' },
+          { label: 'Courses', to: '/courses' },
+          { label: 'Course Categories', to: '/course-categories' },
+          { label: 'Universities', to: '/universities' },
         ],
       },
-      { label: 'Student Resources', icon: UploadCloud },
-      { label: 'Media Library', icon: Image },
-      { label: 'Agent Resources', icon: Cloud },
+      { label: 'Student Resources', icon: UploadCloud, to: '/student-resources' },
+      { label: 'Media Library', icon: Image, to: '/media-library' },
       {
         label: 'CMS',
         icon: AppWindow,
         children: [{ label: 'Pages' }, { label: 'Menus' }],
       },
-      { label: 'Announcements', icon: Megaphone },
+      { label: 'Announcements', icon: Megaphone, to: '/announcements' },
       {
         label: 'Message Templates',
         icon: Mail,
         children: [{ label: 'Email' }, { label: 'SMS' }, { label: 'WhatsApp' }],
       },
-      { label: 'User Management', icon: UserCog },
+      { label: 'User Management', icon: UserCog, to: '/user-management' },
       { label: 'Import', icon: Import },
       { label: 'Backups', icon: Database },
       { label: 'Roles', icon: ShieldCheck },
@@ -135,11 +143,21 @@ function SidebarItem({
   collapsed: boolean
   onNavigate: () => void
 }) {
-  // True when the current page is one of this item's children.
-  const childActive = item.children?.some((c) => c.to && c.to === window.location.pathname) ?? false
+  // True when the current page is one of this item's children (or a sub-route of
+  // one, e.g. a course detail page under the "Courses" child).
+  const childActive = item.children?.some((c) => c.to && pathIsActive(c.to)) ?? false
+  const leafActive = item.to ? pathIsActive(item.to) : false
   // Start open on a child page so the submenu stays expanded across the
   // full-page navigations between children.
   const [expanded, setExpanded] = useState(() => childActive)
+  // On each full-page load, bring the active row into view so a menu deep in
+  // the list (e.g. Course Management in the System group) isn't left off-screen.
+  const scrollRef = useRef<HTMLElement | null>(null)
+  useEffect(() => {
+    if (leafActive || childActive) scrollRef.current?.scrollIntoView({ block: 'center' })
+    // Run once on mount only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   const [tip, setTip] = useState<{ top: number; center: number; left: number } | null>(null)
   // Deferred hide so the mouse can travel from the icon into the flyout submenu
   // without it vanishing in the gap.
@@ -219,7 +237,7 @@ function SidebarItem({
   // Expandable item (has children)
   if (item.children) {
     return (
-      <div>
+      <div ref={(el) => { scrollRef.current = el }}>
         <button
           type="button"
           onClick={() => !collapsed && setExpanded((v) => !v)}
@@ -256,7 +274,7 @@ function SidebarItem({
                   onClick={onNavigate}
                   className={cn(
                     'flex items-center gap-2 whitespace-nowrap rounded-md px-3 py-2 text-sm transition-colors',
-                    window.location.pathname === child.to
+                    child.to && pathIsActive(child.to)
                       ? 'bg-brand-600 text-white'
                       : 'text-slate-400 hover:bg-slate-800 hover:text-white',
                   )}
@@ -286,14 +304,14 @@ function SidebarItem({
 
   // Real routed item — full page redirect/refresh on click.
   if (item.to) {
-    const active = window.location.pathname === item.to
     return (
       <>
         <a
+          ref={(el) => { scrollRef.current = el }}
           href={item.to}
           onClick={onNavigate}
           {...hoverProps}
-          className={cn(rowClass, active ? itemActive : idle)}
+          className={cn(rowClass, leafActive ? itemActive : idle)}
         >
           <Icon className={iconClass} />
           {!collapsed && <span>{item.label}</span>}

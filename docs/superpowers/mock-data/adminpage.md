@@ -36,6 +36,11 @@ never inline in components. Types are exported alongside the data.
 | [Automation](#automation-automation) | `src/mock/automation.ts` | ✅ done |
 | [Webinar & Events](#webinar--events) | `src/mock/webinars.ts` | ✅ done |
 | [Staff](#staff-staff) | `src/mock/staff.ts` | ✅ done |
+| [Course Management](#course-management-courses--course-categories--universities) | `src/mock/courseManagement.ts` | ✅ done |
+| [Student Resources](#student-resources-student-resources--categories) | `src/mock/studentResources.ts` | ✅ done |
+| [Media Library](#media-library-media-library) | `src/mock/mediaLibrary.ts` | ✅ done |
+| [Announcements](#announcements-announcements--newidedit) | `src/mock/announcements.ts` | ✅ done |
+| [User Management](#user-management-user-management--newidedit) | `src/mock/userManagement.ts` | ✅ done |
 
 ---
 
@@ -744,6 +749,231 @@ Rows for the Campaigns table.
   three linked tables — Assigned Leads / Students / Applications
   (`assignedLeads` / `assignedStudents` / `assignedApplications`), names link
   through to those records.
+
+---
+
+## Course Management (Courses / Course Categories / Universities)
+
+- **Mock file:** `src/mock/courseManagement.ts`; **pages** under
+  `src/features/courseManagement/`: `CoursesPage` (list), `CourseFormPage`
+  (add/edit), `CourseViewPage` (detail), `UniversitiesPage` / `UniversityFormPage`
+  / `UniversityViewPage`, `CourseCategoriesPage` (tree + modal add/edit).
+  Sidebar **Course Management** (System group) submenu → `/courses`,
+  `/course-categories`, `/universities`. Modeled on EduCtrl
+  `/admin/coursemanagement`, `/…/categories`, `/…/universities`.
+- **One source of truth, three connected sub-modules.** The module reuses the
+  Course Finder catalogue (`finderCourses`) as the course seed, then **derives**
+  Universities (unique institutions, enriched via `UNI_META`) and Categories
+  (top-level `studyAreas` + child `disciplineAreas`) from it — no duplicated data.
+  A course points at one university + one study area; each university/category
+  reports its **live** course count.
+- Persisted to localStorage: `unidest-courses`, `unidest-universities`,
+  `unidest-course-categories` (seed → load/save/add/update/delete, same pattern
+  as Staff).
+
+### `courses: ManagedCourse[]`
+
+`ManagedCourse extends FinderCourse` + `status` (`Enabled`/`Disabled`),
+`concentration`, `durationMonths`, `description`, `entryRequirements`,
+`websiteUrl`. 22 seeded. CRUD: `addCourse` / `updateCourse` /
+`toggleCourseStatus` / `deleteCourse`.
+
+- **List** (`/courses`): "University Course Management" · filters University /
+  Study Area / Study Level / Status + Clear · Show + search + `ExportButtons` ·
+  table Course (gradient logo tile + discipline) / University / Country / Study
+  Level / Study Area / Status / Actions (sky **eye** → detail + slate **3-dot**:
+  Edit / Enable-Disable / Delete via `ConfirmDialog`) · compact windowed
+  pagination (`pageWindow`, 1 … n … last).
+- **Add/Edit** (`/courses/new`, `/courses/:id/edit`): grouped sections — Course
+  Details (Title\* · University\* · Study Level\* · **Category → dependent Sub
+  Category** · Concentration · Campus/City · Duration months · **Intake\*** via
+  `MultiSelect` · Description · Entry Requirements) · Admission Requirements
+  (IELTS / IELTS-no-band / TOEFL / PTE / GRE / GMAT) · Fees & Commission
+  (Currency + Application/Tuition amounts composed into `"USD 32000"` strings) ·
+  Additional (Website URL · Status radios). **Selecting a university auto-fills
+  its country + city.**
+- **Detail** (`/courses/:id`): gradient header (title, status, university link →
+  `/universities/:id`) · facts grid (level / area / discipline / campus /
+  duration / intakes) · Overview · Entry Requirements · Fees & Commission ·
+  Test Scores chips.
+
+### `universities: University[]`
+
+`id · name · country · city · website · type` (`Public`/`Private`) `·
+established · ranking · showToAgent · logoClass · status` (`Active`/`Inactive`).
+14 derived from the catalogue. CRUD: `addUniversity` / `updateUniversity` /
+`deleteUniversity`; lookups `universityByName`, `universityNames`,
+`coursesForUniversity`.
+
+- **List** (`/universities`): "Universities (Institutions)" · Country / Type /
+  Status filters · table University (logo tile + city) / Country / Type /
+  **Courses** (live count) / Show To Agent (Yes/No) / Status / Actions.
+- **Add/Edit**: Name\* · Country\* · City · Type · Website · Established · Ranking ·
+  **logo-colour swatch picker** · Show To Agent checkbox · Status radios.
+- **Detail** (`/universities/:id`): header + facts + course-count card · linked
+  table of that university's courses.
+
+### `courseCategories: CourseCategory[]`
+
+Flat tree node: `id · name · parentId` (null = top-level study area) `·
+description · displayOrder · status`. Seeded from `studyAreas` (8 parents) +
+`disciplineAreas` (children). Helpers `topCategories`, `childCategories`,
+`coursesForCategory` / `categoryCourseCount`, `categoryNames`. CRUD:
+`addCategory` / `updateCategory` / `deleteCategory` (deleting a parent removes
+its children).
+
+- **Page** (`/course-categories`): "Course Management — Categories" · table
+  Category (parent bold, child indented with `CornerDownRight`) / **Courses**
+  (live count — parent matches `studyArea`, child matches `disciplineArea`) /
+  Status / Display Order / Edit·Delete · **Create** opens a `createPortal` modal
+  (Name\* · Parent Study Area select · Display Order · Status · Description); a
+  top-level area can't be reparented.
+
+---
+
+## Student Resources (`/student-resources` + `/categories`)
+
+- **Mock file:** `src/mock/studentResources.ts`; **pages** under
+  `src/features/studentResources/`: `StudentResourcesPage` (upload form + list),
+  `ResourceCategoriesPage` (flat categories + modal add/edit). Sidebar **Student
+  Resources** (System group, UploadCloud icon) → `/student-resources`. Modeled on
+  EduCtrl `/admin/upload` + `/admin/show/category`.
+- **Connected to existing modules:** each resource records `uploadedBy` (a
+  `staff` name) and an optional `relatedCourseId` (a Course Management course,
+  rendered as a link → `/courses/:id`); every category reports its **live**
+  resource count.
+- **Files aren't really stored** in a frontend build — an upload captures the
+  chosen file's name/size/type and mints a mock storage URL via `mockFileUrl()`
+  (Phase 2 swaps in real storage). Helpers: `allowedExtensions` (pdf/doc/docx/
+  txt/jpg/jpeg/png/zip/mp4), `maxFileMb` (49), `fileTypeOf` → `pdf`/`doc`/
+  `image`/`video`/`zip`/`other`, `formatFileSize`.
+
+### `studentResources: StudentResource[]` + `resourceCategories: ResourceCategory[]`
+
+`StudentResource`: `id · title · categoryId · fileName · fileType · fileSize ·
+fileUrl · relatedCourseId · uploadedBy · uploadedAt`. `ResourceCategory`:
+`id · name · description`. 9 + 7 seeded, persisted to `unidest-student-resources`
+/ `unidest-resource-categories`. CRUD: `addResource` / `deleteResource`;
+`addResourceCategory` / `updateResourceCategory` / `deleteResourceCategory`
+(**deletion blocked while resources still use the category** — returns `false`).
+
+- **Resources page** (`/student-resources`): header + Categories / Create
+  Category buttons · **Add New Resource** card (Title\* · Category\* · Related
+  Course optional · Document\* file input validating extension + 49 MB size ·
+  Upload) · **All Student Resources** table (file-type icon + Title/filename/size
+  · Category badge · Related Course link · Uploaded By + date · File URL +
+  **Copy Link** · **Download** anchor + **Delete** via `ConfirmDialog`) · category
+  filter + search + `ExportButtons`.
+- **Categories page** (`/student-resources/categories`): "Student Resources
+  Category" table (Category + description · live Resources count · Edit / Delete)
+  · **Create Category** opens a `createPortal` modal (Name\* · Description); the
+  main page's "Create Category" button deep-links here with `?create=1` to open
+  the modal immediately.
+
+---
+
+## Media Library (`/media-library` + `/:id`)
+
+- **Mock file:** `src/mock/mediaLibrary.ts`; **pages** under
+  `src/features/mediaLibrary/`: `MediaLibraryPage` (dropzone + gallery grid, also
+  exports the `MediaTile`), `MediaDetailPage` (preview + meta + URL + delete).
+  Sidebar **Media Library** (System group, Image icon) → `/media-library`.
+  Modeled on EduCtrl `/admin/gallery`.
+- **Connected to existing modules:** each item records `uploadedBy` (a `staff`
+  name). **Files aren't really stored** — a dropped/selected image is previewed
+  in-browser (`readImageMeta` reads natural width/height + a data-URL preview for
+  images ≤ `maxPreviewBytes`); seeded items and videos render as gradient tiles.
+  Helpers: `allowedMediaExtensions` (jpeg/jpg/png/gif/webp/mp4/mov/wmv/webm),
+  `maxMediaMb` (16), `mediaTypeOf` → `image`/`video`, `formatFileSize`,
+  `mockMediaUrl`, `mediaCounts`.
+
+### `media: MediaItem[]`
+
+`id · name · type` (`image`/`video`) `· url · thumb` (data-URL preview or null)
+`· gradient · width · height · size · uploadedBy · uploadedAt`. 8 seeded,
+persisted to `unidest-media-library` (`addMedia` / `deleteMedia`; a large
+data-URL preview that overflows the quota just stays in-memory).
+
+- **Library** (`/media-library`): drag-and-drop dropzone (also click → hidden
+  multi-file input) validating extension + 16 MB size · All / Images / Videos
+  filter with live counts + search · responsive **Available Media** grid of
+  `MediaTile`s (real `<img>` preview when `thumb` set, else gradient tile with a
+  type icon; a "Video" badge for videos) → each links to the detail page.
+- **Detail** (`/media-library/:id`): "Media Details" · large preview · meta cards
+  (Type · Dimensions · Size · Uploaded By · Uploaded date) · read-only URL +
+  **Copy** · **Delete** via `ConfirmDialog` → back to the library.
+
+---
+
+## Announcements (`/announcements` + `/new` + `/:id` + `/:id/edit`)
+
+- **Mock file:** `src/mock/announcements.ts`; **pages** under
+  `src/features/announcements/`: `AnnouncementsPage` (list, also exports the
+  `AREA_BADGE` map), `AnnouncementFormPage` (create/edit), `AnnouncementViewPage`
+  (read). Sidebar **Announcements** (System group, Megaphone icon) →
+  `/announcements`. Modeled on EduCtrl `/admin/announcements`.
+- **Connected to existing modules:** the **Area** is the audience segment and its
+  **live recipient count** comes straight from the existing mocks —
+  `audienceCount('Students'|'Leads'|'Staff'|'All')` reads `students.length` /
+  `leads.length` / `staff.length` (All = the sum); each announcement records its
+  `createdBy` (`staff` name). `formatDateTime`/`toInputValue` bridge the stored
+  ISO datetime and the `datetime-local` input.
+
+### `announcements: Announcement[]`
+
+`id · title · area` (`All`/`Students`/`Leads`/`Staff`) `· message · createdBy ·
+publishedAt` (ISO). 4 seeded, persisted to `unidest-announcements`
+(`addAnnouncement` / `updateAnnouncement` / `deleteAnnouncement`;
+`sortedAnnouncements` = newest-first by `publishedAt`).
+
+- **List** (`/announcements`): Show entries + search (title/area) · table Title
+  (link → view) / **Area** (colour badge + live audience count) / Created By /
+  Published At (`formatDateTime`) / inline **Edit** + **Delete** (`ConfirmDialog`)
+  · "Showing X to Y of Z" + pagination.
+- **Create/Edit** (`/announcements/new`, `/announcements/:id/edit`): Area\* select
+  (shows "Reaches N recipient(s)") · Title\* · Message\* (textarea) · Published At\*
+  (`datetime-local`, defaults to now) → `add`/`update`, redirects to the view.
+- **View** (`/announcements/:id`): area badge + count · title · Created By +
+  Published At · message body (`whitespace-pre-wrap`) · Edit / Back.
+
+---
+
+## User Management (`/user-management` + `/new` + `/:id` + `/:id/edit`)
+
+- **Mock file:** `src/mock/userManagement.ts`; **pages** under
+  `src/features/userManagement/`: `UserManagementPage` (list), `UserFormPage`
+  (create/edit), `UserViewPage` (detail). Sidebar **User Management** (System
+  group, UserCog icon) → `/user-management`. Modeled on EduCtrl
+  `/admin/auth/staff`.
+- **This is the account & access view of the Staff people** (Staff = workload).
+  It's **seeded from `staff`** via an `OVERLAY` map (extra roles, all-branch
+  access, reporting line, blocked status) so names/emails/branches agree, reuses
+  the shared `staffRoles` / `staffBranches` / `avatarColor` / `initials`, and each
+  seeded user keeps a `staffId` → the view links "View workload in Staff"
+  (`/staff/:staffId`).
+
+### `users: UserAccount[]`
+
+`id · name · email · mobile · roles[] · branches[] · reportingToId ·
+status` (`Active`/`Inactive`/`Blocked`) `· createdOn · isSuperAdmin · staffId`.
+7 seeded, persisted to `unidest-users` (`addUser` / `updateUser` /
+`setUserStatus` / `deleteUser` — delete also clears anyone's `reportingToId`
+pointing at the removed user). Live relations: `reportingToName`,
+`directReports`, `reportingOptions`.
+
+- **List** (`/user-management`): "User Management · Staff Accounts" · Role /
+  Status filters + Clear · Show + search + `ExportButtons` · table Name (avatar +
+  **Super Admin** badge) / Contact (email + mobile) / **Details** (role badges ·
+  Branch · Reports to) / Created On / Status badge / Actions (sky **eye** + slate
+  **3-dot**: Edit / Activate-Deactivate / Block / Delete). **Super Admin can't be
+  blocked or deleted.** Footer note mirrors the reference.
+- **Create/Edit** (`/user-management/new`, `/user-management/:id/edit`): Full
+  Name\* · Email\* (regex) · Mobile · **Role(s)\*** + **Branch(es)\*** via
+  `MultiSelect` · Reporting To select (other users) · Status radios · Password
+  (create only).
+- **View** (`/user-management/:id`): identity header (avatar, status, Super Admin)
+  · Roles & Access (role + branch badges) · Reporting Line (reports-to · direct
+  reports list · "View workload in Staff" when `staffId` is set).
 
 ---
 

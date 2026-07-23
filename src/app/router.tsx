@@ -28,6 +28,23 @@ import CampaignDetailPage from '../features/automation/CampaignDetailPage'
 import StaffPage from '../features/staff/StaffPage'
 import StaffFormPage from '../features/staff/StaffFormPage'
 import StaffViewPage from '../features/staff/StaffViewPage'
+import CoursesPage from '../features/courseManagement/CoursesPage'
+import CourseFormPage from '../features/courseManagement/CourseFormPage'
+import CourseViewPage from '../features/courseManagement/CourseViewPage'
+import UniversitiesPage from '../features/courseManagement/UniversitiesPage'
+import UniversityFormPage from '../features/courseManagement/UniversityFormPage'
+import UniversityViewPage from '../features/courseManagement/UniversityViewPage'
+import CourseCategoriesPage from '../features/courseManagement/CourseCategoriesPage'
+import StudentResourcesPage from '../features/studentResources/StudentResourcesPage'
+import ResourceCategoriesPage from '../features/studentResources/ResourceCategoriesPage'
+import MediaLibraryPage from '../features/mediaLibrary/MediaLibraryPage'
+import MediaDetailPage from '../features/mediaLibrary/MediaDetailPage'
+import AnnouncementsPage from '../features/announcements/AnnouncementsPage'
+import AnnouncementFormPage from '../features/announcements/AnnouncementFormPage'
+import AnnouncementViewPage from '../features/announcements/AnnouncementViewPage'
+import UserManagementPage from '../features/userManagement/UserManagementPage'
+import UserFormPage from '../features/userManagement/UserFormPage'
+import UserViewPage from '../features/userManagement/UserViewPage'
 import WebinarsPage from '../features/webinars/WebinarsPage'
 import WebinarViewPage from '../features/webinars/WebinarViewPage'
 import EditWebinarPage from '../features/webinars/EditWebinarPage'
@@ -79,6 +96,27 @@ export const router = createBrowserRouter([
           { path: '/staff/new', element: <StaffFormPage /> },
           { path: '/staff/:id', element: <StaffViewPage /> },
           { path: '/staff/:id/edit', element: <StaffFormPage /> },
+          { path: '/courses', element: <CoursesPage /> },
+          { path: '/courses/new', element: <CourseFormPage /> },
+          { path: '/courses/:id', element: <CourseViewPage /> },
+          { path: '/courses/:id/edit', element: <CourseFormPage /> },
+          { path: '/course-categories', element: <CourseCategoriesPage /> },
+          { path: '/universities', element: <UniversitiesPage /> },
+          { path: '/universities/new', element: <UniversityFormPage /> },
+          { path: '/universities/:id', element: <UniversityViewPage /> },
+          { path: '/universities/:id/edit', element: <UniversityFormPage /> },
+          { path: '/student-resources', element: <StudentResourcesPage /> },
+          { path: '/student-resources/categories', element: <ResourceCategoriesPage /> },
+          { path: '/media-library', element: <MediaLibraryPage /> },
+          { path: '/media-library/:id', element: <MediaDetailPage /> },
+          { path: '/announcements', element: <AnnouncementsPage /> },
+          { path: '/announcements/new', element: <AnnouncementFormPage /> },
+          { path: '/announcements/:id', element: <AnnouncementViewPage /> },
+          { path: '/announcements/:id/edit', element: <AnnouncementFormPage /> },
+          { path: '/user-management', element: <UserManagementPage /> },
+          { path: '/user-management/new', element: <UserFormPage /> },
+          { path: '/user-management/:id', element: <UserViewPage /> },
+          { path: '/user-management/:id/edit', element: <UserFormPage /> },
           { path: '/webinars', element: <WebinarsPage /> },
           { path: '/webinars/:id', element: <WebinarViewPage /> },
           { path: '/webinars/:id/edit', element: <EditWebinarPage /> },
