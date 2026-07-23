@@ -33,8 +33,9 @@ never inline in components. Types are exported alongside the data.
 | [Referral Payout](#referral-payout-referralpayout) | `src/mock/referrals.ts` | ✅ done |
 | [Additional Services](#additional-services-services--servicesid) | `src/mock/services.ts` | ✅ done |
 | [Broadcast](#broadcast-broadcast--broadcasthistory) | `src/mock/broadcast.ts` | ✅ done |
+| [Automation](#automation-automation) | `src/mock/automation.ts` | ✅ done |
 | [Webinar & Events](#webinar--events) | `src/mock/webinars.ts` | ✅ done |
-| Staff | `src/mock/staff.ts` | ⬜ not started |
+| [Staff](#staff-staff) | `src/mock/staff.ts` | ✅ done |
 
 ---
 
@@ -600,6 +601,128 @@ Extracted while building this page so both data tables stay in sync:
   · table Date & Time / Type (email-blue, sms-amber badge) / Subject / Message
   (line-clamped) / Sent To / Staff · seeded with 3 records (`seedHistory`),
   new sends appear on top · "Showing X to Y of Z" + pagination.
+
+---
+
+## Automation (`/automation`)
+
+- **Mock file:** `src/mock/automation.ts`; **pages:**
+  `src/features/automation/AutomationPage.tsx` (list, both tabs),
+  `WorkflowFormPage.tsx`, `WorkflowDetailPage.tsx`, `CampaignFormPage.tsx`,
+  `CampaignDetailPage.tsx`. Modeled on demo.eductrl.com/cn4/admin/automation
+  (+ /campaigns, /create/workflow, /create/campaign, /workflow/:id/details).
+- **Two tabs** rendered by one page, routed by URL: `Workflows` (`/automation`)
+  and `Campaigns` (`/automation/campaigns`). Breadcrumb reads "Automation -
+  Workflows" / "Automation - Campaigns". Sidebar "Automation" (Zap) → `/automation`.
+- **Audience matching is live.** `AudienceCriteria { target: 'Leads' |
+  'Students', status?, country? }` is resolved by `resolveAudience()` over the
+  real `leads` / `students` mocks; `matchedUsers()` returns the count.
+  `statusOptionsFor(target)` returns `leadStatuses` / `studentStatuses` labels;
+  country uses `allCountries` matched against `countryInterested`. So the
+  "Matched Users" / "Matched Audience" figures always agree with those pages.
+
+### `workflows: Workflow[]`
+Rows for the Workflows table.
+
+| Field | Type | Notes |
+|-------|------|-------|
+| id | number | |
+| title | string | bold link → `/automation/workflow/:id` |
+| type | `WorkflowType` | Lead nurture sequence / Specific event / Message sequence |
+| mode | `WorkflowMode` | Email / SMS / Whatsapp (coloured pill) |
+| at | string | send time, e.g. `04:45 PM` |
+| created | string | e.g. `08 Sep 2025 16:41` |
+| status | `'Active' \| 'Inactive'` | green / rose badge |
+| audience | `AudienceCriteria` | drives Matched Users on the detail page |
+| steps | `WorkflowStep[]` | `{ schedule, message }`; count shown in "No. of Messages" |
+| history | `ExecutionRecord[]` | `{ date, sequenceIndex, messageSent, message }` |
+
+- Records: **8** seeded (`seedWorkflows`, ids 1–8), persisted to localStorage
+  `unidest-workflows`. Table columns: Title / Mode / Type / No. of Messages
+  (`messageCount`) / Status / Actions. Actions = sky **eye** (→ detail) + slate
+  **3-dot** dropdown (Activate/Deactivate via `toggleWorkflowStatus`, Delete via
+  `deleteWorkflow` + `ConfirmDialog`). Toolbar: Show 50/100/200 + search.
+- **New Workflow** (`/automation/create/workflow`): Title\* · Workflow Type\* ·
+  Send (mode) + At (HH:00 + AM/PM) · Target Audience block (Target / Status /
+  Country) with live "Matched Users: N" · repeatable Messages\* rows
+  (schedule + content, Add/remove) · Create → `addWorkflow` (status Active),
+  redirects to the new detail page.
+- **Workflow Detail** (`/automation/workflow/:id`): header (Type / Mode pill /
+  At / status / Created) · Target Audience with "Matched Users: N"
+  (`matchedUsers`, incl. "Other Criteria → Country Interested") · Messages list
+  (`On:` / `After N Day(s)` + Send Message) · Execution History table.
+
+### `campaigns: Campaign[]`
+Rows for the Campaigns table.
+
+| Field | Type | Notes |
+|-------|------|-------|
+| id | number | |
+| title | string | bold link → `/automation/campaign/:id`, audience summary beneath |
+| status | `CampaignStatus` | Queued / Sent / Draft / Failed (coloured badge) |
+| scheduledAt | string | e.g. `16-05-2026 07:52 PM` |
+| mode | `'Email' \| 'SMS'` | coloured pill |
+| sentTo | number | recipients count |
+| audience | `AudienceCriteria` | same resolver as workflows |
+| message | string | body (with `#first_name#`-style variables) |
+
+- Records: **5** seeded (`seedCampaigns`), persisted to localStorage
+  `unidest-campaigns`. Header: **Status** filter select (`campaignStatuses`) +
+  Filter / Clear + **New Campaign**. Table columns: Title / Status /
+  Scheduled/Sent At / Mode / Sent To / Actions (eye + 3-dot Delete). Toolbar:
+  Show + search.
+- **New Campaign** (`/automation/create/campaign`): Title\* · Target Audience\* /
+  Status / Country · **Matched Audience** with **Calculate** (reveals
+  `matchedUsers`) · Email/SMS radios (Email = execCommand RTE, SMS = textarea +
+  160-char counter) · variables note (`messageVariables`) · Test campaign
+  message (Send To + toast) · **Run at** datetime **OR Send Now** · Create →
+  `addCampaign` (Queued if scheduled, Sent + `sentTo = matched` if Send Now),
+  redirects to the Campaigns tab.
+- **Campaign Detail** (`/automation/campaign/:id`): title + status, Mode /
+  Scheduled-Sent At / Sent To, Target Audience with Matched Audience, message body.
+
+---
+
+## Staff (`/staff`)
+
+- **Mock file:** `src/mock/staff.ts`; **pages:**
+  `src/features/staff/StaffPage.tsx` (list), `StaffFormPage.tsx` (add/edit),
+  `StaffViewPage.tsx` (detail). Sidebar "Staff" (User icon) → `/staff` (the old
+  All Staff / Add Staff submenu was removed).
+- **Workload is computed live, not stored.** Staff are the people assigned across
+  the CRM, so `workload(name)` counts `leads` / `students` / `applications`
+  where `assignedTo === name`. The first four seed records intentionally match
+  `leadStaff` (Sarah Ali / Mohammed Saleh / Moses Otieno / Admin Two Test), so
+  their counts are non-zero and always agree with those pages (a DEV-only warning
+  fires if a `leadStaff` name has no seed record).
+
+### `staff: StaffMember[]`
+
+| Field | Type | Notes |
+|-------|------|-------|
+| id | number | |
+| name | string | bold link → `/staff/:id`; avatar uses `initials()` + `avatarColor()` (WCAG via `pickTextColor`) |
+| email / phone | string | Contact column (mailto + tel-style) |
+| role | `StaffRole` | Super Admin / Branch Manager / Counsellor / Admission Officer / Front Desk / Accountant (slate pill) |
+| branch | string | `staffBranches` (leadBranches minus "All Branch") |
+| status | `'Active' \| 'Inactive'` | emerald / rose badge |
+| joined | string | e.g. `12 Jan 2025` |
+
+- Records: **7** seeded, persisted to localStorage `unidest-staff`
+  (`addStaff` / `updateStaff` / `toggleStaffStatus` / `deleteStaff`).
+- **List:** Role / Branch / Status filter row + Clear · Show 10/25/50/100 +
+  search + `ExportButtons` · table Name (avatar) / Contact / Role / Branch /
+  **Assigned** (live Leads·Students·Apps pills) / Status / Actions (sky **eye**
+  → detail + slate **3-dot** portal dropdown: Edit / Activate-Deactivate /
+  Delete via `ConfirmDialog`) · "Showing X to Y of Z" + pagination.
+- **Add/Edit** (`/staff/new`, `/staff/:id/edit`): Full Name\* · Email\* (regex) ·
+  Phone · Role\* · Branch\* · Status radios · Password (add only, optional min-6)
+  · Create/Save → `addStaff` / `updateStaff`, redirects to the detail page.
+- **Detail** (`/staff/:id`): identity header (avatar, name, status, role·branch,
+  email / phone / joined) + Edit / Back · three workload cards (`workload`) ·
+  three linked tables — Assigned Leads / Students / Applications
+  (`assignedLeads` / `assignedStudents` / `assignedApplications`), names link
+  through to those records.
 
 ---
 

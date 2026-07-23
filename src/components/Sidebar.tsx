@@ -13,7 +13,6 @@ import {
   Share2,
   LineChart,
   Zap,
-  UsersRound,
   User,
   Plane,
   UploadCloud,
@@ -78,17 +77,8 @@ const NAV: NavGroup[] = [
         ],
       },
       { label: 'Analytics', icon: LineChart, to: '/analytics' },
-      { label: 'Automation', icon: Zap },
-      {
-        label: 'Agents',
-        icon: UsersRound,
-        children: [{ label: 'All Agents' }, { label: 'Add Agent' }],
-      },
-      {
-        label: 'Staff',
-        icon: User,
-        children: [{ label: 'All Staff' }, { label: 'Add Staff' }],
-      },
+      { label: 'Automation', icon: Zap, to: '/automation' },
+      { label: 'Staff', icon: User, to: '/staff' },
     ],
   },
   {

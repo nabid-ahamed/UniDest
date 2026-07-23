@@ -20,6 +20,14 @@ import StudentInvoiceFormPage from '../features/invoices/StudentInvoiceFormPage'
 import ReferralSignupsPage from '../features/referral/ReferralSignupsPage'
 import ReferralPayoutPage from '../features/referral/ReferralPayoutPage'
 import AnalyticsPage from '../features/analytics/AnalyticsPage'
+import AutomationPage from '../features/automation/AutomationPage'
+import WorkflowFormPage from '../features/automation/WorkflowFormPage'
+import WorkflowDetailPage from '../features/automation/WorkflowDetailPage'
+import CampaignFormPage from '../features/automation/CampaignFormPage'
+import CampaignDetailPage from '../features/automation/CampaignDetailPage'
+import StaffPage from '../features/staff/StaffPage'
+import StaffFormPage from '../features/staff/StaffFormPage'
+import StaffViewPage from '../features/staff/StaffViewPage'
 import WebinarsPage from '../features/webinars/WebinarsPage'
 import WebinarViewPage from '../features/webinars/WebinarViewPage'
 import EditWebinarPage from '../features/webinars/EditWebinarPage'
@@ -61,6 +69,16 @@ export const router = createBrowserRouter([
           { path: '/referral/signups', element: <ReferralSignupsPage /> },
           { path: '/referral/payout', element: <ReferralPayoutPage /> },
           { path: '/analytics', element: <AnalyticsPage /> },
+          { path: '/automation', element: <AutomationPage /> },
+          { path: '/automation/campaigns', element: <AutomationPage /> },
+          { path: '/automation/create/workflow', element: <WorkflowFormPage /> },
+          { path: '/automation/workflow/:id', element: <WorkflowDetailPage /> },
+          { path: '/automation/create/campaign', element: <CampaignFormPage /> },
+          { path: '/automation/campaign/:id', element: <CampaignDetailPage /> },
+          { path: '/staff', element: <StaffPage /> },
+          { path: '/staff/new', element: <StaffFormPage /> },
+          { path: '/staff/:id', element: <StaffViewPage /> },
+          { path: '/staff/:id/edit', element: <StaffFormPage /> },
           { path: '/webinars', element: <WebinarsPage /> },
           { path: '/webinars/:id', element: <WebinarViewPage /> },
           { path: '/webinars/:id/edit', element: <EditWebinarPage /> },
