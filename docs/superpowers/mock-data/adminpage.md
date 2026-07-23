@@ -62,9 +62,10 @@ the live `staff.length` from the Staff module.
 | value | number | the KPI number |
 | color | `'blue' \| 'emerald' \| 'orange' \| 'purple' \| 'rose'` | accent (strip + icon + number) |
 
-- Records: **4** (Leads 27, Students 1876, Applications 214, Support Tickets 96).
-- **Maps to (future):** aggregate counts over `leads`, `students`, `applications`
-  tables + a future `support_tickets` table (not in current schema).
+- Records: **5** (Leads 27, Students 1876, Applications 214, Support Tickets 96,
+  Staff = live `staff.length`).
+- **Maps to (future):** aggregate counts over `leads`, `students`, `applications`,
+  `staff` tables + a future `support_tickets` table (not in current schema).
 
 ### `monthlyTrend: TrendPoint[]` + `applicationsDaily: DailyPoint[]`
 Charts row (`ChartsRow`): a wide **smooth area chart** ("Students & Leads",
@@ -83,6 +84,14 @@ Charts row (`ChartsRow`): a wide **smooth area chart** ("Students & Leads",
   dashboard now shows the combined monthly trend instead of the old daily bars.)
 - **Maps to (future):** `COUNT(*) ... GROUP BY month` over `students` / `leads`
   and `GROUP BY day` over `applications` (`created_at`).
+
+### Statistics Overview donut (`OverviewDonut`)
+Full-width section between the charts row and Follow-ups. A recharts donut
+(`PieChart` + `Pie` innerRadius 72 / outerRadius 104) of the same five
+`dashboardStats` values (one `<Cell>` per accent colour), a centred **Total**
+(sum = 2,220), a hover tooltip, and a legend list (colour dot · label · value ·
+percentage). Driven entirely by `dashboardStats`, so it stays in sync with the
+KPI cards.
 
 ### `leadFollowups`, `studentFollowups: FollowUpBuckets`
 Follow-ups grouped into `today` / `due` / `upcoming` (each a `FollowUp[]`).

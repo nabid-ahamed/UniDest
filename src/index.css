@@ -8,6 +8,19 @@
   }
 }
 
+/* Recharts adds a tabindex to its surface/sectors, so clicking a bar or area
+   draws the browser's default focus box. Suppress it — the charts aren't
+   keyboard-interactive here. */
+.recharts-wrapper,
+.recharts-surface,
+.recharts-wrapper *:focus,
+.recharts-surface *:focus,
+.recharts-sector:focus,
+.recharts-bar-rectangle:focus,
+.recharts-area:focus {
+  outline: none !important;
+}
+
 html,
 body,
 #root {
