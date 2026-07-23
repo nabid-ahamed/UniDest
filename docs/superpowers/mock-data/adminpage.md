@@ -46,31 +46,43 @@ never inline in components. Types are exported alongside the data.
   `src/features/dashboard/components/`)
 
 ### `dashboardStats: StatCardData[]`
-Top KPI cards.
+Top KPI cards (5): Leads, Students, Applications, Support Tickets, Staff. Each
+renders as a gradient-tint card with a left accent strip, gradient icon tile
+(white icon + coloured glow), big accent number, uppercase sub-label and a faint
+corner blob + a hover effect (card lifts, and an ash overlay wipes across
+left→right) (`StatCard.tsx`). Grid: 2-up (sm) →
+4-up (lg), so the 5th (Staff) wraps onto a second row. The Staff card's value is
+the live `staff.length` from the Staff module.
 
 | Field | Type | Notes |
 |-------|------|-------|
-| key | `'leads' \| 'students' \| 'applications' \| 'support'` | drives icon |
+| key | `'leads' \| 'students' \| 'applications' \| 'support' \| 'staff'` | drives icon |
 | label | string | card title |
-| sublabel | string | e.g. "Open Leads" |
+| sublabel | string | uppercase label shown under the number, e.g. "Open Leads" |
 | value | number | the KPI number |
-| color | `'amber' \| 'blue' \| 'sky' \| 'purple'` | icon tint |
+| color | `'blue' \| 'emerald' \| 'orange' \| 'purple' \| 'rose'` | accent (strip + icon + number) |
 
 - Records: **4** (Leads 27, Students 1876, Applications 214, Support Tickets 96).
 - **Maps to (future):** aggregate counts over `leads`, `students`, `applications`
   tables + a future `support_tickets` table (not in current schema).
 
-### `studentsDaily`, `leadsDaily`, `applicationsDaily: DailyPoint[]`
-Bar-chart series.
+### `monthlyTrend: TrendPoint[]` + `applicationsDaily: DailyPoint[]`
+Charts row (`ChartsRow`): a wide **smooth area chart** ("Students & Leads",
+`TrendAreaCard`) beside the **Applications** bar chart (`ChartCard`).
 
-| Field | Type | Notes |
-|-------|------|-------|
-| date | string | axis label (`"06 Jul"` for 14-day, `"13"` for 7-day) |
-| count | number | value for that day |
-
-- Records: studentsDaily **14** (last 14 days), leadsDaily **7**, applicationsDaily **7**.
-- **Maps to (future):** `COUNT(*) ... GROUP BY day` over `students` / `leads` /
-  `applications` (`created_at`).
+- `TrendPoint` = `{ month, students, leads }` — **12** months (Aug→Jul).
+  `TrendAreaCard` renders two `type="monotone"` recharts `<Area>`s with
+  top-down gradient fills (Students `#14b8a6`, Leads `#f59e0b`) and a floating
+  tooltip card (month title + coloured value rows) styled like the reference.
+  Interactive: a **Timeframe** dropdown (Last 3 / 6 / 12 Months) slices the data,
+  and the **Students / Leads** legend chips are clickable toggles — clicking
+  crosses a series out and hides its area (kept to ≥ 1 visible; the Y-axis
+  auto-rescales).
+- `DailyPoint` = `{ date, count }` — `applicationsDaily` **7** (last 7 days),
+  purple bars. (`studentsDaily` / `leadsDaily` are retained in the mock but the
+  dashboard now shows the combined monthly trend instead of the old daily bars.)
+- **Maps to (future):** `COUNT(*) ... GROUP BY month` over `students` / `leads`
+  and `GROUP BY day` over `applications` (`created_at`).
 
 ### `leadFollowups`, `studentFollowups: FollowUpBuckets`
 Follow-ups grouped into `today` / `due` / `upcoming` (each a `FollowUp[]`).

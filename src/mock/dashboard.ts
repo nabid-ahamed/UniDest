@@ -1,19 +1,23 @@
 // Mock data for the Dashboard page.
 // Docs: docs/superpowers/mock-data/adminpage.md. Replace with real API in Phase 2.
 
+import { staff } from './staff'
+
 export interface StatCardData {
-  key: 'leads' | 'students' | 'applications' | 'support'
+  key: 'leads' | 'students' | 'applications' | 'support' | 'staff'
   label: string
   sublabel: string
   value: number
-  color: 'amber' | 'blue' | 'sky' | 'purple'
+  color: 'blue' | 'emerald' | 'orange' | 'purple' | 'rose'
 }
 
 export const dashboardStats: StatCardData[] = [
-  { key: 'leads', label: 'Leads', sublabel: 'Open Leads', value: 27, color: 'amber' },
-  { key: 'students', label: 'Students', sublabel: 'Total Students', value: 1876, color: 'blue' },
-  { key: 'applications', label: 'Applications', sublabel: 'Open Applications', value: 214, color: 'sky' },
+  { key: 'leads', label: 'Leads', sublabel: 'Open Leads', value: 27, color: 'blue' },
+  { key: 'students', label: 'Students', sublabel: 'Total Students', value: 1876, color: 'emerald' },
+  { key: 'applications', label: 'Applications', sublabel: 'Open Applications', value: 214, color: 'orange' },
   { key: 'support', label: 'Support Tickets', sublabel: 'Open Support Tickets', value: 96, color: 'purple' },
+  // Live count from the Staff module so it always matches that page.
+  { key: 'staff', label: 'Staff', sublabel: 'Total Staff', value: staff.length, color: 'rose' },
 ]
 
 export interface DailyPoint {
@@ -59,6 +63,28 @@ export const applicationsDaily: DailyPoint[] = [
   { date: '17', count: 2 },
   { date: '18', count: 4 },
   { date: '19', count: 2 },
+]
+
+// Students vs Leads — monthly trend for the smooth area chart.
+export interface TrendPoint {
+  month: string
+  students: number
+  leads: number
+}
+
+export const monthlyTrend: TrendPoint[] = [
+  { month: 'Aug', students: 38, leads: 62 },
+  { month: 'Sep', students: 45, leads: 70 },
+  { month: 'Oct', students: 41, leads: 66 },
+  { month: 'Nov', students: 52, leads: 78 },
+  { month: 'Dec', students: 60, leads: 85 },
+  { month: 'Jan', students: 58, leads: 90 },
+  { month: 'Feb', students: 66, leads: 96 },
+  { month: 'Mar', students: 74, leads: 104 },
+  { month: 'Apr', students: 70, leads: 100 },
+  { month: 'May', students: 82, leads: 112 },
+  { month: 'Jun', students: 90, leads: 120 },
+  { month: 'Jul', students: 96, leads: 128 },
 ]
 
 export interface FollowUp {

@@ -1,8 +1,7 @@
 import { useAuth } from '../../store/auth'
 import {
   dashboardStats,
-  studentsDaily,
-  leadsDaily,
+  monthlyTrend,
   applicationsDaily,
   leadFollowups,
   studentFollowups,
@@ -17,6 +16,7 @@ import {
 import { StatCard } from './components/StatCard'
 import { CollapsibleSection } from './components/CollapsibleSection'
 import { ChartCard } from './components/ChartCard'
+import { TrendAreaCard } from './components/TrendAreaCard'
 import { FollowUpCard } from './components/FollowUpCard'
 import { RemindersCard } from './components/RemindersCard'
 import { BreakdownCard } from './components/BreakdownCard'
@@ -27,11 +27,10 @@ function ChartsRow() {
   return (
     <div className="grid gap-4 lg:grid-cols-3">
       <div className="lg:col-span-2">
-        <ChartCard title="Students" subtitle="Last 14 Days" data={studentsDaily} color="#3366ff" height={280} />
+        <TrendAreaCard title="Students & Leads" data={monthlyTrend} height={280} />
       </div>
       <div className="grid gap-4">
-        <ChartCard title="Leads" subtitle="Last 7 Days" data={leadsDaily} color="#f59e0b" height={120} />
-        <ChartCard title="Applications" subtitle="Last 7 Days" data={applicationsDaily} color="#8b5cf6" height={120} />
+        <ChartCard title="Applications" subtitle="Last 7 Days" data={applicationsDaily} color="#8b5cf6" height={280} />
       </div>
     </div>
   )
