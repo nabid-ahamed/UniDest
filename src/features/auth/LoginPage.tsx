@@ -12,11 +12,15 @@ import logoWhite from '../../assets/globaled-logo-white.png'
 
 const schema = z.object({
   email: z.string().min(1, 'Email is required').email('Enter a valid email'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
+  password: z.string().min(1, 'Password is required'),
   remember: z.boolean().optional(),
 })
 
 type FormValues = z.infer<typeof schema>
+
+/** One-click demo login. */
+const DEMO_EMAIL = 'admin@gmail.com'
+const DEMO_PASSWORD = '123456'
 
 const highlights = [
   { icon: Users, text: 'Manage leads & students in one place' },
@@ -29,20 +33,44 @@ export default function LoginPage() {
   const login = useAuth((s) => s.login)
   const [showPassword, setShowPassword] = useState(false)
 
+  const [copied, setCopied] = useState(false)
+  const [authError, setAuthError] = useState('')
+
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { email: 'admin@demo.com', password: '', remember: true },
+    defaultValues: { email: DEMO_EMAIL, password: DEMO_PASSWORD, remember: true },
   })
 
   const onSubmit = async (values: FormValues) => {
-    // Mock sign-in — replaced by real API in Phase 2.
+    // Mock sign-in — only the demo credentials are accepted.
     await new Promise((r) => setTimeout(r, 600))
+    if (values.email.trim().toLowerCase() !== DEMO_EMAIL || values.password !== DEMO_PASSWORD) {
+      setAuthError('Invalid credentials. Use the demo login below.')
+      return
+    }
+    setAuthError('')
     login(values.email)
     navigate('/dashboard')
+  }
+
+  /** Auto-fill the email + password fields with the demo credentials. */
+  const fillDemo = () => {
+    setAuthError('')
+    setValue('email', DEMO_EMAIL, { shouldValidate: true })
+    setValue('password', DEMO_PASSWORD, { shouldValidate: true })
+    navigator.clipboard?.writeText(`${DEMO_EMAIL} / ${DEMO_PASSWORD}`).catch(() => {})
+    setCopied(true)
+    window.setTimeout(() => setCopied(false), 1600)
+  }
+
+  const clearDemo = () => {
+    setValue('email', '', { shouldValidate: false })
+    setValue('password', '', { shouldValidate: false })
   }
 
   return (
@@ -108,7 +136,12 @@ export default function LoginPage() {
             Sign in to your consultancy dashboard.
           </p>
 
-          <form onSubmit={handleSubmit(onSubmit)} className="mt-8 space-y-5">
+          <form onSubmit={handleSubmit(onSubmit)} onChange={() => authError && setAuthError('')} className="mt-8 space-y-5">
+            {authError && (
+              <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">
+                {authError}
+              </div>
+            )}
             <div>
               <label className="mb-1.5 block text-sm font-medium text-slate-700">
                 Email
@@ -173,9 +206,51 @@ export default function LoginPage() {
             </Button>
           </form>
 
-          <div className="mt-6 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-500">
-            <span className="font-medium text-slate-600">Demo:</span> use any
-            email and a 6+ character password to sign in.
+          {/* Demo credentials — Copy auto-fills the form above. */}
+          <div className="mt-6 overflow-hidden rounded-lg border border-slate-200">
+            <div className="border-b border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-bold text-slate-700">
+              Demo Login Info
+            </div>
+            <table className="w-full text-left">
+              <thead>
+                <tr className="border-b border-slate-200 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                  <th className="px-3 py-2">Role</th>
+                  <th className="px-3 py-2">Email / Password</th>
+                  <th className="px-3 py-2" />
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td className="px-3 py-3 align-top">
+                    <span className="inline-flex items-center rounded-md bg-brand-50 px-2 py-1 text-xs font-bold text-brand-600">
+                      Admin
+                    </span>
+                  </td>
+                  <td className="px-3 py-3">
+                    <p className="text-sm font-semibold text-slate-800 [overflow-wrap:anywhere]">{DEMO_EMAIL}</p>
+                    <p className="text-sm font-semibold text-slate-800">{DEMO_PASSWORD}</p>
+                  </td>
+                  <td className="px-3 py-3">
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={fillDemo}
+                        className="rounded-lg bg-brand-600 px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-brand-700"
+                      >
+                        {copied ? 'Filled ✓' : 'Copy'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={clearDemo}
+                        className="rounded-lg px-2 py-1.5 text-sm font-semibold text-brand-600 transition-colors hover:bg-brand-50"
+                      >
+                        Clear
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
