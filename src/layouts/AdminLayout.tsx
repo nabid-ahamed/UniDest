@@ -1,6 +1,8 @@
 import { Outlet } from 'react-router-dom'
 import { Header } from '../components/Header'
 import { Sidebar } from '../components/Sidebar'
+import { SidebarMessenger } from '../components/SidebarMessenger'
+import { BackToTop } from '../components/BackToTop'
 import { Breadcrumb } from '../components/Breadcrumb'
 import { useUI } from '../store/ui'
 import { cn } from '../lib/cn'
@@ -18,6 +20,8 @@ export default function AdminLayout() {
     <div className="flex min-h-screen flex-col bg-slate-50">
       <Header />
       <Sidebar />
+      <SidebarMessenger />
+      <BackToTop />
 
       <main className={cn('flex-1 py-6 transition-[padding] duration-300', pad)}>
         <Breadcrumb />
@@ -26,13 +30,12 @@ export default function AdminLayout() {
 
       <footer
         className={cn(
-          'border-t border-slate-200 bg-white py-4 text-center text-sm text-slate-600 transition-[padding] duration-300',
+          // Copyright type spec: Source Sans 3 Semibold · 14px / 21px · 0 tracking · #545454
+          "border-t border-slate-200 bg-white py-2.5 text-center font-['Source_Sans_3',_'Open_Sans',_sans-serif] text-sm font-semibold leading-[21px] tracking-normal text-[#545454] transition-[padding] duration-300",
           pad,
         )}
       >
-        Copyright © {new Date().getFullYear()}{' '}
-        <span className="font-semibold text-slate-700">GlobalEd</span> All Rights Reserved.{' '}
-        <span className="ml-1 text-xs text-slate-400">v1.0</span>
+        Copyright © {new Date().getFullYear()} <span className="font-bold">GlobalEd</span> All Rights Reserved.
       </footer>
     </div>
   )
