@@ -25,6 +25,20 @@ const TITLES: Record<string, string> = {
   '/media-library': 'Media Library',
   '/announcements': 'Announcements',
   '/user-management': 'User Management',
+  '/cms/home-page': 'Home Page & Theme',
+  '/cms/countries': 'Countries',
+  '/cms/blog': 'Blog Posts',
+  '/cms/pages': 'Pages',
+  '/cms/menu': 'Menu Manager',
+  '/cms/newsletter': 'Newsletter Subscribers',
+  '/message-templates/email': 'Email Templates',
+  '/message-templates/sms': 'SMS Templates',
+  '/message-templates/whatsapp': 'Whatsapp Templates',
+  '/message-templates/canned': 'Canned Responses',
+  '/import': 'Import',
+  '/backups': 'Backups',
+  '/roles': 'Role Management',
+  '/settings': 'Settings',
 }
 
 // Multi-level trails for nested pages.
@@ -53,6 +67,10 @@ const TRAILS: Record<string, Crumb[]> = {
   ],
   '/announcements/new': [{ label: 'Announcements', to: '/announcements' }, { label: 'Create Announcement' }],
   '/user-management/new': [{ label: 'User Management', to: '/user-management' }, { label: 'Create User' }],
+  '/cms/blog/new': [{ label: 'Blog Posts', to: '/cms/blog' }, { label: 'Add Post' }],
+  '/cms/pages/new': [{ label: 'Pages', to: '/cms/pages' }, { label: 'Create Page' }],
+  '/message-templates/canned/new': [{ label: 'Canned Responses', to: '/message-templates/canned' }, { label: 'Add New' }],
+  '/roles/new': [{ label: 'Role Management', to: '/roles' }, { label: 'Create Role' }],
 }
 
 // Dynamic (parameterised) routes that a static map can't cover.
@@ -96,6 +114,21 @@ function dynamicTrail(pathname: string): Crumb[] | null {
     return [{ label: 'User Management', to: '/user-management' }, { label: 'View' }]
   if (/^\/user-management\/\d+\/edit$/.test(pathname))
     return [{ label: 'User Management', to: '/user-management' }, { label: 'Edit User' }]
+  if (/^\/cms\/countries\/\d+\/edit$/.test(pathname))
+    return [{ label: 'Countries', to: '/cms/countries' }, { label: 'Edit Country' }]
+  if (/^\/cms\/blog\/\d+\/edit$/.test(pathname))
+    return [{ label: 'Blog Posts', to: '/cms/blog' }, { label: 'Edit Post' }]
+  if (/^\/cms\/pages\/\d+\/edit$/.test(pathname))
+    return [{ label: 'Pages', to: '/cms/pages' }, { label: 'Edit Page' }]
+  const mt = pathname.match(/^\/message-templates\/(email|sms|whatsapp)\/(new|\d+\/edit)$/)
+  if (mt) {
+    const label = { email: 'Email Templates', sms: 'SMS Templates', whatsapp: 'Whatsapp Templates' }[mt[1]]!
+    return [{ label, to: `/message-templates/${mt[1]}` }, { label: mt[2] === 'new' ? 'Add Template' : 'Edit Template' }]
+  }
+  if (/^\/message-templates\/canned\/\d+\/edit$/.test(pathname))
+    return [{ label: 'Canned Responses', to: '/message-templates/canned' }, { label: 'Edit' }]
+  if (/^\/roles\/\d+\/edit$/.test(pathname))
+    return [{ label: 'Role Management', to: '/roles' }, { label: 'Edit Role' }]
   if (/^\/webinars\/\d+$/.test(pathname))
     return [{ label: 'Webinar', to: '/webinars' }, { label: 'View Webinar' }]
   if (/^\/webinars\/\d+\/edit$/.test(pathname))

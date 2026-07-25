@@ -41,6 +41,12 @@ never inline in components. Types are exported alongside the data.
 | [Media Library](#media-library-media-library) | `src/mock/mediaLibrary.ts` | ✅ done |
 | [Announcements](#announcements-announcements--newidedit) | `src/mock/announcements.ts` | ✅ done |
 | [User Management](#user-management-user-management--newidedit) | `src/mock/userManagement.ts` | ✅ done |
+| [CMS](#cms-cms) | `src/mock/cms.ts` | ✅ done |
+| [Message Templates](#message-templates-message-templates) | `src/mock/messageTemplates.ts` | ✅ done |
+| [Import](#import-import) | `src/mock/importData.ts` | ✅ done |
+| [Backups](#backups-backups) | `src/mock/backups.ts` | ✅ done |
+| [Roles](#roles-roles) | `src/mock/roles.ts` | ✅ done |
+| [Settings](#settings-settings) | `src/mock/settings.ts` | ✅ done |
 
 ---
 
@@ -1085,6 +1091,278 @@ from `webinarEnrollments(w)` in the mock — generated **deterministically** fro
 the webinar id (count = `enrolledUsers`; agent-audience webinars yield Agent
 rows). `parseWebinarDate()` also moved into the mock and is shared with the
 edit page. All four webinar row actions are now fully wired.
+
+---
+
+## CMS (`/cms/*`)
+
+Reference: EduCtrl `/admin/cms/home-page`, `/admin/cms/countries`,
+`/admin/blog-posts`, `/admin/articles`, `/admin/menu-manager`,
+`/admin/cms/newsletter-subscribers`. One consolidated mock (`src/mock/cms.ts`)
+backs six sub-modules, all persisted to their own `unidest-cms-*` localStorage
+keys. **The CMS never invents data another module owns** — it derives from and
+links back to existing modules everywhere.
+
+### 1. Home Page & Theme (`/cms/home-page`, `HomePageSettingsPage.tsx`)
+
+Settings screen (no list). `homeSettings: HomeSettings` (single object, key
+`unidest-cms-home`, merged with defaults on load) + `saveHomeSettings(patch)`.
+Sections:
+- **Public Website Theme** — `frontendThemes` (Europa/Ganymede/Callisto) select +
+  `brandColors[]` swatch grid (primary+accent pairs, click to select).
+- **Homepage Layout** — `LayoutMode` cards (minimal/full) + `homeSections[]`
+  toggle grid. Each section is a `HomeSection` with an optional `count()` reading
+  a **live number from a connected module**: Destinations→`cmsCountries`,
+  Study Streams→`topCategories()`, Programs→`courses`, University Logos→
+  `universities`, Blog→published `blogPosts`, Events→`webinars`, Gallery→`media`.
+- **Header/Footer Display** — Top Bar / Menu Bar / Footer / Copyright toggles.
+
+Reusable `Toggle` switch lives in `src/features/cms/components/Toggle.tsx`.
+
+### 2. Countries (`/cms/countries` + `/:id/edit`)
+
+`cmsCountries: CmsCountry[]` (key `unidest-cms-countries`) **seeded from the
+unique countries in Course Management `universities`** — those get status
+`Published`, a curated `EXTRA_DESTINATIONS` set ships as `Default Only`.
+`universitiesInCountry(name)` reads the live partner-university count from
+Course Management. List: Country / Slug (`study-in/<slug>`) / Universities /
+Status (click cycles `countryStatuses`) / Edit + Preview (→ Course Finder).
+Edit page shows the connected university count with a link to `/universities`.
+
+### 3. Blog Posts (`/cms/blog` + `/new` + `/:id/edit`)
+
+`blogPosts: BlogPost[]` (key `unidest-cms-blog`). CRUD: `addPost` / `updatePost`
+/ `togglePostFeatured` / `deletePost`, `sortedPosts()`. Authors come from
+`staff`. List = image tile (uploaded data-URL or gradient) / title+slug+author /
+status / featured star (toggle) / published / Edit+Delete, with Show/status/
+search/`ExportButtons`. Form: title (auto-slug), slug, excerpt, content, cover
+upload (FileReader data-URL preview), status, author (Staff select), featured.
+
+### 4. Pages (`/cms/pages` + `/new` + `/:id/edit`)
+
+`cmsPages: CmsPage[]` (key `unidest-cms-pages`). Content pages (About Us,
+policies) are fully CRUD; **module pages** (`system: true` — Countries, Home)
+render live data and can be edited but **`deleteCmsPage` returns false** for
+them (shown as a locked "System" chip). Form disables name/slug for system pages.
+
+### 5. Menu Manager (`/cms/menu`, `MenuManagerPage.tsx`)
+
+`menuItems: MenuItem[]` (key `unidest-cms-menu`) across `menuGroups`
+(main/footer). `linkTypes[]` **map to real routes/modules** (home, page, static,
+blog, course_finder, study_destinations, universities, webinars, student_login,
+student_signup). Tabs, ordered items with parent nesting, move up/down
+(`moveMenuItem`), inline edit modal (`createPortal`), add-item form
+(label/link type/parent/new tab), delete (`deleteMenuItem` re-parents children),
+and a Link Types reference panel. Save Menu = toast (already persisted per-change).
+
+### 6. Newsletter (`/cms/newsletter`, `NewsletterPage.tsx`)
+
+`newsletterSubscribers: NewsletterSubscriber[]` (key `unidest-cms-newsletter`)
+**seeded partly from real Student emails** + public sign-ups. List: # / Email /
+Subscribed At (`formatSubscribedAt`) / IP / delete, with search + `ExportButtons`
+(Export CSV). `sortedSubscribers()` newest-first, `deleteSubscriber(id)`.
+
+Wiring: routes in `router.tsx`, sidebar CMS children carry `to` values,
+breadcrumb TITLES/TRAILS/dynamicTrail cover every CMS route.
+
+---
+
+## Message Templates (`/message-templates/*`)
+
+Reference: EduCtrl `/admin/mailtemplates`, `/admin/smstemplates`,
+`/admin/whatsapptemplates`, `/admin/cannedresponsetemplates`. One mock
+(`src/mock/messageTemplates.ts`) powers all four; the three channel screens
+share **one** reusable list component and **one** form (no duplicate logic).
+
+### Template engine (Email / SMS / WhatsApp)
+
+`channels = ['email','sms','whatsapp']`; `channelMeta` captures the only real
+differences — Email has a **Subject**, WhatsApp uses `{{token}}` merge tags
+while Email/SMS use `#token#` (`formatTag(channel, token)`). `messageTemplates:
+MessageTemplate[]` (key `unidest-message-templates`), filtered via
+`templatesFor(channel)`.
+
+**Connection to existing modules** — every event template is bound to a
+`TemplateEvent` (`templateEvents[]`) that already fires elsewhere:
+`STUDENT_CREATE_WELCOME`/`BIRTHDAY_WISHES`→Students, `LEAD_WELCOME`→Leads,
+`WEBINAR_REMINDER`→Webinars, `UNIVERSITY_APPLICATION_UPDATE`→Applications,
+`COURSE_SUGGESTION`→Course Finder, `AGENT_COMMISSION_PAYOUT`→Referral,
+`STAFF_LEAD_ASSIGNED`→Staff. The list's Details column links straight to that
+module's route. `mergeTags[]` resolve to real record fields (name, email,
+course, university, intake, webinar, application…) and are click-to-insert in
+the form (caret-aware). Event templates are `system: true` — editable/toggleable
+but **`deleteTemplate` returns false** for them (locked in the UI); custom
+templates are deletable. Bodies are authored channel-neutral (`{token}`) and
+`renderBody()` swaps in the channel's delimiter, so one source serves all three.
+
+Pages: `TemplatesPage.tsx` takes a `channel` prop (routes pass
+`<TemplatesPage channel="email" />`); `TemplateFormPage.tsx` reads `:channel`
++ `:id` from the route (`/message-templates/:channel/new` + `/:id/edit`).
+
+### Canned Responses (`/message-templates/canned` + `/new` + `/:id/edit`)
+
+`cannedResponses: CannedResponse[]` (key `unidest-canned-responses`) — grouped
+quick replies for the live-chat widget. Each has a `type`, `details`, `enabled`
+flag and a `responses[]` array. List: Type / Details / Replies count / Status
+(toggle) / Edit + Delete. Form manages the dynamic `responses[]` (add/remove
+rows) + enabled toggle. Full CRUD (`addCanned`/`updateCanned`/`toggleCanned`/
+`deleteCanned`).
+
+Wiring: routes in `router.tsx` (canned routes precede the `:channel` dynamic
+ones), sidebar Message Templates children carry `to`, breadcrumb covers every
+channel + canned route including channel-aware new/edit trails.
+
+---
+
+## Import (`/import`)
+
+Reference: EduCtrl `/admin/import-export/students` — a tabbed CSV importer.
+`src/mock/importData.ts` is a small **config-driven engine**; the reference's
+Agents tab (no agents module here) is replaced with **Staff** so every tab maps
+to a real module: **Leads, Students, Staff, Course Data**.
+
+**Connected to existing modules — this is the only place the app bulk-creates
+records**, and each tab writes straight into its module: Leads→`addLead`,
+Students→pushes onto `students`, Staff→`addStaff`, Course Data→`addCourse`.
+`importEntities[]` declares each entity's `columns` (header/field/required/
+`enumValues`), whether it shows an "Assign to Branch" select or an
+"Auto-generate password" checkbox, a live `count()` from the module, and an
+`importRecord()` that builds a valid record with sensible defaults. Column
+enums are sourced from the real modules (`staffBranches`, `studyLevels`,
+`staffRoles`, `studentSources`, `studyAreas`…) so the on-screen rules and the
+validation always agree with what those modules accept.
+
+Engine helpers: `parseCsv()` (RFC-4180-ish, handles quotes/commas/newlines),
+`buildPreview()` (maps rows to fields, checks required + enum values, returns
+per-row errors + valid/error counts), `buildSampleCsv()` (real headers + one
+example row, downloaded client-side), `runImport()` (appends every valid row
+via `importRecord`, returns how many landed).
+
+Pages: `ImportPage.tsx` renders the entity tabs (with live count badges) +
+active-tab live count and syncs the tab to `?tab=`; the reusable
+`ImportPanel.tsx` runs the workflow for whichever entity is active — format
+rules, Download Sample, file picker, **in-browser preview table** (valid rows
+vs. per-row errors, first 8 shown), branch/password options, Import button, and
+a success banner linking to the module (e.g. "View in Students →"). One panel,
+four entities — no duplicated per-tab logic.
+
+Wiring: route `/import` in `router.tsx`, sidebar Import leaf carries `to`,
+breadcrumb TITLES has `/import`.
+
+Note: file-upload → append was verified by build + logic and manual use; the
+headless browser-use runner can't drive the OS file picker, so that final step
+isn't part of the automated smoke test.
+
+---
+
+## Backups (`/backups`)
+
+Reference: EduCtrl `/admin/backups` — a server-ops page (download a DB dump +
+shell/cron guidance). Adapted for a frontend build where the app's real state
+lives in the mock modules (seeded, persisted to `unidest-*` localStorage on
+change): here a **backup is a live JSON snapshot of every module's data**,
+downloadable and restorable. `src/mock/backups.ts` owns the engine.
+
+**Connected to existing modules**: `REGISTRY` maps each `unidest-*` storage key
+to the module's **live exported array** (`leads`, `students`, `staff`, `users`,
+`courses`, `universities`, `courseCategories`, `studentResources`, `media`,
+`announcements`, `webinars`, `serviceRequests`, invoices, all `cms.*`,
+`messageTemplates`, `cannedResponses`…). So counts are always accurate — seed or
+edited, **including rows added by the Import tool** — and the snapshot holds real
+data. `listSources()` also sweeps any extra `unidest-*` key found in localStorage
+that isn't curated, so nothing is missed. `sourceValue(key)` returns live data
+for registry keys, else the stored JSON.
+
+Engine: `buildBackup()` → a signed `BackupManifest` ({signature, version, app,
+generatedAt, keys}); `downloadBackup()` serializes + triggers a browser download
+and stamps `unidest-last-backup`; `parseBackup()` validates an uploaded file;
+`restoreBackup(manifest, 'replace'|'merge')` writes keys back to localStorage
+(a reload rehydrates each persistent module); `summarizeManifest()` powers the
+restore preview; `formatBytes`/`formatDateTime` are shared formatters.
+
+Page (`BackupsPage.tsx`): (1) **Generate & download** — stat tiles (data sets /
+total records / snapshot size) + Download button + last-backup time; (2)
+**What's included** — a live table (Module link · Records · Size · Storage key)
+with a totals row; (3) **Restore from backup** — file picker → validated preview
+of the manifest's data sets → `ConfirmDialog` → restore + reload; (4)
+**Scheduled backups** — guidance card (browser data is on-demand; cron/mysqldump
+notes for a hosted DB). Reuses `ConfirmDialog`.
+
+Wiring: route `/backups`, sidebar Backups leaf carries `to`, breadcrumb TITLES.
+
+Note: download-file-landing and restore-upload use the browser's file layer,
+which the headless browser-use runner can't inspect/drive; both flows are
+build-verified and the download was confirmed live (the last-backup timestamp
+updates on click).
+
+---
+
+## Roles (`/roles` + `/new` + `/:id/edit`)
+
+Reference: EduCtrl `/admin/auth/role` — Role Management (list + grouped
+permission editor). `src/mock/roles.ts` owns the RBAC data.
+
+**Connected to existing modules**: roles ARE the roles used across Staff and User
+Management — seeded from `staffRoles` (Super Admin, Branch Manager, Counsellor,
+Admission Officer, Front Desk, Accountant), each with a permission `PRESETS`
+entry. `userCountForRole(name)` reads the **live** count of User Management
+accounts holding that role (`users[].roles`), and the list's Users cell links to
+`/user-management?role=<name>`. `permissionGroups` is the grouped catalog (~47
+permissions across 17 groups — Lead/Student/Application/Staff/Agent/Course/
+Invoice/Support/CMS/Upload/Message-Template/Referral/Report/Advanced/Chat +
+General), mirroring the reference. `Role` = {id, name, managerial, permissions[],
+system}. CRUD: `addRole`/`updateRole`/`deleteRole` (Super Admin is `system` —
+`deleteRole` returns false, always shows "All permissions", no edit/delete in the
+list). `hasAllPermissions()` decides the "All" pill; `permissionLabel()` renders
+chips. Persists to `unidest-roles` (so it also shows up in the Backups snapshot).
+
+Pages: `RolesPage.tsx` — table Role · Permissions (chips with "+N more", "All"
+for system) · Managerial (Yes/—) · Users (live, linked) · Actions (edit/delete;
+system = N/A) + a Note card linking to User Management. `RoleFormPage.tsx` —
+Name, "managerial role" `Toggle` (reused from CMS), and the grouped permission
+checkbox editor with a running "N of 47 selected" counter, per-group and global
+Select-all/Clear, selected-card highlight, and the "grant View with Edit"
+reminder. Reuses `ConfirmDialog`, `Toggle`.
+
+Wiring: routes `/roles`, `/roles/new`, `/roles/:id/edit`; sidebar Roles leaf
+carries `to`; breadcrumb TITLES + create/edit trails.
+
+---
+
+## Settings (`/settings`)
+
+Reference: EduCtrl `/admin/settings` — a huge tabbed config screen. Rather than
+stub ~35 tabs, this builds a focused **settings-nav + panel** layout where every
+tab is real and wired (no dead ends). `src/mock/settings.ts` holds one
+`AppSettings` object persisted to `unidest-settings` (so it also shows in the
+Backups snapshot), loaded with a deep-merge over `defaults`.
+
+**Connected to existing modules**: the Public Website Theme reuses CMS
+`frontendThemes` and links to CMS › Home Page; **Branches** and **Study Levels**
+are seeded from the real `staffBranches` / `studyLevels` those modules already use
+(Staff, Users, Leads, Students, Courses, Import) and the panels link back to them;
+**Modules** toggles the app's real modules via `moduleRegistry` (label + route,
+mirrors the sidebar); **Localization** currency options come from Invoices
+(`invoiceCurrencies`); **Notifications** links to Message Templates. Helpers:
+`saveSettings(slice, value)`, `toggleModule`, `add/removeBranch`,
+`add/removeStudyLevel`, `setMaintenance`, `enabledModuleCount`, and
+`pendingSetupSteps()` (empty required fields → the amber "Master Setup" banner).
+
+Pages: `SettingsPage.tsx` — Master Setup banner (dynamic pending count), a
+sticky left settings-nav synced to `?tab=`, and the active panel. Panels live in
+`features/settings/panels/`:
+- `ListEditorPanel.tsx` — **one reusable** chip-list editor powering both Branches
+  and Study Levels (add/remove + connected note); also exports the shared `Panel`
+  card wrapper used by every panel.
+- `GeneralPanel.tsx` — org profile, theme, social links, footer + Save.
+- `LocalizationPanel.tsx` — currency/date/timezone/week-start + Save.
+- `ModulesPanel.tsx` — per-module `Toggle` with live enabled count + route links.
+- `NotificationsPanel.tsx` — channel + event `Toggle`s + Save.
+- `AdvancedPanel.tsx` — maintenance `Toggle`, Backups link, and a "reset settings"
+  danger action (`ConfirmDialog` → clears `unidest-settings` → reload).
+
+Reuses the CMS `Toggle` and `ConfirmDialog`; no per-tab duplicated logic. Wiring:
+route `/settings`, sidebar Settings leaf carries `to`, breadcrumb TITLES.
 
 ---
 

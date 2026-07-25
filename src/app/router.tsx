@@ -45,6 +45,24 @@ import AnnouncementViewPage from '../features/announcements/AnnouncementViewPage
 import UserManagementPage from '../features/userManagement/UserManagementPage'
 import UserFormPage from '../features/userManagement/UserFormPage'
 import UserViewPage from '../features/userManagement/UserViewPage'
+import HomePageSettingsPage from '../features/cms/HomePageSettingsPage'
+import CountriesPage from '../features/cms/CountriesPage'
+import CountryFormPage from '../features/cms/CountryFormPage'
+import BlogPostsPage from '../features/cms/BlogPostsPage'
+import BlogPostFormPage from '../features/cms/BlogPostFormPage'
+import PagesPage from '../features/cms/PagesPage'
+import PageFormPage from '../features/cms/PageFormPage'
+import MenuManagerPage from '../features/cms/MenuManagerPage'
+import NewsletterPage from '../features/cms/NewsletterPage'
+import TemplatesPage from '../features/messageTemplates/TemplatesPage'
+import TemplateFormPage from '../features/messageTemplates/TemplateFormPage'
+import CannedResponsesPage from '../features/messageTemplates/CannedResponsesPage'
+import CannedResponseFormPage from '../features/messageTemplates/CannedResponseFormPage'
+import ImportPage from '../features/import/ImportPage'
+import BackupsPage from '../features/backups/BackupsPage'
+import RolesPage from '../features/roles/RolesPage'
+import RoleFormPage from '../features/roles/RoleFormPage'
+import SettingsPage from '../features/settings/SettingsPage'
 import WebinarsPage from '../features/webinars/WebinarsPage'
 import WebinarViewPage from '../features/webinars/WebinarViewPage'
 import EditWebinarPage from '../features/webinars/EditWebinarPage'
@@ -117,6 +135,31 @@ export const router = createBrowserRouter([
           { path: '/user-management/new', element: <UserFormPage /> },
           { path: '/user-management/:id', element: <UserViewPage /> },
           { path: '/user-management/:id/edit', element: <UserFormPage /> },
+          { path: '/cms/home-page', element: <HomePageSettingsPage /> },
+          { path: '/cms/countries', element: <CountriesPage /> },
+          { path: '/cms/countries/:id/edit', element: <CountryFormPage /> },
+          { path: '/cms/blog', element: <BlogPostsPage /> },
+          { path: '/cms/blog/new', element: <BlogPostFormPage /> },
+          { path: '/cms/blog/:id/edit', element: <BlogPostFormPage /> },
+          { path: '/cms/pages', element: <PagesPage /> },
+          { path: '/cms/pages/new', element: <PageFormPage /> },
+          { path: '/cms/pages/:id/edit', element: <PageFormPage /> },
+          { path: '/cms/menu', element: <MenuManagerPage /> },
+          { path: '/cms/newsletter', element: <NewsletterPage /> },
+          { path: '/message-templates/email', element: <TemplatesPage channel="email" /> },
+          { path: '/message-templates/sms', element: <TemplatesPage channel="sms" /> },
+          { path: '/message-templates/whatsapp', element: <TemplatesPage channel="whatsapp" /> },
+          { path: '/message-templates/canned', element: <CannedResponsesPage /> },
+          { path: '/message-templates/canned/new', element: <CannedResponseFormPage /> },
+          { path: '/message-templates/canned/:id/edit', element: <CannedResponseFormPage /> },
+          { path: '/message-templates/:channel/new', element: <TemplateFormPage /> },
+          { path: '/message-templates/:channel/:id/edit', element: <TemplateFormPage /> },
+          { path: '/import', element: <ImportPage /> },
+          { path: '/backups', element: <BackupsPage /> },
+          { path: '/roles', element: <RolesPage /> },
+          { path: '/roles/new', element: <RoleFormPage /> },
+          { path: '/roles/:id/edit', element: <RoleFormPage /> },
+          { path: '/settings', element: <SettingsPage /> },
           { path: '/webinars', element: <WebinarsPage /> },
           { path: '/webinars/:id', element: <WebinarViewPage /> },
           { path: '/webinars/:id/edit', element: <EditWebinarPage /> },

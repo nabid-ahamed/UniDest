@@ -8,6 +8,7 @@ import { Input } from '../../components/ui/Input'
 import { Button } from '../../components/ui/Button'
 import { useAuth } from '../../store/auth'
 import logo from '../../assets/globaled-logo.png'
+import logoWhite from '../../assets/globaled-logo-white.png'
 
 const schema = z.object({
   email: z.string().min(1, 'Email is required').email('Enter a valid email'),
@@ -52,16 +53,14 @@ export default function LoginPage() {
         <div className="absolute -bottom-32 -left-16 h-96 w-96 rounded-full bg-brand-400/20 blur-3xl" />
 
         <div className="relative">
-          {/* White plate keeps the coloured wordmark readable on the blue panel. */}
-          <span className="inline-flex items-center rounded-xl bg-white px-4 py-2.5 shadow-sm">
-            <img
-              src={logo}
-              alt="GlobalEd — IELTS & Study Abroad Consultancy"
-              width={1198}
-              height={294}
-              className="h-9 w-auto"
-            />
-          </span>
+          {/* White wordmark sits directly on the blue panel — no plate needed. */}
+          <img
+            src={logoWhite}
+            alt="GlobalEd — IELTS & Study Abroad Consultancy"
+            width={1200}
+            height={294}
+            className="h-11 w-auto"
+          />
         </div>
 
         <div className="relative">
