@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { showSuccessDialog } from '../../store/successDialog'
 import { Plus, Pencil, Trash2, MessagesSquare } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
@@ -109,7 +110,7 @@ export default function CannedResponsesPage() {
         onConfirm={() => {
           if (confirm) {
             deleteCanned(confirm.id)
-            showToast('Canned response deleted')
+            showSuccessDialog('Canned response deleted successfully')
             setConfirm(null)
             setRev((n) => n + 1)
           }

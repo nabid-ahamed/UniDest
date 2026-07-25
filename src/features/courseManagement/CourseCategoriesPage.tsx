@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { showSuccessDialog } from '../../store/successDialog'
 import { createPortal } from 'react-dom'
 import { Plus, Pencil, Trash2, Check, X, CornerDownRight } from 'lucide-react'
 import { cn } from '../../lib/cn'
@@ -104,7 +105,7 @@ export default function CourseCategoriesPage() {
         onConfirm={() => {
           if (confirm) {
             deleteCategory(confirm.id)
-            showToast('Category deleted')
+            showSuccessDialog('Category deleted successfully')
             setConfirm(null)
             bump()
           }

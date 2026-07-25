@@ -88,6 +88,8 @@ function dynamicTrail(pathname: string): Crumb[] | null {
       { label: 'Additional Services', to: '/services' },
       { label: 'Visa & Services Detail' },
     ]
+  if (/^\/applications\/\d+$/.test(pathname))
+    return [{ label: 'Applications', to: '/applications' }, { label: 'View' }]
   if (/^\/students\/\d+$/.test(pathname))
     return [{ label: 'Student Management', to: '/students' }, { label: 'View' }]
   if (/^\/students\/\d+\/edit$/.test(pathname))

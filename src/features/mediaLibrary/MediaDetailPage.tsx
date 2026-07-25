@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { showSuccessDialog } from '../../store/successDialog'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, Copy, Trash2, Image as ImageIcon, Film, Play, Calendar, User, HardDrive, Ruler } from 'lucide-react'
 import { cn } from '../../lib/cn'
@@ -126,6 +127,7 @@ export default function MediaDetailPage() {
         onCancel={() => setConfirm(false)}
         onConfirm={() => {
           deleteMedia(item.id)
+          showSuccessDialog(`"${item.name}" deleted successfully`)
           navigate('/media-library')
         }}
       />

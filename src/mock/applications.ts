@@ -23,7 +23,7 @@ export interface Application {
 
 // Badge colours are the darker 700/800 shades so white text clears WCAG AA
 // (>= 4.5:1). ApplicationRow still runs pickTextColor() as a safety net.
-export const applicationStatuses = [
+export const applicationStatuses: { label: string; color: string }[] = [
   { label: 'Pending', color: '#b91c1c' },
   { label: 'Funds Under Assessment', color: '#0e7490' },
   { label: 'Admission Criteria Met', color: '#6d28d9' },
@@ -51,7 +51,10 @@ export const totalApplicationCount = 193
 const s = (label: string) =>
   applicationStatuses.find((x) => x.label === label)?.color ?? '#0e7490'
 
-export const applications: Application[] = [
+/** Resolve a status label to its badge colour (falls back to Funds teal). */
+export const statusColorFor = (label: string) => s(label)
+
+const seedApplications: Application[] = [
   { id: 142347, dateCreated: '27-04-2026', student: 'Aarav Sharma', studentNo: 'STU-2026-1902', country: 'Canada', university: 'University of Toronto', course: 'Business Studies', intake: 'May 2026', agent: null, appliedThrough: 'DIRECT', status: 'Offer Letter Received', statusColor: s('Offer Letter Received'), assignedTo: 'Sarah Ali', branch: 'Sylhet' },
   { id: 846140, dateCreated: '24-04-2026', student: 'Fatima Rahman', studentNo: 'STU-2026-1898', country: 'United Arab Emirates', university: 'University of Dubai', course: 'International Business', intake: 'July 2026', agent: null, appliedThrough: 'Applyboard', status: 'Pending', statusColor: s('Pending'), assignedTo: 'Mohammed Saleh', branch: 'Khulna' },
   { id: 302122, dateCreated: '15-04-2026', student: 'Rohan Das', studentNo: 'STU-2026-1893', country: 'Finland', university: 'University of Helsinki', course: 'Data Science', intake: 'July 2026', agent: null, appliedThrough: 'DIRECT', status: 'Payment Received', statusColor: s('Payment Received'), assignedTo: 'Moses Otieno', branch: 'Dhaka' },
@@ -67,3 +70,62 @@ export const applications: Application[] = [
   { id: 550274, dateCreated: '22-01-2026', student: 'Imran Ali', studentNo: 'STU-2026-1842', country: 'United States', university: 'Arizona State University', course: 'MBA', intake: 'September 2026', agent: 'Shubham Gill', appliedThrough: 'DIRECT', status: 'Withdrawn', statusColor: s('Withdrawn'), assignedTo: 'Mohammed Saleh', branch: 'Dhaka' },
   { id: 418096, dateCreated: '10-01-2026', student: 'Rahul Verma', studentNo: 'STU-2026-1829', country: 'Germany', university: 'Technical University of Munich', course: 'Automotive Engineering', intake: 'April 2027', agent: null, appliedThrough: 'Applyboard', status: 'Pending', statusColor: s('Pending'), assignedTo: null, branch: 'Chattogram' },
 ]
+
+/* ------------------------------------------------------------------ */
+/* Persistence (localStorage) + CRUD — same pattern as Students        */
+/* ------------------------------------------------------------------ */
+
+const KEY = 'unidest-applications'
+
+/** Live, mutable list. Other modules read this so edits stay in sync. */
+export const applications: Application[] = (() => {
+  try {
+    const raw = localStorage.getItem(KEY)
+    if (!raw) return seedApplications
+    const parsed = JSON.parse(raw)
+    return Array.isArray(parsed) && parsed.length ? parsed : seedApplications
+  } catch {
+    return seedApplications
+  }
+})()
+
+/** Persist the current list. Call after any mutation. */
+export function persistApplications() {
+  try {
+    localStorage.setItem(KEY, JSON.stringify(applications))
+  } catch {
+    // Storage blocked — changes stay in-memory for this session.
+  }
+}
+
+export const getApplication = (id: number) => applications.find((x) => x.id === id)
+
+export function updateApplication(id: number, patch: Partial<Omit<Application, 'id'>>) {
+  const app = applications.find((x) => x.id === id)
+  if (!app) return
+  Object.assign(app, patch)
+  if (patch.status) app.statusColor = s(patch.status)
+  persistApplications()
+}
+
+export function setApplicationStatus(id: number, status: string) {
+  updateApplication(id, { status })
+}
+
+export function setApplicationAssignee(id: number, assignedTo: string | null) {
+  updateApplication(id, { assignedTo })
+}
+
+export function deleteApplication(id: number) {
+  const i = applications.findIndex((x) => x.id === id)
+  if (i >= 0) applications.splice(i, 1)
+  persistApplications()
+}
+
+export function deleteApplications(ids: number[]) {
+  const set = new Set(ids)
+  for (let i = applications.length - 1; i >= 0; i--) {
+    if (set.has(applications[i].id)) applications.splice(i, 1)
+  }
+  persistApplications()
+}

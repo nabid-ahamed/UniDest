@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { showSuccessDialog } from '../../store/successDialog'
 import { createPortal } from 'react-dom'
 import {
   Search,
@@ -314,7 +315,7 @@ export default function CoursesPage() {
         onConfirm={() => {
           if (confirm) {
             deleteCourse(confirm.id)
-            showToast('Course deleted')
+            showSuccessDialog('Course deleted successfully')
             setConfirm(null)
             setRev((n) => n + 1)
           }

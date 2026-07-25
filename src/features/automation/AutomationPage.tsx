@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { showSuccessDialog } from '../../store/successDialog'
 import { useLocation, useNavigate } from 'react-router-dom'
 import {
   Search,
@@ -66,7 +67,7 @@ export default function AutomationPage() {
         {tab === 'Workflows' ? (
           <WorkflowsTab onToast={showToast} />
         ) : (
-          <CampaignsTab onToast={showToast} />
+          <CampaignsTab />
         )}
       </div>
 
@@ -384,7 +385,7 @@ function WorkflowsTab({ onToast }: { onToast: (msg: string) => void }) {
         onConfirm={() => {
           if (confirm) {
             deleteWorkflow(confirm.id)
-            onToast('Workflow deleted')
+            showSuccessDialog('Workflow deleted successfully')
             setConfirm(null)
             setRev((n) => n + 1)
           }
@@ -405,7 +406,7 @@ const campaignStatusColor: Record<string, string> = {
   Failed: 'bg-rose-100 text-rose-700',
 }
 
-function CampaignsTab({ onToast }: { onToast: (msg: string) => void }) {
+function CampaignsTab() {
   const [rev, setRev] = useState(0)
   const [statusFilter, setStatusFilter] = useState('')
   const [applied, setApplied] = useState('')
@@ -564,7 +565,7 @@ function CampaignsTab({ onToast }: { onToast: (msg: string) => void }) {
         onConfirm={() => {
           if (confirm) {
             deleteCampaign(confirm.id)
-            onToast('Campaign deleted')
+            showSuccessDialog('Campaign deleted successfully')
             setConfirm(null)
             setRev((n) => n + 1)
           }

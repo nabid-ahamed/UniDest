@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { showSuccessDialog } from '../../store/successDialog'
 import { Search, Plus, Pencil, Trash2, ChevronLeft, ChevronRight, Users } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { PageBtn } from '../../components/DataTableUI'
@@ -183,7 +184,7 @@ export default function AnnouncementsPage() {
         onConfirm={() => {
           if (confirm) {
             deleteAnnouncement(confirm.id)
-            showToast('Announcement deleted')
+            showSuccessDialog('Announcement deleted successfully')
             setConfirm(null)
             setRev((n) => n + 1)
           }

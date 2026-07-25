@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { showSuccessDialog } from '../../store/successDialog'
 import { Search, Plus, Pencil, Trash2, Star, ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { PageBtn } from '../../components/DataTableUI'
@@ -217,7 +218,7 @@ export default function BlogPostsPage() {
         onConfirm={() => {
           if (confirm) {
             deletePost(confirm.id)
-            showToast('Blog post deleted')
+            showSuccessDialog('Blog post deleted successfully')
             setConfirm(null)
             setRev((n) => n + 1)
           }

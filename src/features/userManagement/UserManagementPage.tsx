@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { showSuccessDialog } from '../../store/successDialog'
 import { createPortal } from 'react-dom'
 import {
   Search,
@@ -320,7 +321,7 @@ export default function UserManagementPage() {
         onConfirm={() => {
           if (confirm) {
             deleteUser(confirm.id)
-            showToast('User deleted')
+            showSuccessDialog('User deleted successfully')
             setConfirm(null)
             setRev((n) => n + 1)
           }

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { showSuccessDialog } from '../../store/successDialog'
 import { createPortal } from 'react-dom'
 import { useSearchParams } from 'react-router-dom'
 import { Plus, Pencil, Trash2, X, ArrowLeft } from 'lucide-react'
@@ -135,7 +136,7 @@ export default function ResourceCategoriesPage() {
           if (!confirm) return
           const ok = deleteResourceCategory(confirm.id)
           if (ok) {
-            showToast('Category deleted')
+            showSuccessDialog('Category deleted successfully')
             setRev((n) => n + 1)
           } else {
             showToast(`"${confirm.name}" is in use by ${resourceCountForCategory(confirm.id)} resource(s)`)

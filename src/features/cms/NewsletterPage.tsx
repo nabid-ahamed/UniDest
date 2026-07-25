@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { showSuccessDialog } from '../../store/successDialog'
 import { Search, Trash2, Mail, Users } from 'lucide-react'
 import { ExportButtons } from '../../components/ExportButtons'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
@@ -116,7 +117,7 @@ export default function NewsletterPage() {
         onConfirm={() => {
           if (confirm) {
             deleteSubscriber(confirm.id)
-            showToast('Subscriber removed')
+            showSuccessDialog('Subscriber removed successfully', 'Removed!')
             setConfirm(null)
             setRev((n) => n + 1)
           }

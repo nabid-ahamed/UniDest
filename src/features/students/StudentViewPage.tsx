@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { showSuccessDialog } from '../../store/successDialog'
 import { createPortal } from 'react-dom'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
@@ -370,6 +371,7 @@ function StudentView({ student }: { student: Student }) {
             onConfirm={() => {
               deleteStudent(student.id)
               setDeleting(false)
+              showSuccessDialog(`${student.name} deleted successfully`)
               navigate('/students')
             }}
             onCancel={() => setDeleting(false)}

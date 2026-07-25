@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { showSuccessDialog } from '../../store/successDialog'
 import { createPortal } from 'react-dom'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
@@ -412,7 +413,7 @@ function InvoicesTab({
             confirmLabel="Delete"
             onConfirm={() => {
               deleteInvoice(deleteInvoiceRow.id)
-              onToast(`Invoice #${deleteInvoiceRow.id} deleted`)
+              showSuccessDialog(`Invoice #${deleteInvoiceRow.id} deleted successfully`)
               setDeleteInvoiceRow(null)
               onMutate()
             }}

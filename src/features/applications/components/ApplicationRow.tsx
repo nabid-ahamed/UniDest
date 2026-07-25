@@ -1,7 +1,16 @@
-import { Pencil, UserPlus, Eye, User } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import {
+  Pencil,
+  UserPlus,
+  Eye,
+  User,
+  EllipsisVertical,
+  ChevronDown,
+  Trash2,
+} from 'lucide-react'
 import { cn } from '../../../lib/cn'
 import { pickTextColor } from '../../../lib/contrast'
-import type { Application } from '../../../mock/applications'
+import { applicationStatuses, type Application } from '../../../mock/applications'
 
 export function ApplicationRow({
   app,
@@ -14,7 +23,7 @@ export function ApplicationRow({
   assignedTo: string | null
   selected: boolean
   onToggle: () => void
-  onAction: (type: string) => void
+  onAction: (type: string, payload?: string) => void
 }) {
   return (
     <tr
@@ -89,7 +98,8 @@ export function ApplicationRow({
       </td>
 
       {/* Status — uniform pill: single line, centered, shared min-width so the
-          column reads consistently regardless of label length. */}
+          column reads consistently regardless of label length. The pencil opens
+          an inline "Change Status to" menu. */}
       <td className="px-3 py-3">
         <div className="flex items-center gap-1.5">
           <span
@@ -98,15 +108,7 @@ export function ApplicationRow({
           >
             {app.status}
           </span>
-          <button
-            type="button"
-            onClick={() => onAction('Edit status')}
-            aria-label="Edit status"
-            title="Edit status"
-            className="text-brand-600 hover:text-brand-700"
-          >
-            <Pencil className="h-3.5 w-3.5" />
-          </button>
+          <StatusMenu current={app.status} onPick={(label) => onAction('SetStatus', label)} />
         </div>
       </td>
 
@@ -133,7 +135,7 @@ export function ApplicationRow({
         )}
       </td>
 
-      {/* Actions — assign icon + a labelled View button, per the reference */}
+      {/* Actions — assign icon, a labelled View button, and a 3-dot menu */}
       <td className="px-3 py-3">
         <div className="flex items-center gap-1.5">
           {/* Instant CSS tooltip — the native title attribute takes ~1s to appear. */}
@@ -158,8 +160,123 @@ export function ApplicationRow({
             <Eye className="h-3.5 w-3.5" />
             View
           </button>
+          <MoreMenu onAction={onAction} />
         </div>
       </td>
     </tr>
+  )
+}
+
+/** Red-accented 3-dot trigger opening the secondary row actions. */
+function MoreMenu({ onAction }: { onAction: (type: string) => void }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const onClick = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', onClick)
+    return () => document.removeEventListener('mousedown', onClick)
+  }, [open])
+
+  const ITEMS = [
+    { label: 'Assign Staff', icon: UserPlus, type: 'Assign' },
+    { label: 'Delete', icon: Trash2, type: 'Delete', danger: true },
+  ]
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-label="More actions"
+        aria-expanded={open}
+        className={cn(
+          'flex h-7 items-center justify-center gap-0.5 rounded-md border border-rose-300 px-1.5 transition-colors',
+          open ? 'bg-rose-50' : 'hover:bg-rose-50',
+        )}
+      >
+        <EllipsisVertical className="h-3.5 w-3.5 text-slate-700" />
+        <ChevronDown className="h-3 w-3 text-rose-600" />
+      </button>
+      {open && (
+        <div className="absolute right-0 top-full z-30 mt-1.5 w-40 rounded-lg border border-slate-200 bg-white py-1.5 shadow-lg">
+          {ITEMS.map((item) => (
+            <button
+              key={item.label}
+              type="button"
+              onClick={() => {
+                setOpen(false)
+                onAction(item.type)
+              }}
+              className={cn(
+                'flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm font-medium transition-colors',
+                item.danger
+                  ? 'text-rose-600 hover:bg-rose-50'
+                  : 'text-slate-700 hover:bg-brand-50 hover:text-brand-700',
+              )}
+            >
+              <item.icon className="h-4 w-4" />
+              {item.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/** Pencil trigger + "Change Status to" dropdown (same pattern as Students). */
+function StatusMenu({ current, onPick }: { current: string; onPick: (status: string) => void }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const onClick = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', onClick)
+    return () => document.removeEventListener('mousedown', onClick)
+  }, [open])
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-label="Edit status"
+        title="Edit status"
+        className="text-brand-600 hover:text-brand-700"
+      >
+        <Pencil className="h-3.5 w-3.5" />
+      </button>
+      {open && (
+        <div className="absolute left-0 top-full z-30 mt-1.5 w-60 rounded-lg border border-slate-200 bg-white py-1.5 shadow-lg">
+          <p className="px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Change Status to
+          </p>
+          {applicationStatuses.map((st) => (
+            <button
+              key={st.label}
+              type="button"
+              onClick={() => {
+                setOpen(false)
+                if (st.label !== current) onPick(st.label)
+              }}
+              className={cn(
+                'flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-slate-50',
+                st.label === current ? 'font-semibold text-brand-700' : 'text-slate-700',
+              )}
+            >
+              <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: st.color }} />
+              {st.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   )
 }

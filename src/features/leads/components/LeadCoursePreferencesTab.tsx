@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { showSuccessDialog } from '../../../store/successDialog'
 import { ChevronDown, ChevronUp, PlusCircle, Trash2 } from 'lucide-react'
 import { cn } from '../../../lib/cn'
 import { SingleSelect } from '../../../components/DataTableUI'
@@ -218,7 +219,7 @@ export function LeadCoursePreferencesTab({
     const list = programs.filter((_, i) => i !== idx)
     setPrograms(list)
     savePrograms(lead.id, list)
-    onToast('Program removed')
+    showSuccessDialog('Program removed successfully', 'Removed!')
   }
 
   const inputCls = (bad?: string) =>

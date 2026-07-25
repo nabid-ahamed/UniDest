@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from 'react'
+import { showSuccessDialog } from '../../store/successDialog'
 import {
   Search,
   Plus,
@@ -395,7 +396,7 @@ export default function StudentResourcesPage() {
         onConfirm={() => {
           if (confirm) {
             deleteResource(confirm.id)
-            showToast('Resource deleted')
+            showSuccessDialog('Resource deleted successfully')
             setConfirm(null)
             setRev((n) => n + 1)
           }

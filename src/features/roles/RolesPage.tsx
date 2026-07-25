@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { showSuccessDialog } from '../../store/successDialog'
 import { Search, Plus, Pencil, Trash2, Lock, ShieldCheck, Users } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
@@ -167,7 +168,8 @@ export default function RolesPage() {
         onConfirm={() => {
           if (confirm) {
             const ok = deleteRole(confirm.id)
-            showToast(ok ? 'Role deleted' : "System role can't be deleted")
+            if (ok) showSuccessDialog('Role deleted successfully')
+            else showToast("System role can't be deleted")
             setConfirm(null)
             setRev((n) => n + 1)
           }

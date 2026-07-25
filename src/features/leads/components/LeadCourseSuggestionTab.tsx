@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import { showSuccessDialog } from '../../../store/successDialog'
 import { Upload } from 'lucide-react'
 import { cn } from '../../../lib/cn'
 import type { Lead } from '../../../mock/leads'
@@ -85,7 +86,7 @@ export function LeadCourseSuggestionTab({
     const list = cfSuggestions.filter((_, i) => i !== idx)
     setCfSuggestions(list)
     saveCfSuggestions(lead.id, list)
-    onToast('Suggestion removed')
+    showSuccessDialog('Suggestion removed successfully', 'Removed!')
   }
 
   const upload = () => {

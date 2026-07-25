@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { showSuccessDialog } from '../../store/successDialog'
 import { Search, Plus, Pencil, Trash2, Lock, FileText, Boxes } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
@@ -144,7 +145,8 @@ export default function PagesPage() {
         onConfirm={() => {
           if (confirm) {
             const ok = deleteCmsPage(confirm.id)
-            showToast(ok ? 'Page deleted' : "System page can't be deleted")
+            if (ok) showSuccessDialog('Page deleted successfully')
+            else showToast("System page can't be deleted")
             setConfirm(null)
             setRev((n) => n + 1)
           }

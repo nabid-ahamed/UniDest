@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { showSuccessDialog } from '../../store/successDialog'
 import { createPortal } from 'react-dom'
 import {
   Search,
@@ -301,7 +302,7 @@ export default function StaffPage() {
         onConfirm={() => {
           if (confirm) {
             deleteStaff(confirm.id)
-            showToast('Staff member deleted')
+            showSuccessDialog('Staff member deleted successfully')
             setConfirm(null)
             setRev((n) => n + 1)
           }

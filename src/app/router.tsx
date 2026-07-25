@@ -10,6 +10,7 @@ import StudentsPage from '../features/students/StudentsPage'
 import StudentFormPage from '../features/students/StudentFormPage'
 import StudentViewPage from '../features/students/StudentViewPage'
 import ApplicationsPage from '../features/applications/ApplicationsPage'
+import ApplicationViewPage from '../features/applications/ApplicationViewPage'
 import CourseFinderPage from '../features/courseFinder/CourseFinderPage'
 import BroadcastPage from '../features/broadcast/BroadcastPage'
 import AdditionalServicesPage from '../features/services/AdditionalServicesPage'
@@ -96,6 +97,7 @@ export const router = createBrowserRouter([
           { path: '/students/:id', element: <StudentViewPage /> },
           { path: '/students/:id/edit', element: <StudentFormPage /> },
           { path: '/applications', element: <ApplicationsPage /> },
+          { path: '/applications/:id', element: <ApplicationViewPage /> },
           { path: '/course-finder', element: <CourseFinderPage /> },
           { path: '/services', element: <AdditionalServicesPage /> },
           { path: '/services/:id', element: <ServiceViewPage /> },

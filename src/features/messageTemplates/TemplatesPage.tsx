@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { showSuccessDialog } from '../../store/successDialog'
 import { Search, Plus, Pencil, Trash2, Lock, Mail, MessageSquare, Zap } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { ExportButtons } from '../../components/ExportButtons'
@@ -203,7 +204,8 @@ export default function TemplatesPage({ channel }: { channel: TemplateChannel })
         onConfirm={() => {
           if (confirm) {
             const ok = deleteTemplate(confirm.id)
-            showToast(ok ? 'Template deleted' : "Event template can't be deleted")
+            if (ok) showSuccessDialog('Template deleted successfully')
+            else showToast("Event template can't be deleted")
             setConfirm(null)
             setRev((n) => n + 1)
           }

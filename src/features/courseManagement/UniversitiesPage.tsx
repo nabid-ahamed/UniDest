@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { showSuccessDialog } from '../../store/successDialog'
 import { createPortal } from 'react-dom'
 import { Search, ChevronLeft, ChevronRight, Eye, MoreVertical, Plus, Pencil, Trash2, Building2 } from 'lucide-react'
 import { cn } from '../../lib/cn'
@@ -271,7 +272,7 @@ export default function UniversitiesPage() {
         onConfirm={() => {
           if (confirm) {
             deleteUniversity(confirm.id)
-            showToast('University deleted')
+            showSuccessDialog('University deleted successfully')
             setConfirm(null)
             setRev((n) => n + 1)
           }

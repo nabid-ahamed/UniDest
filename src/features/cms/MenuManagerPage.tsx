@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { showSuccessDialog } from '../../store/successDialog'
 import { createPortal } from 'react-dom'
 import {
   Menu as MenuIcon,
@@ -226,7 +227,7 @@ export default function MenuManagerPage() {
         onConfirm={() => {
           if (confirm) {
             deleteMenuItem(confirm.id)
-            showToast('Menu item removed')
+            showSuccessDialog('Menu item removed successfully', 'Removed!')
             setConfirm(null)
             refresh()
           }

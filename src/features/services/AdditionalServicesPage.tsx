@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { showSuccessDialog } from '../../store/successDialog'
 import { createPortal } from 'react-dom'
 import {
   Filter,
@@ -418,7 +419,7 @@ export default function AdditionalServicesPage() {
             confirmLabel="Delete"
             onConfirm={() => {
               deleteService(deleteReq.id)
-              showToast(`Request #${deleteReq.id} deleted`)
+              showSuccessDialog(`Request #${deleteReq.id} deleted successfully`)
               setDeleteReq(null)
               rerender()
             }}

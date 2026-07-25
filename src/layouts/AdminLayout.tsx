@@ -3,6 +3,7 @@ import { Header } from '../components/Header'
 import { Sidebar } from '../components/Sidebar'
 import { SidebarMessenger } from '../components/SidebarMessenger'
 import { BackToTop } from '../components/BackToTop'
+import { GlobalSuccessDialog } from '../components/ui/GlobalSuccessDialog'
 import { Breadcrumb } from '../components/Breadcrumb'
 import { useUI } from '../store/ui'
 import { cn } from '../lib/cn'
@@ -22,6 +23,7 @@ export default function AdminLayout() {
       <Sidebar />
       <SidebarMessenger />
       <BackToTop />
+      <GlobalSuccessDialog />
 
       <main className={cn('flex-1 py-6 transition-[padding] duration-300', pad)}>
         <Breadcrumb />

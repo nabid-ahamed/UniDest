@@ -3,11 +3,13 @@ import { useEffect } from 'react'
 interface SuccessDialogProps {
   open: boolean
   message: string
+  /** Bold heading above the message (e.g. "Deleted!"). Omit to show the message as the heading. */
+  title?: string
   okLabel?: string
   onOk: () => void
 }
 
-export function SuccessDialog({ open, message, okLabel = 'OK', onOk }: SuccessDialogProps) {
+export function SuccessDialog({ open, message, title, okLabel = 'OK', onOk }: SuccessDialogProps) {
   // Close on Escape / Enter.
   useEffect(() => {
     if (!open) return
@@ -31,7 +33,14 @@ export function SuccessDialog({ open, message, okLabel = 'OK', onOk }: SuccessDi
           <path className="checkmark-check" d="M15 27l7 7 15-15" />
         </svg>
 
-        <h2 className="mt-6 text-xl font-bold text-slate-700">{message}</h2>
+        {title ? (
+          <>
+            <h2 className="mt-6 text-3xl font-bold text-slate-700">{title}</h2>
+            <p className="mt-2 text-sm text-slate-500">{message}</p>
+          </>
+        ) : (
+          <h2 className="mt-6 text-xl font-bold text-slate-700">{message}</h2>
+        )}
 
         <div className="mt-8 flex justify-center">
           <button

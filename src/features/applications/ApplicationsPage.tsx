@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { showSuccessDialog } from '../../store/successDialog'
 import { createPortal } from 'react-dom'
 import {
   RefreshCw,
@@ -12,6 +13,7 @@ import { cn } from '../../lib/cn'
 import { MultiSelect } from '../../components/MultiSelect'
 import { ExportButtons } from '../../components/ExportButtons'
 import { DotsLoader, Field, PageBtn, SingleSelect } from '../../components/DataTableUI'
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { AssignStaffDialog } from '../leads/components/AssignStaffDialog'
 import type { Application } from '../../mock/applications'
 import {
@@ -23,6 +25,10 @@ import {
   applicationStaff,
   allCountries,
   intakes,
+  setApplicationStatus,
+  setApplicationAssignee,
+  deleteApplication,
+  deleteApplications,
 } from '../../mock/applications'
 import { ApplicationRow } from './components/ApplicationRow'
 
@@ -49,12 +55,14 @@ export default function ApplicationsPage() {
   const [refreshing, setRefreshing] = useState(false)
   const [loading, setLoading] = useState(true)
   const [bulkAction, setBulkAction] = useState('')
+  const [bulkValue, setBulkValue] = useState('')
+  const [bulkConfirm, setBulkConfirm] = useState(false)
   const [toast, setToast] = useState('')
   const [assignApp, setAssignApp] = useState<Application | null>(null)
-  // Owner per application id, seeded from the mock so re-assignment persists in the UI.
-  const [assignees, setAssignees] = useState<Record<number, string | null>>(() =>
-    Object.fromEntries(applications.map((a) => [a.id, a.assignedTo])),
-  )
+  const [deleteTarget, setDeleteTarget] = useState<Application | null>(null)
+  // Re-render tick — bumped after any mutation to the shared `applications` array.
+  const [rev, setRev] = useState(0)
+  const bump = () => setRev((n) => n + 1)
 
   // Initial "fetch" preloader on mount.
   useEffect(() => {
@@ -89,23 +97,76 @@ export default function ApplicationsPage() {
     showToast('List refreshed')
   }
 
+  // Actions that need a target value (status / staff) show a second dropdown.
+  const bulkNeedsValue =
+    bulkAction === 'Change status' ? 'status' : bulkAction === 'Assign to staff' ? 'staff' : null
+
   const applyBulk = () => {
     if (!bulkAction) return showToast('Choose a bulk action first')
     if (selected.size === 0) return showToast('Select at least one application')
-    showToast(`${bulkAction} — ${selected.size} application(s)`)
+    const ids = [...selected]
+
+    if (bulkAction === 'Delete selected') return setBulkConfirm(true)
+
+    if (bulkAction === 'Change status') {
+      if (!bulkValue) return showToast('Choose a status to apply')
+      ids.forEach((id) => setApplicationStatus(id, bulkValue))
+      bump()
+      showToast(`Status set to ${bulkValue} — ${ids.length} application(s)`)
+    } else if (bulkAction === 'Assign to staff') {
+      if (!bulkValue) return showToast('Choose a staff member')
+      ids.forEach((id) => setApplicationAssignee(id, bulkValue))
+      bump()
+      showToast(`Assigned to ${bulkValue} — ${ids.length} application(s)`)
+    } else {
+      // Send email — dispatch is a Phase-2 backend job.
+      showToast(`${bulkAction} queued for ${ids.length} application(s)`)
+    }
     setBulkAction('')
+    setBulkValue('')
   }
 
-  const rowAction = (type: string, app: Application) => {
+  const confirmBulkDelete = () => {
+    const ids = [...selected]
+    deleteApplications(ids)
+    setSelected(new Set())
+    setBulkConfirm(false)
+    setBulkAction('')
+    bump()
+    showSuccessDialog(`${ids.length} application(s) deleted successfully`)
+  }
+
+  const rowAction = (type: string, app: Application, payload?: string) => {
     if (type === 'Assign') return setAssignApp(app)
+    if (type === 'View') return window.location.assign(`/applications/${app.id}`)
+    if (type === 'Delete') return setDeleteTarget(app)
+    if (type === 'SetStatus' && payload) {
+      setApplicationStatus(app.id, payload)
+      bump()
+      return showToast(`${app.student} → ${payload}`)
+    }
     showToast(`${type}: ${app.student} (#${app.id})`)
   }
 
   const saveAssignee = (member: string) => {
     if (!assignApp) return
-    setAssignees((prev) => ({ ...prev, [assignApp.id]: member }))
+    setApplicationAssignee(assignApp.id, member)
+    bump()
     showToast(`Application #${assignApp.id} assigned to ${member}`)
     setAssignApp(null)
+  }
+
+  const confirmDelete = () => {
+    if (!deleteTarget) return
+    deleteApplication(deleteTarget.id)
+    setSelected((prev) => {
+      const next = new Set(prev)
+      next.delete(deleteTarget.id)
+      return next
+    })
+    bump()
+    showSuccessDialog(`Application #${deleteTarget.id} deleted successfully`)
+    setDeleteTarget(null)
   }
 
   const filtered = useMemo(() => {
@@ -114,7 +175,7 @@ export default function ApplicationsPage() {
       if (countries.length && !countries.includes(a.country)) return false
       if (intake && a.intake !== intake) return false
       if (statuses.length && !statuses.includes(a.status)) return false
-      if (staff && (assignees[a.id] ?? null) !== staff) return false
+      if (staff && (a.assignedTo ?? null) !== staff) return false
       if (branch !== 'All Branch' && a.branch !== branch) return false
       if (channel && a.appliedThrough !== channel) return false
       if (q) {
@@ -123,7 +184,7 @@ export default function ApplicationsPage() {
       }
       return true
     })
-  }, [search, countries, intake, statuses, staff, branch, channel, assignees])
+  }, [search, countries, intake, statuses, staff, branch, channel, rev])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
   const currentPage = Math.min(page, totalPages)
@@ -183,7 +244,7 @@ export default function ApplicationsPage() {
     a.intake,
     a.appliedThrough,
     a.status,
-    assignees[a.id] ?? 'Unassigned',
+    a.assignedTo ?? 'Unassigned',
   ])
 
   return (
@@ -436,10 +497,10 @@ export default function ApplicationsPage() {
                     <ApplicationRow
                       key={app.id}
                       app={app}
-                      assignedTo={assignees[app.id] ?? null}
+                      assignedTo={app.assignedTo}
                       selected={selected.has(app.id)}
                       onToggle={() => toggleOne(app.id)}
-                      onAction={(type) => rowAction(type, app)}
+                      onAction={(type, payload) => rowAction(type, app, payload)}
                     />
                   ))}
                   {pageRows.length === 0 && (
@@ -506,7 +567,10 @@ export default function ApplicationsPage() {
       <div className="flex flex-wrap items-center gap-2">
         <select
           value={bulkAction}
-          onChange={(e) => setBulkAction(e.target.value)}
+          onChange={(e) => {
+            setBulkAction(e.target.value)
+            setBulkValue('')
+          }}
           aria-label="Bulk action"
           className="input w-56"
         >
@@ -515,6 +579,35 @@ export default function ApplicationsPage() {
             <option key={a}>{a}</option>
           ))}
         </select>
+
+        {/* Secondary value picker for status / staff actions. */}
+        {bulkNeedsValue === 'status' && (
+          <select
+            value={bulkValue}
+            onChange={(e) => setBulkValue(e.target.value)}
+            aria-label="Target status"
+            className="input w-56"
+          >
+            <option value="">- Select status -</option>
+            {applicationStatuses.map((s) => (
+              <option key={s.label}>{s.label}</option>
+            ))}
+          </select>
+        )}
+        {bulkNeedsValue === 'staff' && (
+          <select
+            value={bulkValue}
+            onChange={(e) => setBulkValue(e.target.value)}
+            aria-label="Target staff"
+            className="input w-48"
+          >
+            <option value="">- Select staff -</option>
+            {applicationStaff.map((s) => (
+              <option key={s}>{s}</option>
+            ))}
+          </select>
+        )}
+
         <button
           onClick={applyBulk}
           className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-700"
@@ -532,12 +625,46 @@ export default function ApplicationsPage() {
           lead={{ id: assignApp.id, name: assignApp.student }}
           title="Application - Assign Staff"
           nameLabel="Student Name"
-          assignedTo={assignees[assignApp.id] ?? null}
+          assignedTo={assignApp.assignedTo}
           staff={applicationStaff}
           onClose={() => setAssignApp(null)}
           onSave={saveAssignee}
         />
       )}
+
+      {/* Delete one */}
+      {deleteTarget &&
+        createPortal(
+          <ConfirmDialog
+            open
+            title="Delete this application?"
+            message={
+              <>
+                Application{' '}
+                <span className="font-medium text-slate-700">#{deleteTarget.id}</span> (
+                {deleteTarget.student}) will be removed permanently.
+              </>
+            }
+            confirmLabel="Delete"
+            onConfirm={confirmDelete}
+            onCancel={() => setDeleteTarget(null)}
+          />,
+          document.body,
+        )}
+
+      {/* Bulk delete */}
+      {bulkConfirm &&
+        createPortal(
+          <ConfirmDialog
+            open
+            title={`Delete ${selected.size} application(s)?`}
+            message="The selected applications will be removed permanently."
+            confirmLabel="Delete"
+            onConfirm={confirmBulkDelete}
+            onCancel={() => setBulkConfirm(false)}
+          />,
+          document.body,
+        )}
 
       {/* Toast */}
       {toast && (

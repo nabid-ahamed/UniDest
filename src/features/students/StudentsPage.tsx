@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { showSuccessDialog } from '../../store/successDialog'
 import { createPortal } from 'react-dom'
 import {
   Plus,
@@ -143,7 +144,7 @@ export default function StudentsPage() {
     setBulkConfirm(false)
     setBulkAction('')
     bump()
-    showToast(`${ids.length} student(s) deleted`)
+    showSuccessDialog(`${ids.length} student(s) deleted successfully`)
   }
 
   const rowAction = (type: string, student: Student, payload?: string) => {
@@ -177,7 +178,7 @@ export default function StudentsPage() {
       return next
     })
     bump()
-    showToast(`${deleteTarget.name} deleted`)
+    showSuccessDialog(`${deleteTarget.name} deleted successfully`)
     setDeleteTarget(null)
   }
 
