@@ -64,6 +64,7 @@ import BackupsPage from '../features/backups/BackupsPage'
 import RolesPage from '../features/roles/RolesPage'
 import RoleFormPage from '../features/roles/RoleFormPage'
 import SettingsPage from '../features/settings/SettingsPage'
+import NotificationsPage from '../features/notifications/NotificationsPage'
 import WebinarsPage from '../features/webinars/WebinarsPage'
 import WebinarViewPage from '../features/webinars/WebinarViewPage'
 import EditWebinarPage from '../features/webinars/EditWebinarPage'
@@ -163,6 +164,7 @@ export const router = createBrowserRouter([
           { path: '/roles/new', element: <RoleFormPage /> },
           { path: '/roles/:id/edit', element: <RoleFormPage /> },
           { path: '/settings', element: <SettingsPage /> },
+          { path: '/notifications', element: <NotificationsPage /> },
           { path: '/webinars', element: <WebinarsPage /> },
           { path: '/webinars/:id', element: <WebinarViewPage /> },
           { path: '/webinars/:id/edit', element: <EditWebinarPage /> },

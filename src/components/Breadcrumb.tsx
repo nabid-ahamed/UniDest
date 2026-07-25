@@ -39,6 +39,7 @@ const TITLES: Record<string, string> = {
   '/backups': 'Backups',
   '/roles': 'Role Management',
   '/settings': 'Settings',
+  '/notifications': 'Notifications',
 }
 
 // Multi-level trails for nested pages.

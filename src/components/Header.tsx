@@ -1,8 +1,9 @@
 import { useEffect, useRef } from 'react'
-import { Menu, Bell, BookOpenCheck } from 'lucide-react'
+import { Menu, BookOpenCheck } from 'lucide-react'
 import { useUI } from '../store/ui'
 import { CheckInTimer } from './CheckInTimer'
 import { AdminMenu } from './AdminMenu'
+import { NotificationBell } from './NotificationBell'
 import logo from '../assets/globaled-logo.png'
 
 export function Header() {
@@ -59,14 +60,7 @@ export function Header() {
         <div className="ml-auto flex items-center gap-1.5 sm:gap-3">
           <CheckInTimer />
 
-          <button
-            type="button"
-            className="relative rounded-lg p-2 text-slate-500 hover:bg-slate-100"
-            aria-label="Notifications"
-          >
-            <Bell className="h-5 w-5" />
-            <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-rose-500 ring-2 ring-white" />
-          </button>
+          <NotificationBell />
 
           <button
             type="button"
