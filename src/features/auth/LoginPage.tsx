@@ -43,7 +43,7 @@ export default function LoginPage() {
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { email: DEMO_EMAIL, password: DEMO_PASSWORD, remember: true },
+    defaultValues: { email: '', password: '', remember: true },
   })
 
   const onSubmit = async (values: FormValues) => {
@@ -151,7 +151,7 @@ export default function LoginPage() {
                 placeholder="you@agency.com"
                 icon={<Mail className="h-4 w-4" />}
                 error={errors.email?.message}
-                autoComplete="email"
+                autoComplete="off"
                 {...register('email')}
               />
             </div>
@@ -170,10 +170,10 @@ export default function LoginPage() {
               </div>
               <Input
                 type={showPassword ? 'text' : 'password'}
-                placeholder="••••••••"
+                placeholder="Enter your password"
                 icon={<Lock className="h-4 w-4" />}
                 error={errors.password?.message}
-                autoComplete="current-password"
+                autoComplete="new-password"
                 rightSlot={
                   <button
                     type="button"
@@ -226,8 +226,8 @@ export default function LoginPage() {
                       Admin
                     </span>
                   </td>
-                  <td className="px-3 py-3">
-                    <p className="text-sm font-semibold text-slate-800 [overflow-wrap:anywhere]">{DEMO_EMAIL}</p>
+                  <td className="whitespace-nowrap px-3 py-3">
+                    <p className="text-sm font-semibold text-slate-800">{DEMO_EMAIL}</p>
                     <p className="text-sm font-semibold text-slate-800">{DEMO_PASSWORD}</p>
                   </td>
                   <td className="px-3 py-3">
@@ -235,7 +235,7 @@ export default function LoginPage() {
                       <button
                         type="button"
                         onClick={fillDemo}
-                        className="rounded-lg bg-brand-600 px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-brand-700"
+                        className="min-w-[62px] shrink-0 rounded-lg bg-brand-600 px-3 py-1.5 text-center text-sm font-semibold text-white transition-colors hover:bg-brand-700"
                       >
                         {copied ? 'Filled ✓' : 'Copy'}
                       </button>
