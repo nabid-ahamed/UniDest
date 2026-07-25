@@ -88,11 +88,12 @@ export function ApplicationRow({
         </div>
       </td>
 
-      {/* Status */}
+      {/* Status — uniform pill: single line, centered, shared min-width so the
+          column reads consistently regardless of label length. */}
       <td className="px-3 py-3">
         <div className="flex items-center gap-1.5">
           <span
-            className="rounded-md px-2 py-1 text-xs font-semibold"
+            className="inline-flex min-w-[7.5rem] items-center justify-center whitespace-nowrap rounded-md px-2.5 py-1 text-xs font-semibold leading-5"
             style={{ backgroundColor: app.statusColor, color: pickTextColor(app.statusColor) }}
           >
             {app.status}

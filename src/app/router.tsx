@@ -7,6 +7,7 @@ import AddLeadPage from '../features/leads/AddLeadPage'
 import LeadViewPage from '../features/leads/LeadViewPage'
 import EditLeadProfilePage from '../features/leads/EditLeadProfilePage'
 import StudentsPage from '../features/students/StudentsPage'
+import StudentFormPage from '../features/students/StudentFormPage'
 import StudentViewPage from '../features/students/StudentViewPage'
 import ApplicationsPage from '../features/applications/ApplicationsPage'
 import CourseFinderPage from '../features/courseFinder/CourseFinderPage'
@@ -90,7 +91,9 @@ export const router = createBrowserRouter([
           { path: '/leads/:id', element: <LeadViewPage /> },
           { path: '/leads/:id/edit', element: <EditLeadProfilePage /> },
           { path: '/students', element: <StudentsPage /> },
+          { path: '/students/new', element: <StudentFormPage /> },
           { path: '/students/:id', element: <StudentViewPage /> },
+          { path: '/students/:id/edit', element: <StudentFormPage /> },
           { path: '/applications', element: <ApplicationsPage /> },
           { path: '/course-finder', element: <CourseFinderPage /> },
           { path: '/services', element: <AdditionalServicesPage /> },

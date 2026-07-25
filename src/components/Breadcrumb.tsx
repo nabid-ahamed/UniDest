@@ -58,6 +58,7 @@ const TRAILS: Record<string, Crumb[]> = {
     { label: 'Automation - Campaigns', to: '/automation/campaigns' },
     { label: 'New Campaign' },
   ],
+  '/students/new': [{ label: 'Student Management', to: '/students' }, { label: 'New Student' }],
   '/staff/new': [{ label: 'Staff', to: '/staff' }, { label: 'Add Staff' }],
   '/courses/new': [{ label: 'University Course Management', to: '/courses' }, { label: 'Add Course' }],
   '/universities/new': [{ label: 'Universities', to: '/universities' }, { label: 'Add University' }],
@@ -88,6 +89,8 @@ function dynamicTrail(pathname: string): Crumb[] | null {
     ]
   if (/^\/students\/\d+$/.test(pathname))
     return [{ label: 'Student Management', to: '/students' }, { label: 'View' }]
+  if (/^\/students\/\d+\/edit$/.test(pathname))
+    return [{ label: 'Student Management', to: '/students' }, { label: 'Edit Student' }]
   if (/^\/automation\/workflow\/\d+$/.test(pathname))
     return [{ label: 'Automation - Workflows', to: '/automation' }, { label: 'Workflow Detail' }]
   if (/^\/automation\/campaign\/\d+$/.test(pathname))

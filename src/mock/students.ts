@@ -1,7 +1,7 @@
 // Mock data for the Students page.
 // Docs: docs/superpowers/mock-data/adminpage.md. Replace with real API in Phase 2.
 
-import { allCountries, leadBranches, leadStaff, intakes, studyLevels } from './leads'
+import { allCountries, leadBranches, leadStaff, coursesInterested, intakes, studyLevels } from './leads'
 
 export interface Student {
   id: number
@@ -63,14 +63,24 @@ export const studentBulkActions = [
 
 // Filter option lists shared with the Leads page — same lookup tables in the
 // real schema, so they stay in one place.
-export { allCountries, leadBranches as studentBranches, leadStaff as studentStaff, intakes, studyLevels }
+export {
+  allCountries,
+  leadBranches as studentBranches,
+  leadStaff as studentStaff,
+  coursesInterested as studentCourses,
+  intakes,
+  studyLevels,
+}
 
 /** Total students in the system (the list below is one filtered page). */
 export const totalStudentCount = 1876
 
 const s = (label: string) => studentStatuses.find((x) => x.label === label)?.color ?? '#0e7490'
 
-export const students: Student[] = [
+/** Resolve a status label to its badge colour (falls back to Active teal). */
+export const statusColorFor = (label: string) => s(label)
+
+const seedStudents: Student[] = [
   { id: 1902, studentNo: 'STU-2026-1902', name: 'Aarav Sharma', email: 'aarav.sharma@gmail.com', emailDate: '18 Jul', phone: '+91 98450 12345', phoneNote: 'Primary', branch: 'Sylhet', status: 'Active', statusColor: s('Active'), assignedTo: 'Sarah Ali', created: '19 Jul 2026', countryOfResidence: 'India', countryInterested: 'United Kingdom', studyLevel: 'Masters', course: 'Computer Science', intake: 'September 2026', university: 'University of Manchester', applications: 2, source: 'Lead Convert' },
   { id: 1898, studentNo: 'STU-2026-1898', name: 'Fatima Rahman', email: 'fatima.r@gmail.com', emailDate: '15 Jul', phone: '+880 1712 445566', phoneNote: 'WhatsApp', branch: 'Khulna', status: 'Docs Pending', statusColor: s('Docs Pending'), assignedTo: null, created: '16 Jul 2026', countryOfResidence: 'Bangladesh', countryInterested: 'Canada', studyLevel: 'Bachelors', course: 'Business & Management', intake: 'January 2027', university: null, applications: 0, source: 'Walk-in' },
   { id: 1893, studentNo: 'STU-2026-1893', name: 'Rohan Das', email: 'rohan.das@gmail.com', emailDate: '12 Jul', phone: '+91 90080 11223', phoneNote: 'Primary', branch: 'Dhaka', status: 'Applied', statusColor: s('Applied'), assignedTo: 'Mohammed Saleh', created: '13 Jul 2026', countryOfResidence: 'India', countryInterested: 'Australia', studyLevel: 'Masters', course: 'Engineering', intake: 'February 2027', university: 'University of Melbourne', applications: 3, source: 'Referral' },
@@ -87,3 +97,91 @@ export const students: Student[] = [
   { id: 1836, studentNo: 'STU-2026-1836', name: 'Sneha Reddy', email: 'sneha.reddy@gmail.com', emailDate: '12 Jun', phone: '+91 99555 44422', phoneNote: 'WhatsApp', branch: 'Khulna', status: 'Visa Applied', statusColor: s('Visa Applied'), assignedTo: 'Sarah Ali', created: '13 Jun 2026', countryOfResidence: 'India', countryInterested: 'New Zealand', studyLevel: 'Masters', course: 'Health Sciences', intake: 'January 2027', university: 'University of Auckland', applications: 2, source: 'Referral' },
   { id: 1829, studentNo: 'STU-2026-1829', name: 'Rahul Verma', email: 'rahul.verma@gmail.com', emailDate: '09 Jun', phone: '+91 90123 45678', phoneNote: 'Primary', branch: 'Chattogram', status: 'Active', statusColor: s('Active'), assignedTo: null, created: '10 Jun 2026', countryOfResidence: 'India', countryInterested: 'Germany', studyLevel: 'Bachelors', course: 'Engineering', intake: 'April 2027', university: null, applications: 0, source: 'Facebook' },
 ]
+
+/* ------------------------------------------------------------------ */
+/* Persistence (localStorage) + CRUD — same pattern as userManagement  */
+/* ------------------------------------------------------------------ */
+
+const KEY = 'unidest-students'
+
+/** Live, mutable list. Other modules (analytics, broadcast, import…) read this. */
+export const students: Student[] = (() => {
+  try {
+    const raw = localStorage.getItem(KEY)
+    if (!raw) return seedStudents
+    const parsed = JSON.parse(raw)
+    return Array.isArray(parsed) && parsed.length ? parsed : seedStudents
+  } catch {
+    return seedStudents
+  }
+})()
+
+/** Persist the current list. Call after any mutation. */
+export function persistStudents() {
+  try {
+    localStorage.setItem(KEY, JSON.stringify(students))
+  } catch {
+    // Storage blocked — changes stay in-memory for this session.
+  }
+}
+
+const nextId = () => Math.max(1900, ...students.map((x) => x.id)) + 1
+
+/** Two-line date like the seed data, e.g. "25 Jul 2026". */
+export function todayLabel(): string {
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+  const d = new Date()
+  return `${String(d.getDate()).padStart(2, '0')} ${months[d.getMonth()]} ${d.getFullYear()}`
+}
+
+export const getStudent = (id: number) => students.find((x) => x.id === id)
+
+/** Create a student. Derives studentNo/created/statusColor when not supplied. */
+export function addStudent(
+  data: Omit<Student, 'id' | 'studentNo' | 'statusColor' | 'created' | 'emailDate' | 'applications'> &
+    Partial<Pick<Student, 'studentNo' | 'created' | 'applications'>>,
+): Student {
+  const id = nextId()
+  const student: Student = {
+    emailDate: todayLabel().slice(0, 6),
+    applications: 0,
+    ...data,
+    id,
+    studentNo: data.studentNo ?? `STU-${new Date().getFullYear()}-${id}`,
+    statusColor: s(data.status),
+    created: data.created ?? todayLabel(),
+  }
+  students.unshift(student)
+  persistStudents()
+  return student
+}
+
+export function updateStudent(id: number, patch: Partial<Omit<Student, 'id'>>) {
+  const student = students.find((x) => x.id === id)
+  if (!student) return
+  Object.assign(student, patch)
+  if (patch.status) student.statusColor = s(patch.status)
+  persistStudents()
+}
+
+export function setStudentStatus(id: number, status: string) {
+  updateStudent(id, { status })
+}
+
+export function setStudentAssignee(id: number, assignedTo: string | null) {
+  updateStudent(id, { assignedTo })
+}
+
+export function deleteStudent(id: number) {
+  const i = students.findIndex((x) => x.id === id)
+  if (i >= 0) students.splice(i, 1)
+  persistStudents()
+}
+
+export function deleteStudents(ids: number[]) {
+  const set = new Set(ids)
+  for (let i = students.length - 1; i >= 0; i--) {
+    if (set.has(students[i].id)) students.splice(i, 1)
+  }
+  persistStudents()
+}

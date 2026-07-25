@@ -14,6 +14,7 @@ import { cn } from '../../lib/cn'
 import { MultiSelect } from '../../components/MultiSelect'
 import { ExportButtons } from '../../components/ExportButtons'
 import { DotsLoader, Field, PageBtn, SingleSelect } from '../../components/DataTableUI'
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { AssignStaffDialog } from '../leads/components/AssignStaffDialog'
 import type { Student } from '../../mock/students'
 import {
@@ -28,6 +29,10 @@ import {
   allCountries,
   studyLevels,
   intakes,
+  setStudentStatus,
+  setStudentAssignee,
+  deleteStudent,
+  deleteStudents,
 } from '../../mock/students'
 import { StudentRow } from './components/StudentRow'
 
@@ -57,12 +62,14 @@ export default function StudentsPage() {
   const [refreshing, setRefreshing] = useState(false)
   const [loading, setLoading] = useState(true)
   const [bulkAction, setBulkAction] = useState('')
+  const [bulkValue, setBulkValue] = useState('')
+  const [bulkConfirm, setBulkConfirm] = useState(false)
   const [toast, setToast] = useState('')
   const [assignStudent, setAssignStudent] = useState<Student | null>(null)
-  // Owner per student id, seeded from the mock so re-assignment persists in the UI.
-  const [assignees, setAssignees] = useState<Record<number, string | null>>(() =>
-    Object.fromEntries(students.map((s) => [s.id, s.assignedTo])),
-  )
+  const [deleteTarget, setDeleteTarget] = useState<Student | null>(null)
+  // Re-render tick — bumped after any mutation to the shared `students` array.
+  const [rev, setRev] = useState(0)
+  const bump = () => setRev((n) => n + 1)
 
   // Initial "fetch" preloader on mount.
   useEffect(() => {
@@ -100,24 +107,78 @@ export default function StudentsPage() {
     showToast('List refreshed')
   }
 
+  // Actions that need a target value (status / staff) show a second dropdown.
+  const bulkNeedsValue =
+    bulkAction === 'Change status' ? 'status' : bulkAction === 'Assign to staff' ? 'staff' : null
+
   const applyBulk = () => {
     if (!bulkAction) return showToast('Choose a bulk action first')
     if (selected.size === 0) return showToast('Select at least one student')
-    showToast(`${bulkAction} — ${selected.size} student(s)`)
+    const ids = [...selected]
+
+    if (bulkAction === 'Delete selected') return setBulkConfirm(true)
+
+    if (bulkAction === 'Change status') {
+      if (!bulkValue) return showToast('Choose a status to apply')
+      ids.forEach((id) => setStudentStatus(id, bulkValue))
+      bump()
+      showToast(`Status set to ${bulkValue} — ${ids.length} student(s)`)
+    } else if (bulkAction === 'Assign to staff') {
+      if (!bulkValue) return showToast('Choose a staff member')
+      ids.forEach((id) => setStudentAssignee(id, bulkValue))
+      bump()
+      showToast(`Assigned to ${bulkValue} — ${ids.length} student(s)`)
+    } else {
+      // Send email / Send SMS — dispatch is a Phase-2 backend job.
+      showToast(`${bulkAction} queued for ${ids.length} student(s)`)
+    }
     setBulkAction('')
+    setBulkValue('')
   }
 
-  const rowAction = (type: string, student: Student) => {
+  const confirmBulkDelete = () => {
+    const ids = [...selected]
+    deleteStudents(ids)
+    setSelected(new Set())
+    setBulkConfirm(false)
+    setBulkAction('')
+    bump()
+    showToast(`${ids.length} student(s) deleted`)
+  }
+
+  const rowAction = (type: string, student: Student, payload?: string) => {
     if (type === 'Assign') return setAssignStudent(student)
     if (type === 'View') return window.location.assign(`/students/${student.id}`)
+    if (type === 'Edit') return window.location.assign(`/students/${student.id}/edit`)
+    if (type === 'Applications') return window.location.assign(`/students/${student.id}`)
+    if (type === 'Delete') return setDeleteTarget(student)
+    if (type === 'SetStatus' && payload) {
+      setStudentStatus(student.id, payload)
+      bump()
+      return showToast(`${student.name} → ${payload}`)
+    }
     showToast(`${type}: ${student.name} (#${student.id})`)
   }
 
   const saveAssignee = (member: string) => {
     if (!assignStudent) return
-    setAssignees((prev) => ({ ...prev, [assignStudent.id]: member }))
+    setStudentAssignee(assignStudent.id, member)
+    bump()
     showToast(`${assignStudent.name} assigned to ${member}`)
     setAssignStudent(null)
+  }
+
+  const confirmDelete = () => {
+    if (!deleteTarget) return
+    deleteStudent(deleteTarget.id)
+    setSelected((prev) => {
+      const next = new Set(prev)
+      next.delete(deleteTarget.id)
+      return next
+    })
+    bump()
+    showToast(`${deleteTarget.name} deleted`)
+    setDeleteTarget(null)
   }
 
   const filtered = useMemo(() => {
@@ -126,7 +187,7 @@ export default function StudentsPage() {
       if (statuses.length && !statuses.includes(s.status)) return false
       if (countriesInterested.length && !countriesInterested.includes(s.countryInterested))
         return false
-      if (staff && (assignees[s.id] ?? null) !== staff) return false
+      if (staff && (s.assignedTo ?? null) !== staff) return false
       if (residence && s.countryOfResidence !== residence) return false
       if (branch !== 'All Branch' && s.branch !== branch) return false
       if (studyLevel && s.studyLevel !== studyLevel) return false
@@ -150,7 +211,7 @@ export default function StudentsPage() {
     intake,
     university,
     source,
-    assignees,
+    rev,
   ])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
@@ -212,7 +273,7 @@ export default function StudentsPage() {
     s.phone,
     s.countryInterested,
     s.status,
-    assignees[s.id] ?? 'Unassigned',
+    s.assignedTo ?? 'Unassigned',
     s.branch,
     s.created,
   ])
@@ -252,19 +313,24 @@ export default function StudentsPage() {
               Refresh List
             </span>
           </div>
-          <button
-            onClick={() => showToast('Import — coming soon')}
-            aria-label="Import"
-            className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition-colors hover:bg-slate-50"
-          >
-            <UploadCloud className="h-4 w-4" />
-          </button>
-          <button
-            onClick={() => showToast('New Student — coming soon')}
+          <div className="group relative">
+            <a
+              href="/import"
+              aria-label="Import Students"
+              className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition-colors hover:bg-slate-50"
+            >
+              <UploadCloud className="h-4 w-4" />
+            </a>
+            <span className="pointer-events-none absolute left-1/2 top-full z-20 mt-1.5 -translate-x-1/2 whitespace-nowrap rounded bg-slate-700 px-2 py-1 text-xs font-medium text-white opacity-0 shadow-sm transition-opacity group-hover:opacity-100">
+              Import Students
+            </span>
+          </div>
+          <a
+            href="/students/new"
             className="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-3.5 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-700"
           >
             <Plus className="h-4 w-4" /> New Student
-          </button>
+          </a>
         </div>
       </div>
 
@@ -529,10 +595,10 @@ export default function StudentsPage() {
                     <StudentRow
                       key={student.id}
                       student={student}
-                      assignedTo={assignees[student.id] ?? null}
+                      assignedTo={student.assignedTo}
                       selected={selected.has(student.id)}
                       onToggle={() => toggleOne(student.id)}
-                      onAction={(type) => rowAction(type, student)}
+                      onAction={(type, payload) => rowAction(type, student, payload)}
                     />
                   ))}
                   {pageRows.length === 0 && (
@@ -599,7 +665,10 @@ export default function StudentsPage() {
       <div className="flex flex-wrap items-center gap-2">
         <select
           value={bulkAction}
-          onChange={(e) => setBulkAction(e.target.value)}
+          onChange={(e) => {
+            setBulkAction(e.target.value)
+            setBulkValue('')
+          }}
           aria-label="Bulk action"
           className="input w-56"
         >
@@ -608,6 +677,35 @@ export default function StudentsPage() {
             <option key={a}>{a}</option>
           ))}
         </select>
+
+        {/* Secondary value picker for status / staff actions. */}
+        {bulkNeedsValue === 'status' && (
+          <select
+            value={bulkValue}
+            onChange={(e) => setBulkValue(e.target.value)}
+            aria-label="Target status"
+            className="input w-48"
+          >
+            <option value="">- Select status -</option>
+            {studentStatuses.map((s) => (
+              <option key={s.label}>{s.label}</option>
+            ))}
+          </select>
+        )}
+        {bulkNeedsValue === 'staff' && (
+          <select
+            value={bulkValue}
+            onChange={(e) => setBulkValue(e.target.value)}
+            aria-label="Target staff"
+            className="input w-48"
+          >
+            <option value="">- Select staff -</option>
+            {studentStaff.map((s) => (
+              <option key={s}>{s}</option>
+            ))}
+          </select>
+        )}
+
         <button
           onClick={applyBulk}
           className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-700"
@@ -631,12 +729,45 @@ export default function StudentsPage() {
           lead={assignStudent}
           title="Student - Assign Staff"
           nameLabel="Student Name"
-          assignedTo={assignees[assignStudent.id] ?? null}
+          assignedTo={assignStudent.assignedTo}
           staff={studentStaff}
           onClose={() => setAssignStudent(null)}
           onSave={saveAssignee}
         />
       )}
+
+      {/* Delete one */}
+      {deleteTarget &&
+        createPortal(
+          <ConfirmDialog
+            open
+            title="Delete this student?"
+            message={
+              <>
+                <span className="font-medium text-slate-700">{deleteTarget.name}</span> (
+                {deleteTarget.studentNo}) will be removed permanently.
+              </>
+            }
+            confirmLabel="Delete"
+            onConfirm={confirmDelete}
+            onCancel={() => setDeleteTarget(null)}
+          />,
+          document.body,
+        )}
+
+      {/* Bulk delete */}
+      {bulkConfirm &&
+        createPortal(
+          <ConfirmDialog
+            open
+            title={`Delete ${selected.size} student(s)?`}
+            message="The selected students will be removed permanently."
+            confirmLabel="Delete"
+            onConfirm={confirmBulkDelete}
+            onCancel={() => setBulkConfirm(false)}
+          />,
+          document.body,
+        )}
 
       {/* Toast */}
       {toast && (

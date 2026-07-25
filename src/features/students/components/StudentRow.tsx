@@ -3,10 +3,10 @@ import {
   Mail,
   Phone,
   Pencil,
+  SquarePen,
   UserPlus,
   UserRoundPen,
   Eye,
-  Settings,
   GraduationCap,
   FileText,
   EllipsisVertical,
@@ -15,7 +15,7 @@ import {
 } from 'lucide-react'
 import { cn } from '../../../lib/cn'
 import { pickTextColor } from '../../../lib/contrast'
-import type { Student } from '../../../mock/students'
+import { studentStatuses, type Student } from '../../../mock/students'
 
 export function StudentRow({
   student,
@@ -28,7 +28,7 @@ export function StudentRow({
   assignedTo: string | null
   selected: boolean
   onToggle: () => void
-  onAction: (type: string) => void
+  onAction: (type: string, payload?: string) => void
 }) {
   return (
     <tr
@@ -135,15 +135,7 @@ export function StudentRow({
           >
             {student.status}
           </span>
-          <button
-            type="button"
-            onClick={() => onAction('Edit status')}
-            aria-label="Edit status"
-            title="Edit status"
-            className="text-brand-600 hover:text-brand-700"
-          >
-            <Pencil className="h-3.5 w-3.5" />
-          </button>
+          <StatusMenu current={student.status} onPick={(label) => onAction('SetStatus', label)} />
         </div>
       </td>
 
@@ -208,9 +200,8 @@ function MoreMenu({ onAction }: { onAction: (type: string) => void }) {
   }, [open])
 
   const ITEMS = [
+    { label: 'Edit', icon: SquarePen, type: 'Edit' },
     { label: 'Assign Staff', icon: UserPlus, type: 'Assign' },
-    { label: 'Edit Status', icon: Pencil, type: 'Edit status' },
-    { label: 'Settings', icon: Settings, type: 'Settings' },
     { label: 'Delete', icon: Trash2, type: 'Delete', danger: true },
   ]
 
@@ -248,6 +239,59 @@ function MoreMenu({ onAction }: { onAction: (type: string) => void }) {
             >
               <item.icon className="h-4 w-4" />
               {item.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/** Pencil trigger + "Change Status to" dropdown (same pattern as the view page). */
+function StatusMenu({ current, onPick }: { current: string; onPick: (status: string) => void }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const onClick = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', onClick)
+    return () => document.removeEventListener('mousedown', onClick)
+  }, [open])
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-label="Edit status"
+        title="Edit status"
+        className="text-brand-600 hover:text-brand-700"
+      >
+        <Pencil className="h-3.5 w-3.5" />
+      </button>
+      {open && (
+        <div className="absolute left-0 top-full z-30 mt-1.5 w-52 rounded-lg border border-slate-200 bg-white py-1.5 shadow-lg">
+          <p className="px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Change Status to
+          </p>
+          {studentStatuses.map((s) => (
+            <button
+              key={s.label}
+              type="button"
+              onClick={() => {
+                setOpen(false)
+                if (s.label !== current) onPick(s.label)
+              }}
+              className={cn(
+                'flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-slate-50',
+                s.label === current ? 'font-semibold text-brand-700' : 'text-slate-700',
+              )}
+            >
+              <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: s.color }} />
+              {s.label}
             </button>
           ))}
         </div>

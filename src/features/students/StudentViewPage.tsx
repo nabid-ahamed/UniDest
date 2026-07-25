@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import {
   Mail,
   Globe,
@@ -33,7 +33,7 @@ import { LeadProfileTab } from '../leads/components/LeadProfileTab'
 import { LeadCourseSuggestionTab } from '../leads/components/LeadCourseSuggestionTab'
 import { LeadCoursePreferencesTab } from '../leads/components/LeadCoursePreferencesTab'
 import type { Lead } from '../../mock/leads'
-import { students, studentStatuses, type Student } from '../../mock/students'
+import { students, studentStatuses, setStudentStatus, deleteStudent, type Student } from '../../mock/students'
 
 const TABS = [
   'Overview',
@@ -45,27 +45,6 @@ const TABS = [
   'Services',
   'Chat',
 ] as const
-
-const STATUS_KEY = 'unidest-student-status'
-
-function loadStatus(studentId: number): string | null {
-  try {
-    const all = JSON.parse(localStorage.getItem(STATUS_KEY) ?? '{}')
-    return typeof all[studentId] === 'string' ? all[studentId] : null
-  } catch {
-    return null
-  }
-}
-
-function saveStatus(studentId: number, status: string) {
-  try {
-    const all = JSON.parse(localStorage.getItem(STATUS_KEY) ?? '{}')
-    all[studentId] = status
-    localStorage.setItem(STATUS_KEY, JSON.stringify(all))
-  } catch {
-    // Storage blocked — the change just won't persist.
-  }
-}
 
 /**
  * Adapts a Student to the Lead shape so the identity header and the
@@ -118,10 +97,11 @@ export default function StudentViewPage() {
 }
 
 function StudentView({ student }: { student: Student }) {
+  const navigate = useNavigate()
   const [tab, setTab] = useState<(typeof TABS)[number]>('Overview')
   const [toast, setToast] = useState('')
   const [deleting, setDeleting] = useState(false)
-  const [status, setStatus] = useState(() => loadStatus(student.id) ?? student.status)
+  const [status, setStatus] = useState(student.status)
 
   const statusColor =
     studentStatuses.find((s) => s.label === status)?.color ?? student.statusColor
@@ -136,7 +116,7 @@ function StudentView({ student }: { student: Student }) {
   const changeStatus = (next: string) => {
     if (next === status) return
     setStatus(next)
-    saveStatus(student.id, next)
+    setStudentStatus(student.id, next)
     showToast(`Status changed to ${next}`)
   }
 
@@ -312,17 +292,28 @@ function StudentView({ student }: { student: Student }) {
             <section className="overflow-hidden rounded-lg border border-slate-200">
               <h2 className="bg-brand-600 px-4 py-3 font-bold text-white">Actions</h2>
               <div className="divide-y divide-slate-100">
-                {ACTIONS.map((a) => (
-                  <button
-                    key={a.label}
-                    type="button"
-                    onClick={() => showToast(`${a.label} — coming soon`)}
-                    className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm font-medium text-slate-700 transition-colors hover:bg-brand-50 hover:text-brand-700"
-                  >
-                    <a.icon className="h-4 w-4 text-brand-600" />
-                    {a.label}
-                  </button>
-                ))}
+                {ACTIONS.map((a) =>
+                  a.label === 'Edit Basic Info' || a.label === 'Edit Profile' ? (
+                    <a
+                      key={a.label}
+                      href={`/students/${student.id}/edit`}
+                      className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm font-medium text-slate-700 transition-colors hover:bg-brand-50 hover:text-brand-700"
+                    >
+                      <a.icon className="h-4 w-4 text-brand-600" />
+                      {a.label}
+                    </a>
+                  ) : (
+                    <button
+                      key={a.label}
+                      type="button"
+                      onClick={() => showToast(`${a.label} — coming soon`)}
+                      className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm font-medium text-slate-700 transition-colors hover:bg-brand-50 hover:text-brand-700"
+                    >
+                      <a.icon className="h-4 w-4 text-brand-600" />
+                      {a.label}
+                    </button>
+                  ),
+                )}
                 <button
                   type="button"
                   onClick={() => setDeleting(true)}
@@ -377,8 +368,9 @@ function StudentView({ student }: { student: Student }) {
             }
             confirmLabel="Delete"
             onConfirm={() => {
+              deleteStudent(student.id)
               setDeleting(false)
-              showToast('Delete — coming soon (frontend demo)')
+              navigate('/students')
             }}
             onCancel={() => setDeleting(false)}
           />,
