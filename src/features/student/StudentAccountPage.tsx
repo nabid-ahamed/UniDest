@@ -174,10 +174,10 @@ function BasicInfoTab() {
           <TextInput type="email" value={email} onChange={setEmail} invalid={!!errors.email} placeholder="name@example.com" />
         </Field>
         <Field label="Mobile No." required error={errors.mobile}>
-          <TextInput value={mobile} onChange={setMobile} invalid={!!errors.mobile} placeholder="+91 90000 00000" />
+          <TextInput value={mobile} onChange={setMobile} invalid={!!errors.mobile} placeholder="+880 1700-000000" />
         </Field>
         <Field label="Whatsapp No.">
-          <TextInput value={p.whatsapp} onChange={(v) => set('whatsapp', v)} placeholder="+91 90000 00000" />
+          <TextInput value={p.whatsapp} onChange={(v) => set('whatsapp', v)} placeholder="+880 1700-000000" />
         </Field>
       </div>
 

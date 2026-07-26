@@ -189,7 +189,7 @@ export function StudentProfileForm({
           <TextInput type="email" value={email} onChange={setEmail} invalid={!!errors.email} placeholder="name@example.com" />
         </Field>
         <Field label="Mobile" required error={errors.mobile}>
-          <TextInput value={mobile} onChange={setMobile} invalid={!!errors.mobile} placeholder="+91 90000 00000" />
+          <TextInput value={mobile} onChange={setMobile} invalid={!!errors.mobile} placeholder="+880 1700-000000" />
         </Field>
 
         <Field label="Nationality" required>
