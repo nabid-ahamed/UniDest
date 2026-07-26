@@ -3,62 +3,16 @@ import { showSuccessDialog } from '../../../store/successDialog'
 import { Upload } from 'lucide-react'
 import { cn } from '../../../lib/cn'
 import type { Lead } from '../../../mock/leads'
+import {
+  loadFileSuggestions as loadSuggestions,
+  saveFileSuggestions as saveSuggestions,
+  loadCfSuggestions,
+  saveCfSuggestions,
+  type FileSuggestion as Suggestion,
+  type CfSuggestion,
+} from '../../../mock/courseSuggestions'
 
-interface Suggestion {
-  date: string
-  file: string
-  accepted: string
-}
-
-const SUGGESTIONS_KEY = 'unidest-lead-suggestions'
-const CF_SUGGESTIONS_KEY = 'unidest-cf-suggestions' // written by the Course Finder page
 const ALLOWED = ['xls', 'xlsx', 'csv', 'doc', 'docx', 'pdf']
-
-interface CfSuggestion {
-  date: string
-  course: string
-  university: string
-  intake: string
-  accepted: string
-}
-
-function loadCfSuggestions(personId: number): CfSuggestion[] {
-  try {
-    const all = JSON.parse(localStorage.getItem(CF_SUGGESTIONS_KEY) ?? '{}')
-    return Array.isArray(all[personId]) ? all[personId] : []
-  } catch {
-    return []
-  }
-}
-
-function saveCfSuggestions(personId: number, list: CfSuggestion[]) {
-  try {
-    const all = JSON.parse(localStorage.getItem(CF_SUGGESTIONS_KEY) ?? '{}')
-    all[personId] = list
-    localStorage.setItem(CF_SUGGESTIONS_KEY, JSON.stringify(all))
-  } catch {
-    // Storage blocked — removals just won't persist.
-  }
-}
-
-function loadSuggestions(leadId: number): Suggestion[] {
-  try {
-    const all = JSON.parse(localStorage.getItem(SUGGESTIONS_KEY) ?? '{}')
-    return Array.isArray(all[leadId]) ? all[leadId] : []
-  } catch {
-    return []
-  }
-}
-
-function saveSuggestions(leadId: number, list: Suggestion[]) {
-  try {
-    const all = JSON.parse(localStorage.getItem(SUGGESTIONS_KEY) ?? '{}')
-    all[leadId] = list
-    localStorage.setItem(SUGGESTIONS_KEY, JSON.stringify(all))
-  } catch {
-    // Storage blocked — uploads just won't persist.
-  }
-}
 
 /** Blue section bar used throughout this tab (matches the reference). */
 function Bar({ children }: { children: React.ReactNode }) {

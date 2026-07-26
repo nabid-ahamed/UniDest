@@ -70,19 +70,66 @@ import WebinarsPage from '../features/webinars/WebinarsPage'
 import WebinarViewPage from '../features/webinars/WebinarViewPage'
 import EditWebinarPage from '../features/webinars/EditWebinarPage'
 import WebinarEnrolledPage from '../features/webinars/WebinarEnrolledPage'
+import StudentLayout from '../layouts/StudentLayout'
+import StudentDashboardPage from '../features/student/StudentDashboardPage'
+import StudentCourseSuggestionsPage from '../features/student/StudentCourseSuggestionsPage'
+import StudentApplyPage from '../features/student/StudentApplyPage'
+import StudentPlaceholderPage from '../features/student/StudentPlaceholderPage'
 import { useAuth } from '../store/auth'
 
-/** Guards routes that require authentication. */
-function ProtectedRoute() {
-  const isAuthenticated = useAuth((s) => s.isAuthenticated)
-  return isAuthenticated ? <Outlet /> : <Navigate to="/login" replace />
+const isStudent = (role?: string) => role === 'Student'
+
+/** Where a signed-in user's home lives, based on their role. */
+const homeFor = (role?: string) => (isStudent(role) ? '/portal' : '/dashboard')
+
+/** Admin area: must be authenticated AND not a student (students go to /portal). */
+function RequireAdmin() {
+  const { isAuthenticated, user } = useAuth()
+  if (!isAuthenticated) return <Navigate to="/login" replace />
+  if (isStudent(user?.role)) return <Navigate to="/portal" replace />
+  return <Outlet />
+}
+
+/** Student area: must be authenticated AND a student (staff go to /dashboard). */
+function RequireStudent() {
+  const { isAuthenticated, user } = useAuth()
+  if (!isAuthenticated) return <Navigate to="/login" replace />
+  if (!isStudent(user?.role)) return <Navigate to="/dashboard" replace />
+  return <Outlet />
+}
+
+/** Sends each user to their role's home (or the login page). */
+function RootRedirect() {
+  const { isAuthenticated, user } = useAuth()
+  return <Navigate to={isAuthenticated ? homeFor(user?.role) : '/login'} replace />
 }
 
 export const router = createBrowserRouter([
-  { path: '/', element: <Navigate to="/dashboard" replace /> },
+  { path: '/', element: <RootRedirect /> },
   { path: '/login', element: <LoginPage /> },
   {
-    element: <ProtectedRoute />,
+    element: <RequireStudent />,
+    children: [
+      {
+        element: <StudentLayout />,
+        children: [
+          { path: '/portal', element: <StudentDashboardPage /> },
+          { path: '/portal/course-suggestions', element: <StudentCourseSuggestionsPage /> },
+          { path: '/portal/apply', element: <StudentApplyPage /> },
+          { path: '/portal/applications', element: <StudentPlaceholderPage title="My Applications" /> },
+          { path: '/portal/services', element: <StudentPlaceholderPage title="Additional Services" /> },
+          { path: '/portal/course-finder', element: <StudentPlaceholderPage title="Course Finder" /> },
+          { path: '/portal/country-info', element: <StudentPlaceholderPage title="Country Information" /> },
+          { path: '/portal/fees', element: <StudentPlaceholderPage title="Fees" /> },
+          { path: '/portal/resources', element: <StudentPlaceholderPage title="Resources" /> },
+          { path: '/portal/webinars', element: <StudentPlaceholderPage title="Webinar & Events" /> },
+          { path: '/portal/account', element: <StudentPlaceholderPage title="My Account" /> },
+        ],
+      },
+    ],
+  },
+  {
+    element: <RequireAdmin />,
     children: [
       {
         element: <AdminLayout />,
@@ -175,5 +222,5 @@ export const router = createBrowserRouter([
       },
     ],
   },
-  { path: '*', element: <Navigate to="/dashboard" replace /> },
+  { path: '*', element: <RootRedirect /> },
 ])

@@ -33,8 +33,7 @@ import { LeadIdentityHeader } from '../leads/components/LeadIdentityHeader'
 import { LeadProfileTab } from '../leads/components/LeadProfileTab'
 import { LeadCourseSuggestionTab } from '../leads/components/LeadCourseSuggestionTab'
 import { LeadCoursePreferencesTab } from '../leads/components/LeadCoursePreferencesTab'
-import type { Lead } from '../../mock/leads'
-import { students, studentStatuses, setStudentStatus, deleteStudent, type Student } from '../../mock/students'
+import { students, studentStatuses, setStudentStatus, deleteStudent, studentAsLead, type Student } from '../../mock/students'
 
 const TABS = [
   'Overview',
@@ -46,34 +45,6 @@ const TABS = [
   'Services',
   'Chat',
 ] as const
-
-/**
- * Adapts a Student to the Lead shape so the identity header and the
- * Profile / Course Suggestion / Course Preferences tabs can be reused as-is.
- */
-function studentAsLead(s: Student, status: string, statusColor: string): Lead {
-  return {
-    id: s.id,
-    name: s.name,
-    email: s.email,
-    emailDate: s.emailDate,
-    phone: s.phone,
-    phoneNote: s.phoneNote,
-    whatsapp: false,
-    leadAgeDays: 0,
-    branch: s.branch,
-    status,
-    statusColor,
-    assignedTo: s.assignedTo,
-    created: s.created,
-    nextFollowup: null,
-    countryInterested: s.countryInterested,
-    tags: [],
-    studyLevel: s.studyLevel,
-    source: s.source,
-    countryOfResidence: s.countryOfResidence,
-  }
-}
 
 /** Student detail page (route /students/:id), matching the reference "View" page. */
 export default function StudentViewPage() {

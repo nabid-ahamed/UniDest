@@ -148,3 +148,14 @@ export const finderCountries = [...new Set(finderCourses.map((c) => c.country))]
 
 /** Total course count in the "system" (the list above is one filtered page). */
 export const totalFinderCourseCount = 1190
+
+/** Look a course up by title (optionally disambiguated by university). */
+export function finderCourseByTitle(title: string, university?: string): FinderCourse | undefined {
+  const t = title.trim().toLowerCase()
+  const matches = finderCourses.filter((c) => c.title.toLowerCase() === t)
+  if (university) {
+    const u = university.trim().toLowerCase()
+    return matches.find((c) => c.university.toLowerCase() === u) ?? matches[0]
+  }
+  return matches[0]
+}

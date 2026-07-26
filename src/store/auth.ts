@@ -11,7 +11,7 @@ interface AuthState {
   user: AuthUser | null
   isAuthenticated: boolean
   /** Mock sign-in. Replaced by a real API call in Phase 2. */
-  login: (email: string) => void
+  login: (email: string, role?: string) => void
   logout: () => void
 }
 
@@ -20,12 +20,12 @@ export const useAuth = create<AuthState>()(
     (set) => ({
       user: null,
       isAuthenticated: false,
-      login: (email) =>
+      login: (email, role = 'Administrator') =>
         set({
           user: {
             name: email.split('@')[0].replace(/[._]/g, ' ') || 'Admin',
             email,
-            role: 'Administrator',
+            role,
           },
           isAuthenticated: true,
         }),

@@ -1,7 +1,7 @@
 // Mock data for the Students page.
 // Docs: docs/superpowers/mock-data/adminpage.md. Replace with real API in Phase 2.
 
-import { allCountries, leadBranches, leadStaff, coursesInterested, intakes, studyLevels } from './leads'
+import { allCountries, leadBranches, leadStaff, coursesInterested, intakes, studyLevels, type Lead } from './leads'
 
 export interface Student {
   id: number
@@ -184,4 +184,34 @@ export function deleteStudents(ids: number[]) {
     if (set.has(students[i].id)) students.splice(i, 1)
   }
   persistStudents()
+}
+
+/**
+ * Adapts a Student to the Lead shape so the identity header and the
+ * Profile / Course Suggestion / Course Preferences tabs can be reused as-is
+ * on both the admin student page and the student portal. Status defaults to
+ * the student's own so callers that don't track live status can omit it.
+ */
+export function studentAsLead(s: Student, status = s.status, statusColor = s.statusColor): Lead {
+  return {
+    id: s.id,
+    name: s.name,
+    email: s.email,
+    emailDate: s.emailDate,
+    phone: s.phone,
+    phoneNote: s.phoneNote,
+    whatsapp: false,
+    leadAgeDays: 0,
+    branch: s.branch,
+    status,
+    statusColor,
+    assignedTo: s.assignedTo,
+    created: s.created,
+    nextFollowup: null,
+    countryInterested: s.countryInterested,
+    tags: [],
+    studyLevel: s.studyLevel,
+    source: s.source,
+    countryOfResidence: s.countryOfResidence,
+  }
 }

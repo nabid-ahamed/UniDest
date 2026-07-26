@@ -18,9 +18,33 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>
 
-/** One-click demo login. */
-const DEMO_EMAIL = 'admin@gmail.com'
-const DEMO_PASSWORD = '123456'
+/** One-click demo logins — each row on the login screen maps to one of these. */
+interface DemoAccount {
+  role: string
+  email: string
+  password: string
+  /** Where this role lands after signing in. */
+  redirect: string
+  /** Badge colour classes for the Role chip. */
+  badge: string
+}
+
+const DEMO_ACCOUNTS: DemoAccount[] = [
+  {
+    role: 'Admin',
+    email: 'admin@gmail.com',
+    password: '123456',
+    redirect: '/dashboard',
+    badge: 'bg-brand-50 text-brand-600',
+  },
+  {
+    role: 'Student',
+    email: 'student@gmail.com',
+    password: '123456',
+    redirect: '/portal',
+    badge: 'bg-emerald-50 text-emerald-600',
+  },
+]
 
 const highlights = [
   { icon: Users, text: 'Manage leads & students in one place' },
@@ -33,7 +57,8 @@ export default function LoginPage() {
   const login = useAuth((s) => s.login)
   const [showPassword, setShowPassword] = useState(false)
 
-  const [copied, setCopied] = useState(false)
+  // Holds the email of the row whose "Copy" was just clicked (for the "Filled ✓" flash).
+  const [copiedEmail, setCopiedEmail] = useState('')
   const [authError, setAuthError] = useState('')
 
   const {
@@ -49,23 +74,25 @@ export default function LoginPage() {
   const onSubmit = async (values: FormValues) => {
     // Mock sign-in — only the demo credentials are accepted.
     await new Promise((r) => setTimeout(r, 600))
-    if (values.email.trim().toLowerCase() !== DEMO_EMAIL || values.password !== DEMO_PASSWORD) {
+    const email = values.email.trim().toLowerCase()
+    const account = DEMO_ACCOUNTS.find((a) => a.email === email && a.password === values.password)
+    if (!account) {
       setAuthError('Invalid credentials. Use the demo login below.')
       return
     }
     setAuthError('')
-    login(values.email)
-    navigate('/dashboard')
+    login(account.email, account.role)
+    navigate(account.redirect)
   }
 
-  /** Auto-fill the email + password fields with the demo credentials. */
-  const fillDemo = () => {
+  /** Auto-fill the email + password fields with a demo account's credentials. */
+  const fillDemo = (account: DemoAccount) => {
     setAuthError('')
-    setValue('email', DEMO_EMAIL, { shouldValidate: true })
-    setValue('password', DEMO_PASSWORD, { shouldValidate: true })
-    navigator.clipboard?.writeText(`${DEMO_EMAIL} / ${DEMO_PASSWORD}`).catch(() => {})
-    setCopied(true)
-    window.setTimeout(() => setCopied(false), 1600)
+    setValue('email', account.email, { shouldValidate: true })
+    setValue('password', account.password, { shouldValidate: true })
+    navigator.clipboard?.writeText(`${account.email} / ${account.password}`).catch(() => {})
+    setCopiedEmail(account.email)
+    window.setTimeout(() => setCopiedEmail(''), 1600)
   }
 
   const clearDemo = () => {
@@ -219,36 +246,38 @@ export default function LoginPage() {
                   <th className="px-3 py-2" />
                 </tr>
               </thead>
-              <tbody>
-                <tr>
-                  <td className="px-3 py-3 align-top">
-                    <span className="inline-flex items-center rounded-md bg-brand-50 px-2 py-1 text-xs font-bold text-brand-600">
-                      Admin
-                    </span>
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-3">
-                    <p className="text-sm font-semibold text-slate-800">{DEMO_EMAIL}</p>
-                    <p className="text-sm font-semibold text-slate-800">{DEMO_PASSWORD}</p>
-                  </td>
-                  <td className="px-3 py-3">
-                    <div className="flex shrink-0 items-center gap-1.5">
-                      <button
-                        type="button"
-                        onClick={fillDemo}
-                        className="min-w-[62px] shrink-0 rounded-lg bg-brand-600 px-3 py-1.5 text-center text-sm font-semibold text-white transition-colors hover:bg-brand-700"
-                      >
-                        {copied ? 'Filled ✓' : 'Copy'}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={clearDemo}
-                        className="rounded-lg px-2 py-1.5 text-sm font-semibold text-brand-600 transition-colors hover:bg-brand-50"
-                      >
-                        Clear
-                      </button>
-                    </div>
-                  </td>
-                </tr>
+              <tbody className="divide-y divide-slate-100">
+                {DEMO_ACCOUNTS.map((account) => (
+                  <tr key={account.email}>
+                    <td className="px-3 py-3 align-top">
+                      <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-bold ${account.badge}`}>
+                        {account.role}
+                      </span>
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-3">
+                      <p className="text-sm font-semibold text-slate-800">{account.email}</p>
+                      <p className="text-sm font-semibold text-slate-800">{account.password}</p>
+                    </td>
+                    <td className="px-3 py-3">
+                      <div className="flex shrink-0 items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => fillDemo(account)}
+                          className="min-w-[62px] shrink-0 rounded-lg bg-brand-600 px-3 py-1.5 text-center text-sm font-semibold text-white transition-colors hover:bg-brand-700"
+                        >
+                          {copiedEmail === account.email ? 'Filled ✓' : 'Copy'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={clearDemo}
+                          className="rounded-lg px-2 py-1.5 text-sm font-semibold text-brand-600 transition-colors hover:bg-brand-50"
+                        >
+                          Clear
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
