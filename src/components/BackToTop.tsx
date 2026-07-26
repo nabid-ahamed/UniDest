@@ -43,7 +43,7 @@ export function BackToTop() {
       onClick={handleClick}
       aria-label={`Back to top (${Math.round(progress * 100)}% scrolled)`}
       className={cn(
-        'group fixed bottom-1 right-6 z-40 flex h-10 w-10 items-center justify-center overflow-hidden rounded-full',
+        'group fixed bottom-1 right-4 z-40 flex h-10 w-10 items-center justify-center overflow-hidden rounded-full',
         // Glassmorphism surface + soft brand-tinted shadow
         'border border-white/60 bg-white/70 backdrop-blur-md',
         'shadow-[0_8px_24px_-6px_rgba(31,71,245,0.35)]',

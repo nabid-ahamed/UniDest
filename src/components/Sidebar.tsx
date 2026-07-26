@@ -136,8 +136,9 @@ const NAV: NavGroup[] = [
   },
 ]
 
-// No `truncate`/`whitespace-nowrap`: long labels wrap onto a second line so
-// every menu item stays fully readable (WCAG: prefer wrapping over truncation).
+// Labels stay on a single line (`whitespace-nowrap` on each label span); the
+// nav is `overflow-x-hidden` so the rare over-long label is clipped rather than
+// wrapping to a second row.
 const itemBase =
   'group flex w-full items-center gap-2.5 rounded-lg py-2.5 text-[13px] font-medium leading-snug transition-colors'
 const itemIdle = 'text-slate-300 hover:bg-slate-800 hover:text-white'
@@ -249,7 +250,7 @@ function SidebarItem({
   // Expandable item (has children)
   if (item.children) {
     return (
-      <div ref={(el) => { scrollRef.current = el }}>
+      <div className="w-full" ref={(el) => { scrollRef.current = el }}>
         <button
           type="button"
           onClick={() => !collapsed && setExpanded((v) => !v)}
@@ -259,11 +260,16 @@ function SidebarItem({
           {...hoverProps}
         >
           <Icon className={iconClass} />
-          {!collapsed && <span className="flex-1 text-left">{item.label}</span>}
+          {/* Single-line label at its natural width; `ml-auto` on the chevron
+              eats the leftover space so every arrow parks at the far-right edge
+              in one column, giving each label the full row before it. */}
+          {!collapsed && (
+            <span className="whitespace-nowrap text-left">{item.label}</span>
+          )}
           {!collapsed && (
             <ChevronDown
               className={cn(
-                'h-5 w-5 shrink-0 transition-transform duration-300 ease-in-out',
+                'ml-auto h-5 w-5 shrink-0 transition-transform duration-300 ease-in-out',
                 expanded && 'rotate-180',
               )}
             />
@@ -326,7 +332,7 @@ function SidebarItem({
           className={cn(rowClass, leafActive ? itemActive : idle)}
         >
           <Icon className={iconClass} />
-          {!collapsed && <span>{item.label}</span>}
+          {!collapsed && <span className="whitespace-nowrap">{item.label}</span>}
         </a>
         {tooltip}
       </>
@@ -338,7 +344,7 @@ function SidebarItem({
     <>
       <button type="button" className={cn(rowClass, idle)} {...hoverProps}>
         <Icon className={iconClass} />
-        {!collapsed && <span>{item.label}</span>}
+        {!collapsed && <span className="whitespace-nowrap">{item.label}</span>}
       </button>
       {tooltip}
     </>

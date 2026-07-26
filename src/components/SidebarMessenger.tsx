@@ -258,7 +258,7 @@ export function SidebarMessenger() {
              contacts/list below when open ---- */}
       <div
         className={cn(
-          'fixed bottom-0 right-24 z-40 flex w-80 max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-t-2xl border border-b-0 border-slate-200 bg-white shadow-lg',
+          'fixed bottom-0 right-[72px] z-40 flex w-72 max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-t-2xl border border-b-0 border-slate-200 bg-white shadow-lg',
           open && 'max-h-[58vh]',
         )}
       >
