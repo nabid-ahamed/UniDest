@@ -85,7 +85,8 @@ import StudentFeesPage from '../features/student/StudentFeesPage'
 import StudentInvoiceDetailPage from '../features/student/StudentInvoiceDetailPage'
 import StudentPortalResourcesPage from '../features/student/StudentResourcesPage'
 import StudentResourceCategoryPage from '../features/student/StudentResourceCategoryPage'
-import StudentPlaceholderPage from '../features/student/StudentPlaceholderPage'
+import StudentWebinarsPage from '../features/student/StudentWebinarsPage'
+import StudentAccountPage from '../features/student/StudentAccountPage'
 import { useAuth } from '../store/auth'
 
 const isStudent = (role?: string) => role === 'Student'
@@ -138,8 +139,8 @@ export const router = createBrowserRouter([
           { path: '/portal/fees/:id', element: <StudentInvoiceDetailPage /> },
           { path: '/portal/resources', element: <StudentPortalResourcesPage /> },
           { path: '/portal/resources/:id', element: <StudentResourceCategoryPage /> },
-          { path: '/portal/webinars', element: <StudentPlaceholderPage title="Webinar & Events" /> },
-          { path: '/portal/account', element: <StudentPlaceholderPage title="My Account" /> },
+          { path: '/portal/webinars', element: <StudentWebinarsPage /> },
+          { path: '/portal/account', element: <StudentAccountPage /> },
         ],
       },
     ],

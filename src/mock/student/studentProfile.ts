@@ -13,6 +13,7 @@ export type YesNo = 'No' | 'Yes'
 export interface StudentProfile {
   // Personal Info (extends the Student core: first/last name, email, mobile)
   middleName: string
+  whatsapp: string
   gender: string
   maritalStatus: string
   dob: string
@@ -70,6 +71,10 @@ export interface StudentProfile {
   emergencyCity: string
   emergencyPostal: string
 
+  // Account payout preference (My Account → Payment Preference)
+  payoutMethod: string
+  payoutAccount: string
+
   // Collapsible repeater sections
   academicDetails: RepeaterRow[]
   tests: RepeaterRow[]
@@ -83,6 +88,7 @@ export interface StudentProfile {
 /* ---- Option lists (dropdowns / radios) ---- */
 
 export const genders = ['Male', 'Female', 'Other']
+export const payoutMethods = ['Bank Transfer', 'bKash', 'Nagad', 'PayPal']
 export const maritalStatuses = ['Single', 'Married', 'Divorced', 'Widowed', 'Separated']
 export const educationLevels = ['High School', 'Diploma', 'Bachelors', 'Masters', 'PhD']
 export const servicesOptions = [
@@ -99,6 +105,7 @@ export const servicesOptions = [
 export function emptyProfile(): StudentProfile {
   return {
     middleName: '',
+    whatsapp: '',
     gender: '',
     maritalStatus: '',
     dob: '',
@@ -141,6 +148,8 @@ export function emptyProfile(): StudentProfile {
     emergencyState: '',
     emergencyCity: '',
     emergencyPostal: '',
+    payoutMethod: '',
+    payoutAccount: '',
     academicDetails: [],
     tests: [],
     internships: [],

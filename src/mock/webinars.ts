@@ -26,6 +26,10 @@ export const webinarShareLink = (w: Webinar) =>
 export const webinarAudienceTypes = ['Student', 'Agent', 'Student / Agent'] as const
 
 const seedWebinars: Webinar[] = [
+  { id: 22, topic: 'IELTS One-Day Bootcamp', date: '05-02-2027 10:00 AM', venue: 'Dhaka HQ Seminar Hall', audienceType: 'Student', enrolledUsers: null, description: 'An intensive one-day IELTS bootcamp covering all four modules with mock tests and feedback.' },
+  { id: 21, topic: 'USA Spring 2027 Intake — Applications Open', date: '10-11-2026 07:00 PM', venue: 'Online', audienceType: 'Student', enrolledUsers: null, webinarLink: 'https://meet.google.com/uni-dest-usa27', description: 'F-1 timeline, funding documents and university shortlisting for the USA Spring 2027 intake.' },
+  { id: 20, topic: 'Study in Germany — Free Tuition & Blocked Account Guide', date: '20-09-2026 05:30 PM', venue: 'Online', audienceType: 'Student / Agent', enrolledUsers: null, webinarLink: 'https://meet.google.com/uni-dest-de26', description: 'Public university admissions, the blocked account, and student visa steps for Germany.' },
+  { id: 19, topic: 'Fall 2026 Pre-Departure Orientation', date: '15-08-2026 06:00 PM', venue: 'Online', audienceType: 'Student', enrolledUsers: null, webinarLink: 'https://meet.google.com/uni-dest-predep', description: 'Packing, accommodation, banking and first-week tips before you fly out for the Fall 2026 intake.' },
   { id: 18, topic: 'UK September 2026 Intake — Everything You Need to Know', date: '11-06-2026 02:31 PM', venue: 'Online', audienceType: 'Student', enrolledUsers: null, webinarLink: 'https://meet.google.com/uni-dest-uk26', description: 'Entry requirements, tuition, scholarships and the application timeline for the UK September 2026 intake.' },
   { id: 17, topic: 'IELTS Band 7+ Strategy Session', date: '01-05-2026 08:30 AM', venue: 'Dhaka HQ Seminar Hall', audienceType: 'Student / Agent', enrolledUsers: 1, description: 'Live strategy session with our IELTS trainers — writing task 2 structures and speaking drills.', notifiedEmail: 'students@unidest.com' },
   { id: 16, topic: 'Agent Partner Onboarding Workshop', date: '16-03-2026 12:45 PM', venue: 'Chattogram Branch', audienceType: 'Agent', enrolledUsers: null },
@@ -117,6 +121,19 @@ export function parseWebinarDate(s: string): Date | null {
     )
   }
   return null
+}
+
+/** True when a webinar's date is now or in the future. */
+export function isWebinarUpcoming(w: Webinar, now: Date = new Date()): boolean {
+  const d = parseWebinarDate(w.date)
+  return d ? d.getTime() >= now.getTime() : false
+}
+
+/** Webinars a student should see (their audience), upcoming first. */
+export function upcomingStudentWebinars(now: Date = new Date()): Webinar[] {
+  return webinars
+    .filter((w) => w.audienceType !== 'Agent' && isWebinarUpcoming(w, now))
+    .sort((a, b) => (parseWebinarDate(a.date)?.getTime() ?? 0) - (parseWebinarDate(b.date)?.getTime() ?? 0))
 }
 
 const enrolleeNames = [

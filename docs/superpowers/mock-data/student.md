@@ -38,6 +38,8 @@ file) so they stay separate from admin mocks.
 | [Country Information](#country-information-portalcountry-info) | `/portal/country-info` | `cms.ts` (`cmsCountries`) + `countryDocs.ts` | ✅ done |
 | [Fees](#fees-portalfees) | `/portal/fees` | `studentInvoices.ts` (via `myInvoices()`) | ✅ done |
 | [Resources](#resources-portalresources) | `/portal/resources` | `studentResources.ts` (`resourceCategories` + `studentResources`) | ✅ done |
+| [Webinar & Events](#webinar--events-portalwebinars) | `/portal/webinars` | `webinars.ts` (`upcomingStudentWebinars()`) + `webinarRegistrations.ts` | ✅ done |
+| [My Account](#my-account-portalaccount) | `/portal/account` | `students.ts` (`updateStudent`) + `studentProfile.ts` | ✅ done |
 
 ---
 
@@ -380,6 +382,55 @@ Management — real cross-module connections, verified in the browser.
 - **Maps to (future):** a `resource_categories` table + a `resources` table
   (real file storage in place of the mock download) joined to `staff` and
   `courses`.
+
+---
+
+## Webinar & Events (`/portal/webinars`)
+
+- **Page:** `src/features/student/StudentWebinarsPage.tsx`
+- Modeled on demo.eductrl.com/cn4/webinar (reference only) — an "Upcoming
+  Webinar & Events" table (Date · Details · Actions).
+
+**Rows come live from the admin Webinars module.** `upcomingStudentWebinars()`
+(added to `mock/webinars.ts`) filters `webinars` to the student's audience
+(`audienceType !== 'Agent'`) that are still upcoming (`isWebinarUpcoming` via
+the existing `parseWebinarDate`), sorted soonest-first. Four genuinely-upcoming
+student webinars were added to the shared seed so both the admin page and the
+portal have upcoming content.
+
+**Register** — `registerForWebinar(studentId, webinarId)` (in
+`mock/student/webinarRegistrations.ts`) persists the registration
+(`unidest-webinar-registrations`, per student) **and** increments the shared
+webinar's `enrolledUsers`, so the admin Webinars enrolment count reflects it.
+After registering, the row shows a **Registered** badge and a **Join** link
+(when the webinar has a `webinarLink`). Verified in the browser that one
+Register click registers exactly one webinar.
+
+- **Maps to (future):** an `events` table joined to a `webinar_enrolments`
+  table (student ↔ webinar).
+
+---
+
+## My Account (`/portal/account`)
+
+- **Page:** `src/features/student/StudentAccountPage.tsx`
+- Modeled on demo.eductrl.com/cn4/profile (reference only) — a "Your Profile"
+  card with tabs: **Basic Info · Affiliate · Payment Preference · My Earnings**.
+
+| Tab | What it does |
+|-----|--------------|
+| Basic Info | The account form (First/Middle/Last name, Gender, E-mail, Mobile, Whatsapp, Country/State/City) + photo + **Change Password** modal. **Update** writes core fields to the Student record via `updateStudent` and the rest to the `studentProfile` store — the same stores the Study Abroad Apply → Profile form uses, so no duplicate data. |
+| Affiliate | "Refer a Friend" — a referral link (`…/join?ref={studentNo}`) with a Copy button. |
+| Payment Preference | Payout method + account, persisted to the `studentProfile` store (new `payoutMethod` / `payoutAccount` fields). |
+| My Earnings | Referral earnings summary (empty state for a new referrer). |
+
+Field primitives (`Field`, `TextInput`, `Select`) are reused from
+`components/profileFields.tsx`. The `studentProfile` type gained `whatsapp`,
+`payoutMethod` and `payoutAccount`. Change Password validates
+current/new/confirm and shows the global success dialog (mock — no real auth).
+
+- **Maps to (future):** the `students` row + an account-settings table + a
+  `referrals` / `referral_earnings` table.
 
 ---
 
