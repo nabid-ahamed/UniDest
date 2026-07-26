@@ -74,6 +74,17 @@ import StudentLayout from '../layouts/StudentLayout'
 import StudentDashboardPage from '../features/student/StudentDashboardPage'
 import StudentCourseSuggestionsPage from '../features/student/StudentCourseSuggestionsPage'
 import StudentApplyPage from '../features/student/StudentApplyPage'
+import StudentApplicationsPage from '../features/student/StudentApplicationsPage'
+import StudentApplicationDetailPage from '../features/student/StudentApplicationDetailPage'
+import StudentServicesPage from '../features/student/StudentServicesPage'
+import StudentServiceDetailPage from '../features/student/StudentServiceDetailPage'
+import StudentCourseFinderPage from '../features/student/StudentCourseFinderPage'
+import StudentCountryInfoPage from '../features/student/StudentCountryInfoPage'
+import StudentCountryInfoDetailPage from '../features/student/StudentCountryInfoDetailPage'
+import StudentFeesPage from '../features/student/StudentFeesPage'
+import StudentInvoiceDetailPage from '../features/student/StudentInvoiceDetailPage'
+import StudentPortalResourcesPage from '../features/student/StudentResourcesPage'
+import StudentResourceCategoryPage from '../features/student/StudentResourceCategoryPage'
 import StudentPlaceholderPage from '../features/student/StudentPlaceholderPage'
 import { useAuth } from '../store/auth'
 
@@ -116,12 +127,17 @@ export const router = createBrowserRouter([
           { path: '/portal', element: <StudentDashboardPage /> },
           { path: '/portal/course-suggestions', element: <StudentCourseSuggestionsPage /> },
           { path: '/portal/apply', element: <StudentApplyPage /> },
-          { path: '/portal/applications', element: <StudentPlaceholderPage title="My Applications" /> },
-          { path: '/portal/services', element: <StudentPlaceholderPage title="Additional Services" /> },
-          { path: '/portal/course-finder', element: <StudentPlaceholderPage title="Course Finder" /> },
-          { path: '/portal/country-info', element: <StudentPlaceholderPage title="Country Information" /> },
-          { path: '/portal/fees', element: <StudentPlaceholderPage title="Fees" /> },
-          { path: '/portal/resources', element: <StudentPlaceholderPage title="Resources" /> },
+          { path: '/portal/applications', element: <StudentApplicationsPage /> },
+          { path: '/portal/applications/:id', element: <StudentApplicationDetailPage /> },
+          { path: '/portal/services', element: <StudentServicesPage /> },
+          { path: '/portal/services/:id', element: <StudentServiceDetailPage /> },
+          { path: '/portal/course-finder', element: <StudentCourseFinderPage /> },
+          { path: '/portal/country-info', element: <StudentCountryInfoPage /> },
+          { path: '/portal/country-info/:id', element: <StudentCountryInfoDetailPage /> },
+          { path: '/portal/fees', element: <StudentFeesPage /> },
+          { path: '/portal/fees/:id', element: <StudentInvoiceDetailPage /> },
+          { path: '/portal/resources', element: <StudentPortalResourcesPage /> },
+          { path: '/portal/resources/:id', element: <StudentResourceCategoryPage /> },
           { path: '/portal/webinars', element: <StudentPlaceholderPage title="Webinar & Events" /> },
           { path: '/portal/account', element: <StudentPlaceholderPage title="My Account" /> },
         ],

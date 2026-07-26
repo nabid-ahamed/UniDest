@@ -11,6 +11,8 @@ import {
   invoiceGrandTotal,
   invoiceStatus,
   invoiceCurrency,
+  invoiceDue,
+  updateStudentInvoice,
   formatMoney,
   type StudentInvoice,
 } from '../studentInvoices'
@@ -50,6 +52,22 @@ export function invoiceAmountLabel(inv: StudentInvoice): string {
 }
 
 export { invoiceStatus }
+
+/**
+ * Pay off an invoice's outstanding balance (records a full-due payment on the
+ * shared invoice record, so the admin Student Invoices page agrees). Returns
+ * false when there's nothing due.
+ */
+export function payInvoice(inv: StudentInvoice): boolean {
+  const due = invoiceDue(inv)
+  if (due <= 0) return false
+  const date = new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date())
+  updateStudentInvoice({
+    ...inv,
+    payments: [...inv.payments, { amount: due, date, note: 'Online payment' }],
+  })
+  return true
+}
 
 /* ---- Portal-only mock data (no admin equivalent yet) ---- */
 
