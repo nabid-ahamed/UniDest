@@ -239,6 +239,14 @@ export function addWorkflow(data: Omit<Workflow, 'id'>): Workflow {
   return wf
 }
 
+export function updateWorkflow(id: number, patch: Partial<Omit<Workflow, 'id'>>): Workflow | undefined {
+  const wf = workflows.find((w) => w.id === id)
+  if (!wf) return undefined
+  Object.assign(wf, patch)
+  persistWorkflows()
+  return wf
+}
+
 export function toggleWorkflowStatus(id: number) {
   const wf = workflows.find((w) => w.id === id)
   if (!wf) return

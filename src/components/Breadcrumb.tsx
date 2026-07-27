@@ -95,6 +95,8 @@ function dynamicTrail(pathname: string): Crumb[] | null {
     return [{ label: 'Student Management', to: '/students' }, { label: 'View' }]
   if (/^\/students\/\d+\/edit$/.test(pathname))
     return [{ label: 'Student Management', to: '/students' }, { label: 'Edit Student' }]
+  if (/^\/automation\/workflow\/\d+\/edit$/.test(pathname))
+    return [{ label: 'Automation - Workflows', to: '/automation' }, { label: 'Edit Workflow' }]
   if (/^\/automation\/workflow\/\d+$/.test(pathname))
     return [{ label: 'Automation - Workflows', to: '/automation' }, { label: 'Workflow Detail' }]
   if (/^\/automation\/campaign\/\d+$/.test(pathname))

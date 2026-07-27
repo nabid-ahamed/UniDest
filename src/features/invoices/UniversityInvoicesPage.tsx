@@ -17,6 +17,7 @@ import {
   FilePlus2,
 } from 'lucide-react'
 import { cn } from '../../lib/cn'
+import { useAuth } from '../../store/auth'
 import { pickTextColor } from '../../lib/contrast'
 import { ExportButtons } from '../../components/ExportButtons'
 import { Field, PageBtn, SingleSelect } from '../../components/DataTableUI'
@@ -121,6 +122,8 @@ function InvoicesTab({
   onMutate: () => void
   onGoApplications: () => void
 }) {
+  // Staff can view invoices but not delete them (admin-only action).
+  const canManage = useAuth((s) => s.user?.role !== 'Staff')
   const [search, setSearch] = useState('')
   const [tableSearch, setTableSearch] = useState('')
   const [university, setUniversity] = useState('')
@@ -356,12 +359,14 @@ function InvoicesTab({
                         onClick={() => onToast(`Invoice #${inv.id} emailed to ${inv.student}`)}
                         className="border-emerald-300 text-emerald-600 hover:border-emerald-600 hover:bg-emerald-600 hover:text-white"
                       />
-                      <ActionIcon
-                        icon={Trash2}
-                        label="Delete"
-                        onClick={() => setDeleteInvoiceRow(inv)}
-                        className="border-rose-300 text-rose-600 hover:border-rose-600 hover:bg-rose-600 hover:text-white"
-                      />
+                      {canManage && (
+                        <ActionIcon
+                          icon={Trash2}
+                          label="Delete"
+                          onClick={() => setDeleteInvoiceRow(inv)}
+                          className="border-rose-300 text-rose-600 hover:border-rose-600 hover:bg-rose-600 hover:text-white"
+                        />
+                      )}
                     </div>
                     {inv.agentInvoiceRequested && (
                       <span className="inline-flex w-fit items-center gap-1.5 rounded-md bg-emerald-600 px-2.5 py-1 text-xs font-semibold text-white">

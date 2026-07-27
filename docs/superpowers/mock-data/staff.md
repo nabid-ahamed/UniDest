@@ -44,7 +44,8 @@ same as admin" is a one-line change.
   `role === 'Staff'`.
 - **Enabled modules** (`STAFF_ALLOWED` in `src/app/router.tsx`): the admin paths
   a Staff user may open. Currently **`/dashboard`**, **`/leads`**, **`/students`**,
-  **`/applications`**, **`/services`**, **`/course-finder`** and **`/broadcast`** (+ `/staff-portal` itself).
+  **`/applications`**, **`/services`**, **`/course-finder`**, **`/broadcast`**,
+  **`/webinars`**, **`/invoices`** and **`/analytics`** (+ `/staff-portal` itself).
   `staffCanAccess(pathname)` prefix-matches, so adding `'/leads'` would also cover
   `/leads/:id`. **To give staff another admin module, add its path here.**
 - **Guard** — one unified `RequireBackoffice` wraps the whole admin tree:
@@ -75,6 +76,9 @@ access becomes a real permission check instead of the `STAFF_ALLOWED` allowlist.
 | Additional Services | `/services` (+ `/:id`) | admin `AdditionalServicesPage` / `ServiceViewPage` | ✅ enabled (View-only for staff — no Assign/Delete) |
 | Course Finder | `/course-finder` | admin `CourseFinderPage` | ✅ enabled |
 | Broadcast | `/broadcast` (+ `/history`) | admin `BroadcastPage` / `BroadcastHistoryPage` | ✅ enabled |
+| Webinar & Events | `/webinars` (+ `/:id`, `/:id/edit`, `/:id/enrolled`) | admin `WebinarsPage` / `WebinarViewPage` / `EditWebinarPage` / `WebinarEnrolledPage` | ✅ enabled |
+| Invoices | `/invoices/university`, `/invoices/student` (+ `/new`, `/:id/edit`) | admin `UniversityInvoicesPage` / `StudentInvoicesPage` / `StudentInvoiceFormPage` | ✅ enabled (staff cannot **Edit**/**Delete** — those actions hidden for `role === 'Staff'`) |
+| Analytics | `/analytics` | admin `AnalyticsPage` | ✅ enabled |
 | …rest of admin nav | — | admin pages | ⬜ not enabled |
 
 > Staff reuse the admin pages as-is; "enabling" a module = adding its path to

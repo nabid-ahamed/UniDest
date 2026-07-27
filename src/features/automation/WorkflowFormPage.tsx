@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, Plus, Trash2 } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { Field } from '../../components/DataTableUI'
@@ -11,6 +11,8 @@ import {
   allCountries,
   matchedUsers,
   addWorkflow,
+  updateWorkflow,
+  getWorkflow,
   type WorkflowType,
   type WorkflowMode,
   type AudienceTarget,
@@ -19,17 +21,32 @@ import {
 
 const TIME_OPTS = Array.from({ length: 12 }, (_, i) => `${(i + 1).toString().padStart(2, '0')}:00`)
 
+/** Split a stored "HH:MM AM" send-time into a TIME_OPTS-compatible time + meridiem. */
+function parseAt(at: string | undefined): { time: string; meridiem: 'AM' | 'PM' } {
+  const [t = '10:00', m = 'AM'] = (at ?? '').split(' ')
+  const hh = (t.split(':')[0] || '10').padStart(2, '0')
+  return { time: `${hh}:00`, meridiem: m === 'PM' ? 'PM' : 'AM' }
+}
+
 export default function WorkflowFormPage() {
   const navigate = useNavigate()
-  const [title, setTitle] = useState('')
-  const [type, setType] = useState<WorkflowType | ''>('')
-  const [mode, setMode] = useState<WorkflowMode>('Email')
-  const [time, setTime] = useState('10:00')
-  const [meridiem, setMeridiem] = useState<'AM' | 'PM'>('AM')
-  const [target, setTarget] = useState<AudienceTarget>('Leads')
-  const [status, setStatus] = useState('')
-  const [country, setCountry] = useState('')
-  const [steps, setSteps] = useState<WorkflowStep[]>([{ schedule: 'On: (today)', message: '' }])
+  // When an :id is present, this form edits that workflow instead of creating one.
+  const { id } = useParams()
+  const existing = id ? getWorkflow(Number(id)) : undefined
+  const editing = !!existing
+  const at0 = parseAt(existing?.at)
+
+  const [title, setTitle] = useState(existing?.title ?? '')
+  const [type, setType] = useState<WorkflowType | ''>(existing?.type ?? '')
+  const [mode, setMode] = useState<WorkflowMode>(existing?.mode ?? 'Email')
+  const [time, setTime] = useState(at0.time)
+  const [meridiem, setMeridiem] = useState<'AM' | 'PM'>(at0.meridiem)
+  const [target, setTarget] = useState<AudienceTarget>(existing?.audience.target ?? 'Leads')
+  const [status, setStatus] = useState(existing?.audience.status ?? '')
+  const [country, setCountry] = useState(existing?.audience.country ?? '')
+  const [steps, setSteps] = useState<WorkflowStep[]>(
+    existing?.steps.length ? existing.steps.map((s) => ({ ...s })) : [{ schedule: 'On: (today)', message: '' }],
+  )
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   const matched = useMemo(
@@ -48,6 +65,20 @@ export default function WorkflowFormPage() {
     setErrors(next)
     if (Object.keys(next).length) return
 
+    if (editing) {
+      // Preserve created/status/history; only the edited fields are patched.
+      updateWorkflow(existing.id, {
+        title: title.trim(),
+        type: type as WorkflowType,
+        mode,
+        at: `${time} ${meridiem}`,
+        audience: { target, status, country },
+        steps: steps.filter((s) => s.message.trim()),
+      })
+      navigate(`/automation/workflow/${existing.id}`)
+      return
+    }
+
     const wf = addWorkflow({
       title: title.trim(),
       type: type as WorkflowType,
@@ -65,7 +96,7 @@ export default function WorkflowFormPage() {
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
       <div className="flex items-center justify-between gap-3">
-        <h1 className="text-xl font-bold text-slate-900">Add New Workflow</h1>
+        <h1 className="text-xl font-bold text-slate-900">{editing ? 'Edit Workflow' : 'Add New Workflow'}</h1>
         <a
           href="/automation"
           className="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-3.5 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-700"
@@ -247,7 +278,7 @@ export default function WorkflowFormPage() {
             onClick={submit}
             className="rounded-lg bg-brand-600 px-8 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-700"
           >
-            Create Workflow
+            {editing ? 'Save Changes' : 'Create Workflow'}
           </button>
         </div>
       </div>

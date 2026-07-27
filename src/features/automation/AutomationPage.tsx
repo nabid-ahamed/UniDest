@@ -10,6 +10,8 @@ import {
   Plus,
   Power,
   Trash2,
+  Copy,
+  SquarePen,
   Filter as FilterIcon,
 } from 'lucide-react'
 import { cn } from '../../lib/cn'
@@ -20,6 +22,7 @@ import {
   campaigns,
   campaignStatuses,
   messageCount,
+  addWorkflow,
   toggleWorkflowStatus,
   deleteWorkflow,
   deleteCampaign,
@@ -341,6 +344,21 @@ function WorkflowsTab({ onToast }: { onToast: (msg: string) => void }) {
                   <RowActions
                     viewHref={`/automation/workflow/${w.id}`}
                     items={[
+                      {
+                        label: 'Duplicate',
+                        icon: Copy,
+                        onClick: () => {
+                          const { id: _omit, ...rest } = w
+                          addWorkflow({ ...rest, title: `${w.title} (Copy)`, created: 'Just now', history: [] })
+                          onToast(`Workflow "${w.title}" duplicated`)
+                          setRev((n) => n + 1)
+                        },
+                      },
+                      {
+                        label: 'Edit',
+                        icon: SquarePen,
+                        onClick: () => window.location.assign(`/automation/workflow/${w.id}/edit`),
+                      },
                       {
                         label: w.status === 'Active' ? 'Deactivate' : 'Activate',
                         icon: Power,

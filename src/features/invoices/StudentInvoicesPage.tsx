@@ -17,6 +17,7 @@ import {
   Trash2,
 } from 'lucide-react'
 import { cn } from '../../lib/cn'
+import { useAuth } from '../../store/auth'
 import { ExportButtons } from '../../components/ExportButtons'
 import { Field, PageBtn } from '../../components/DataTableUI'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
@@ -39,6 +40,9 @@ const PAGE_SIZES = [25, 50, 100]
 export default function StudentInvoicesPage() {
   const [rev, setRev] = useState(0)
   const bump = () => setRev((n) => n + 1)
+
+  // Staff can view invoices but not edit or delete them (admin-only actions).
+  const canManage = useAuth((s) => s.user?.role !== 'Staff')
 
   const [search, setSearch] = useState('')
   const [tableSearch, setTableSearch] = useState('')
@@ -270,18 +274,22 @@ export default function StudentInvoicesPage() {
                         }}
                         className="border-amber-300 text-amber-600 hover:border-amber-600 hover:bg-amber-600 hover:text-white"
                       />
-                      <ActionIcon
-                        icon={Pencil}
-                        label="Edit"
-                        onClick={() => window.location.assign(`/invoices/student/${inv.id}/edit`)}
-                        className="border-slate-300 text-slate-600 hover:border-slate-600 hover:bg-slate-600 hover:text-white"
-                      />
-                      <ActionIcon
-                        icon={Trash2}
-                        label="Delete"
-                        onClick={() => setDeleteRow(inv)}
-                        className="border-rose-300 text-rose-600 hover:border-rose-600 hover:bg-rose-600 hover:text-white"
-                      />
+                      {canManage && (
+                        <ActionIcon
+                          icon={Pencil}
+                          label="Edit"
+                          onClick={() => window.location.assign(`/invoices/student/${inv.id}/edit`)}
+                          className="border-slate-300 text-slate-600 hover:border-slate-600 hover:bg-slate-600 hover:text-white"
+                        />
+                      )}
+                      {canManage && (
+                        <ActionIcon
+                          icon={Trash2}
+                          label="Delete"
+                          onClick={() => setDeleteRow(inv)}
+                          className="border-rose-300 text-rose-600 hover:border-rose-600 hover:bg-rose-600 hover:text-white"
+                        />
+                      )}
                     </div>
                   </td>
                 </tr>

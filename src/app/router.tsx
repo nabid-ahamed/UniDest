@@ -100,7 +100,7 @@ const isStaff = (role?: string) => role === 'Staff'
  * Enable a module for staff by adding its path here (prefix match covers nested
  * routes, e.g. '/leads' → '/leads/:id').
  */
-const STAFF_ALLOWED = ['/dashboard', '/staff-portal', '/leads', '/students', '/applications', '/services', '/course-finder', '/broadcast']
+const STAFF_ALLOWED = ['/dashboard', '/staff-portal', '/leads', '/students', '/applications', '/services', '/course-finder', '/broadcast', '/webinars', '/invoices', '/analytics']
 const staffCanAccess = (pathname: string) =>
   STAFF_ALLOWED.some((p) => pathname === p || pathname.startsWith(p + '/'))
 
@@ -198,6 +198,7 @@ export const router = createBrowserRouter([
           { path: '/automation', element: <AutomationPage /> },
           { path: '/automation/campaigns', element: <AutomationPage /> },
           { path: '/automation/create/workflow', element: <WorkflowFormPage /> },
+          { path: '/automation/workflow/:id/edit', element: <WorkflowFormPage /> },
           { path: '/automation/workflow/:id', element: <WorkflowDetailPage /> },
           { path: '/automation/create/campaign', element: <CampaignFormPage /> },
           { path: '/automation/campaign/:id', element: <CampaignDetailPage /> },

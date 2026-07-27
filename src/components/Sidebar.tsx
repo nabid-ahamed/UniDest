@@ -29,6 +29,10 @@ import {
 } from 'lucide-react'
 import { cn } from '../lib/cn'
 import { useUI } from '../store/ui'
+import { useAuth } from '../store/auth'
+
+/** Top-level nav items hidden from Staff users (kept for Admin). */
+const STAFF_HIDDEN_ITEMS = new Set(['Referral'])
 
 type IconType = ComponentType<{ className?: string }>
 
@@ -356,6 +360,14 @@ export function Sidebar() {
   const close = useUI((s) => s.closeSidebar)
   const collapsed = !open
 
+  // Staff see a trimmed nav — hide items that aren't part of their workspace.
+  const isStaff = useAuth((s) => s.user?.role === 'Staff')
+  const groups = isStaff
+    ? NAV.map((g) => ({ ...g, items: g.items.filter((i) => !STAFF_HIDDEN_ITEMS.has(i.label)) })).filter(
+        (g) => g.items.length > 0,
+      )
+    : NAV
+
   // Close on navigation only on small screens; keep it open on desktop.
   const handleNavigate = () => {
     if (window.innerWidth < 1024) close()
@@ -394,7 +406,7 @@ export function Sidebar() {
             collapsed ? 'no-scrollbar' : 'sidebar-scroll',
           )}
         >
-          {NAV.map((group) => (
+          {groups.map((group) => (
             <div key={group.title} className="mb-4">
               {!collapsed && (
                 <p className="px-3 pb-2 pt-1 text-xs font-bold uppercase tracking-wider text-white">
