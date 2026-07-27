@@ -45,7 +45,10 @@ same as admin" is a one-line change.
 - **Enabled modules** (`STAFF_ALLOWED` in `src/app/router.tsx`): the admin paths
   a Staff user may open. Currently **`/dashboard`**, **`/leads`**, **`/students`**,
   **`/applications`**, **`/services`**, **`/course-finder`**, **`/broadcast`**,
-  **`/webinars`**, **`/invoices`** and **`/analytics`** (+ `/staff-portal` itself).
+  **`/webinars`**, **`/invoices`**, **`/analytics`**, **`/automation`** and
+  **`/student-resources`**, **`/media-library`** and the CMS subset
+  **`/cms/blog`** / **`/cms/pages`** / **`/cms/newsletter`**, **`/announcements`** and
+  **`/message-templates`** (+ `/staff-portal` itself).
   `staffCanAccess(pathname)` prefix-matches, so adding `'/leads'` would also cover
   `/leads/:id`. **To give staff another admin module, add its path here.**
 - **Guard** — one unified `RequireBackoffice` wraps the whole admin tree:
@@ -79,6 +82,12 @@ access becomes a real permission check instead of the `STAFF_ALLOWED` allowlist.
 | Webinar & Events | `/webinars` (+ `/:id`, `/:id/edit`, `/:id/enrolled`) | admin `WebinarsPage` / `WebinarViewPage` / `EditWebinarPage` / `WebinarEnrolledPage` | ✅ enabled |
 | Invoices | `/invoices/university`, `/invoices/student` (+ `/new`, `/:id/edit`) | admin `UniversityInvoicesPage` / `StudentInvoicesPage` / `StudentInvoiceFormPage` | ✅ enabled (staff cannot **Edit**/**Delete** — those actions hidden for `role === 'Staff'`) |
 | Analytics | `/analytics` | admin `AnalyticsPage` | ✅ enabled |
+| Automation | `/automation` (+ `/campaigns`, `/create/workflow`, `/workflow/:id`, `/workflow/:id/edit`, `/create/campaign`, `/campaign/:id`) | admin `AutomationPage` / `WorkflowFormPage` / `WorkflowDetailPage` / `CampaignFormPage` / `CampaignDetailPage` | ✅ enabled |
+| Student Resources | `/student-resources` (+ `/categories`) | admin `StudentResourcesPage` / `ResourceCategoriesPage` | ✅ enabled |
+| Media Library | `/media-library` (+ `/:id`) | admin `MediaLibraryPage` / `MediaDetailPage` | ✅ enabled |
+| CMS (partial) | `/cms/blog` (+ `/new`, `/:id/edit`), `/cms/pages` (+ `/new`, `/:id/edit`), `/cms/newsletter` | admin `BlogPostsPage` / `BlogPostFormPage` / `PagesPage` / `PageFormPage` / `NewsletterPage` | ✅ enabled — **only Blog Posts, Pages, Newsletter** (Home Page / Countries / Menu Manager hidden via `STAFF_HIDDEN_CHILDREN`) |
+| Announcements | `/announcements` (+ `/new`, `/:id`, `/:id/edit`) | admin `AnnouncementsPage` / `AnnouncementFormPage` / `AnnouncementViewPage` | ✅ enabled |
+| Message Templates | `/message-templates/email`, `/sms`, `/whatsapp`, `/canned` (+ their `/new`, `/:id/edit`) | admin `TemplatesPage` / `TemplateFormPage` / `CannedResponsesPage` / `CannedResponseFormPage` | ✅ enabled |
 | …rest of admin nav | — | admin pages | ⬜ not enabled |
 
 > Staff reuse the admin pages as-is; "enabling" a module = adding its path to

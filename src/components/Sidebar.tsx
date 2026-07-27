@@ -32,7 +32,9 @@ import { useUI } from '../store/ui'
 import { useAuth } from '../store/auth'
 
 /** Top-level nav items hidden from Staff users (kept for Admin). */
-const STAFF_HIDDEN_ITEMS = new Set(['Referral'])
+const STAFF_HIDDEN_ITEMS = new Set(['Referral', 'Staff'])
+/** Submenu children hidden from Staff (e.g. CMS keeps only Blog Posts / Pages / Newsletter). */
+const STAFF_HIDDEN_CHILDREN = new Set(['Home Page', 'Countries', 'Menu Manager'])
 
 type IconType = ComponentType<{ className?: string }>
 
@@ -360,12 +362,20 @@ export function Sidebar() {
   const close = useUI((s) => s.closeSidebar)
   const collapsed = !open
 
-  // Staff see a trimmed nav — hide items that aren't part of their workspace.
+  // Staff see a trimmed nav — hide whole items and specific submenu children that
+  // aren't part of their workspace.
   const isStaff = useAuth((s) => s.user?.role === 'Staff')
   const groups = isStaff
-    ? NAV.map((g) => ({ ...g, items: g.items.filter((i) => !STAFF_HIDDEN_ITEMS.has(i.label)) })).filter(
-        (g) => g.items.length > 0,
-      )
+    ? NAV.map((g) => ({
+        ...g,
+        items: g.items
+          .filter((i) => !STAFF_HIDDEN_ITEMS.has(i.label))
+          .map((i) =>
+            i.children
+              ? { ...i, children: i.children.filter((c) => !STAFF_HIDDEN_CHILDREN.has(c.label)) }
+              : i,
+          ),
+      })).filter((g) => g.items.length > 0)
     : NAV
 
   // Close on navigation only on small screens; keep it open on desktop.

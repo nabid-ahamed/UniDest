@@ -182,16 +182,16 @@ export default function UserManagementPage() {
       </div>
 
       {/* Table */}
-      <div className="mt-4 overflow-x-auto">
-        <table className="w-full min-w-[980px]">
+      <div className="mt-4 overflow-x-auto xl:overflow-x-visible">
+        <table className="w-full min-w-[860px]">
           <thead>
             <tr className="border-y border-slate-200 bg-brand-50/60 text-left text-sm font-semibold text-slate-700">
-              <th className="px-4 py-3">Name</th>
-              <th className="px-4 py-3">Contact</th>
-              <th className="px-4 py-3">Details</th>
-              <th className="px-4 py-3">Created On</th>
-              <th className="px-4 py-3">Status</th>
-              <th className="px-4 py-3">Actions</th>
+              <th className="px-3 py-3">Name</th>
+              <th className="px-3 py-3">Contact</th>
+              <th className="px-3 py-3">Details</th>
+              <th className="px-3 py-3">Created On</th>
+              <th className="px-3 py-3">Status</th>
+              <th className="px-3 py-3">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -200,7 +200,7 @@ export default function UserManagementPage() {
               const manager = reportingToName(u.reportingToId)
               return (
                 <tr key={u.id} className="border-b border-slate-100 align-top text-sm">
-                  <td className="px-4 py-4">
+                  <td className="px-3 py-4">
                     <div className="flex items-center gap-3">
                       <span
                         className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold"
@@ -221,7 +221,7 @@ export default function UserManagementPage() {
                       </div>
                     </div>
                   </td>
-                  <td className="px-4 py-4">
+                  <td className="px-3 py-4">
                     <a href={`mailto:${u.email}`} className="flex items-center gap-1.5 text-slate-600 hover:text-brand-600 [overflow-wrap:anywhere]">
                       <Mail className="h-3.5 w-3.5 shrink-0 text-slate-400" /> {u.email}
                     </a>
@@ -229,7 +229,7 @@ export default function UserManagementPage() {
                       <Phone className="h-3.5 w-3.5 shrink-0 text-slate-400" /> {u.mobile || '—'}
                     </span>
                   </td>
-                  <td className="max-w-xs px-4 py-4">
+                  <td className="max-w-[220px] px-3 py-4">
                     <div className="flex flex-wrap gap-1">
                       {u.roles.map((r) => (
                         <span key={r} className="inline-flex items-center gap-1 rounded-md bg-brand-50 px-2 py-0.5 text-xs font-semibold text-brand-600">
@@ -247,13 +247,13 @@ export default function UserManagementPage() {
                       </p>
                     )}
                   </td>
-                  <td className="whitespace-nowrap px-4 py-4 text-slate-600">{u.createdOn}</td>
-                  <td className="px-4 py-4">
+                  <td className="whitespace-nowrap px-3 py-4 text-slate-600">{u.createdOn}</td>
+                  <td className="px-3 py-4">
                     <span className={cn('rounded-md px-2.5 py-1 text-xs font-semibold', STATUS_BADGE[u.status])}>
                       {u.status}
                     </span>
                   </td>
-                  <td className="px-4 py-4">
+                  <td className="px-3 py-4">
                     <RowActions
                       user={u}
                       onActivate={() => changeStatus(u, 'Active', 'activated')}

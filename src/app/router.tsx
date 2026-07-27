@@ -100,7 +100,7 @@ const isStaff = (role?: string) => role === 'Staff'
  * Enable a module for staff by adding its path here (prefix match covers nested
  * routes, e.g. '/leads' → '/leads/:id').
  */
-const STAFF_ALLOWED = ['/dashboard', '/staff-portal', '/leads', '/students', '/applications', '/services', '/course-finder', '/broadcast', '/webinars', '/invoices', '/analytics']
+const STAFF_ALLOWED = ['/dashboard', '/staff-portal', '/leads', '/students', '/applications', '/services', '/course-finder', '/broadcast', '/webinars', '/invoices', '/analytics', '/automation', '/student-resources', '/media-library', '/cms/blog', '/cms/pages', '/cms/newsletter', '/announcements', '/message-templates']
 const staffCanAccess = (pathname: string) =>
   STAFF_ALLOWED.some((p) => pathname === p || pathname.startsWith(p + '/'))
 
