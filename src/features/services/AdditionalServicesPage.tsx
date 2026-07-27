@@ -14,6 +14,7 @@ import {
   Trash2,
 } from 'lucide-react'
 import { cn } from '../../lib/cn'
+import { useAuth } from '../../store/auth'
 import { ExportButtons } from '../../components/ExportButtons'
 import { Field, PageBtn } from '../../components/DataTableUI'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
@@ -43,6 +44,10 @@ function statusClass(status: string) {
 export default function AdditionalServicesPage() {
   const [, force] = useState(0)
   const rerender = () => force((n) => n + 1)
+
+  // Staff have read-only access to this module — they can View a request but
+  // not Assign staff or Delete (those stay admin-only).
+  const canManage = useAuth((s) => s.user?.role !== 'Staff')
 
   const [search, setSearch] = useState('')
   const [filterOpen, setFilterOpen] = useState(false)
@@ -228,18 +233,20 @@ export default function AdditionalServicesPage() {
                 <td className="px-2.5 py-4 text-slate-700">{r.assignedTo ?? '--'}</td>
                 <td className="px-2.5 py-4">
                   <div className="flex items-center gap-2.5">
-                    <div className="group relative">
-                      <button
-                        onClick={() => setAssignReq(r)}
-                        aria-label="Assign staff"
-                        className="text-brand-600 transition-colors hover:text-brand-700"
-                      >
-                        <UserRoundPen className="h-[18px] w-[18px]" />
-                      </button>
-                      <span className="pointer-events-none absolute -top-8 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded bg-slate-700 px-2 py-1 text-xs font-medium text-white opacity-0 shadow-sm transition-opacity group-hover:opacity-100">
-                        Assign staff
-                      </span>
-                    </div>
+                    {canManage && (
+                      <div className="group relative">
+                        <button
+                          onClick={() => setAssignReq(r)}
+                          aria-label="Assign staff"
+                          className="text-brand-600 transition-colors hover:text-brand-700"
+                        >
+                          <UserRoundPen className="h-[18px] w-[18px]" />
+                        </button>
+                        <span className="pointer-events-none absolute -top-8 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded bg-slate-700 px-2 py-1 text-xs font-medium text-white opacity-0 shadow-sm transition-opacity group-hover:opacity-100">
+                          Assign staff
+                        </span>
+                      </div>
+                    )}
                     <div className="group relative">
                       <a
                         href={`/services/${r.id}`}
@@ -252,18 +259,20 @@ export default function AdditionalServicesPage() {
                         View
                       </span>
                     </div>
-                    <div className="group relative">
-                      <button
-                        onClick={() => setDeleteReq(r)}
-                        aria-label="Delete"
-                        className="text-rose-600 transition-colors hover:text-rose-700"
-                      >
-                        <Trash2 className="h-[18px] w-[18px]" />
-                      </button>
-                      <span className="pointer-events-none absolute -top-8 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded bg-slate-700 px-2 py-1 text-xs font-medium text-white opacity-0 shadow-sm transition-opacity group-hover:opacity-100">
-                        Delete
-                      </span>
-                    </div>
+                    {canManage && (
+                      <div className="group relative">
+                        <button
+                          onClick={() => setDeleteReq(r)}
+                          aria-label="Delete"
+                          className="text-rose-600 transition-colors hover:text-rose-700"
+                        >
+                          <Trash2 className="h-[18px] w-[18px]" />
+                        </button>
+                        <span className="pointer-events-none absolute -top-8 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded bg-slate-700 px-2 py-1 text-xs font-medium text-white opacity-0 shadow-sm transition-opacity group-hover:opacity-100">
+                          Delete
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </td>
               </tr>

@@ -44,7 +44,7 @@ same as admin" is a one-line change.
   `role === 'Staff'`.
 - **Enabled modules** (`STAFF_ALLOWED` in `src/app/router.tsx`): the admin paths
   a Staff user may open. Currently **`/dashboard`**, **`/leads`**, **`/students`**,
-  **`/applications`** and **`/services`** (+ `/staff-portal` itself).
+  **`/applications`**, **`/services`** and **`/course-finder`** (+ `/staff-portal` itself).
   `staffCanAccess(pathname)` prefix-matches, so adding `'/leads'` would also cover
   `/leads/:id`. **To give staff another admin module, add its path here.**
 - **Guard** — one unified `RequireBackoffice` wraps the whole admin tree:
@@ -72,7 +72,8 @@ access becomes a real permission check instead of the `STAFF_ALLOWED` allowlist.
 | Leads | `/leads` (+ `/new`, `/:id`, `/:id/edit`) | admin `LeadsPage` / `AddLeadPage` / `LeadViewPage` / `EditLeadProfilePage` | ✅ enabled |
 | Students | `/students` (+ `/new`, `/:id`, `/:id/edit`) | admin `StudentsPage` / `StudentFormPage` / `StudentViewPage` | ✅ enabled |
 | Applications | `/applications` (+ `/:id`) | admin `ApplicationsPage` / `ApplicationViewPage` | ✅ enabled |
-| Additional Services | `/services` (+ `/:id`) | admin `AdditionalServicesPage` / `ServiceViewPage` | ✅ enabled |
+| Additional Services | `/services` (+ `/:id`) | admin `AdditionalServicesPage` / `ServiceViewPage` | ✅ enabled (View-only for staff — no Assign/Delete) |
+| Course Finder | `/course-finder` | admin `CourseFinderPage` | ✅ enabled |
 | …rest of admin nav | — | admin pages | ⬜ not enabled |
 
 > Staff reuse the admin pages as-is; "enabling" a module = adding its path to
