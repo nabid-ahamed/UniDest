@@ -1,4 +1,4 @@
-import { createBrowserRouter, Navigate, Outlet } from 'react-router-dom'
+import { createBrowserRouter, Navigate, Outlet, useLocation } from 'react-router-dom'
 import LoginPage from '../features/auth/LoginPage'
 import AdminLayout from '../layouts/AdminLayout'
 import DashboardPage from '../features/dashboard/DashboardPage'
@@ -87,26 +87,46 @@ import StudentPortalResourcesPage from '../features/student/StudentResourcesPage
 import StudentResourceCategoryPage from '../features/student/StudentResourceCategoryPage'
 import StudentWebinarsPage from '../features/student/StudentWebinarsPage'
 import StudentAccountPage from '../features/student/StudentAccountPage'
+import StaffPortalPage from '../features/staffPortal/StaffPortalPage'
 import { useAuth } from '../store/auth'
 
 const isStudent = (role?: string) => role === 'Student'
+const isStaff = (role?: string) => role === 'Staff'
+
+/**
+ * Admin backoffice paths a Staff user is allowed to open. Staff share the admin
+ * shell (Header + Sidebar), but only these modules are enabled for them — any
+ * other admin path bounces them to the "not built yet" Staff Portal placeholder.
+ * Enable a module for staff by adding its path here (prefix match covers nested
+ * routes, e.g. '/leads' → '/leads/:id').
+ */
+const STAFF_ALLOWED = ['/dashboard', '/staff-portal', '/leads', '/students', '/applications', '/services']
+const staffCanAccess = (pathname: string) =>
+  STAFF_ALLOWED.some((p) => pathname === p || pathname.startsWith(p + '/'))
 
 /** Where a signed-in user's home lives, based on their role. */
-const homeFor = (role?: string) => (isStudent(role) ? '/portal' : '/dashboard')
+const homeFor = (role?: string) =>
+  isStudent(role) ? '/portal' : '/dashboard'
 
-/** Admin area: must be authenticated AND not a student (students go to /portal). */
-function RequireAdmin() {
+/**
+ * Admin backoffice: authenticated non-students. Admins get everything; Staff are
+ * limited to `STAFF_ALLOWED` and bounced to the Staff Portal placeholder elsewhere.
+ */
+function RequireBackoffice() {
   const { isAuthenticated, user } = useAuth()
+  const { pathname } = useLocation()
   if (!isAuthenticated) return <Navigate to="/login" replace />
   if (isStudent(user?.role)) return <Navigate to="/portal" replace />
+  if (isStaff(user?.role) && !staffCanAccess(pathname))
+    return <Navigate to="/staff-portal" replace />
   return <Outlet />
 }
 
-/** Student area: must be authenticated AND a student (staff go to /dashboard). */
+/** Student area: must be authenticated AND a student (everyone else → their home). */
 function RequireStudent() {
   const { isAuthenticated, user } = useAuth()
   if (!isAuthenticated) return <Navigate to="/login" replace />
-  if (!isStudent(user?.role)) return <Navigate to="/dashboard" replace />
+  if (!isStudent(user?.role)) return <Navigate to={homeFor(user?.role)} replace />
   return <Outlet />
 }
 
@@ -146,11 +166,12 @@ export const router = createBrowserRouter([
     ],
   },
   {
-    element: <RequireAdmin />,
+    element: <RequireBackoffice />,
     children: [
       {
         element: <AdminLayout />,
         children: [
+          { path: '/staff-portal', element: <StaffPortalPage /> },
           { path: '/dashboard', element: <DashboardPage /> },
           { path: '/leads', element: <LeadsPage /> },
           { path: '/leads/new', element: <AddLeadPage /> },

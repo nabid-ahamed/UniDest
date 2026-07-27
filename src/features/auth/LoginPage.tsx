@@ -44,6 +44,13 @@ const DEMO_ACCOUNTS: DemoAccount[] = [
     redirect: '/portal',
     badge: 'bg-emerald-50 text-emerald-600',
   },
+  {
+    role: 'Staff',
+    email: 'staff@gmail.com',
+    password: '123456',
+    redirect: '/dashboard',
+    badge: 'bg-amber-50 text-amber-600',
+  },
 ]
 
 const highlights = [
@@ -101,7 +108,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen bg-slate-50">
+    <div className="flex h-screen overflow-hidden bg-slate-50">
       {/* Left brand panel */}
       <div className="relative hidden w-1/2 flex-col justify-between overflow-hidden bg-brand-700 p-12 text-white lg:flex">
         <div className="absolute -right-24 -top-24 h-96 w-96 rounded-full bg-brand-500/30 blur-3xl" />
@@ -145,10 +152,10 @@ export default function LoginPage() {
       </div>
 
       {/* Right form panel */}
-      <div className="flex w-full items-center justify-center px-6 py-12 lg:w-1/2">
+      <div className="flex w-full items-center justify-center overflow-y-auto px-6 py-8 lg:w-1/2">
         <div className="w-full max-w-sm">
           {/* Mobile logo */}
-          <div className="mb-8 lg:hidden">
+          <div className="mb-6 lg:hidden">
             <img
               src={logo}
               alt="GlobalEd — IELTS & Study Abroad Consultancy"
@@ -163,7 +170,7 @@ export default function LoginPage() {
             Sign in to your consultancy dashboard.
           </p>
 
-          <form onSubmit={handleSubmit(onSubmit)} onChange={() => authError && setAuthError('')} className="mt-8 space-y-5">
+          <form onSubmit={handleSubmit(onSubmit)} onChange={() => authError && setAuthError('')} className="mt-6 space-y-4">
             {authError && (
               <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">
                 {authError}
@@ -234,7 +241,7 @@ export default function LoginPage() {
           </form>
 
           {/* Demo credentials — Copy auto-fills the form above. */}
-          <div className="mt-6 overflow-hidden rounded-lg border border-slate-200">
+          <div className="mt-5 overflow-hidden rounded-lg border border-slate-200">
             <div className="border-b border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-bold text-slate-700">
               Demo Login Info
             </div>
@@ -249,16 +256,16 @@ export default function LoginPage() {
               <tbody className="divide-y divide-slate-100">
                 {DEMO_ACCOUNTS.map((account) => (
                   <tr key={account.email}>
-                    <td className="px-3 py-3 align-top">
+                    <td className="px-3 py-2.5 align-top">
                       <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-bold ${account.badge}`}>
                         {account.role}
                       </span>
                     </td>
-                    <td className="whitespace-nowrap px-3 py-3">
+                    <td className="whitespace-nowrap px-3 py-2.5">
                       <p className="text-sm font-semibold text-slate-800">{account.email}</p>
                       <p className="text-sm font-semibold text-slate-800">{account.password}</p>
                     </td>
-                    <td className="px-3 py-3">
+                    <td className="px-3 py-2.5">
                       <div className="flex shrink-0 items-center gap-1.5">
                         <button
                           type="button"

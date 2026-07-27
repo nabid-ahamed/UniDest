@@ -11,6 +11,7 @@ import {
   User,
   Globe,
   UserRoundPen,
+  Trash2,
 } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { ExportButtons } from '../../components/ExportButtons'
@@ -181,76 +182,88 @@ export default function AdditionalServicesPage() {
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[1150px]">
+      <div className="overflow-x-auto xl:overflow-x-visible">
+        <table className="w-full min-w-[760px]">
           <thead>
             <tr className="border-y border-slate-200 bg-brand-50/60 text-left text-sm font-semibold text-slate-700">
-              <th className="px-4 py-3">ID</th>
-              <th className="px-4 py-3">Date Created</th>
-              <th className="px-4 py-3">Status</th>
-              <th className="px-4 py-3">Student</th>
-              <th className="px-4 py-3">Service</th>
-              <th className="px-4 py-3">Country</th>
-              <th className="px-4 py-3">Description</th>
-              <th className="px-4 py-3">Assigned to</th>
-              <th className="px-4 py-3">Actions</th>
+              <th className="px-2.5 py-3">ID</th>
+              <th className="px-2.5 py-3">Date Created</th>
+              <th className="px-2.5 py-3">Status</th>
+              <th className="px-2.5 py-3">Student</th>
+              <th className="px-2.5 py-3">Service</th>
+              <th className="px-2.5 py-3">Country</th>
+              <th className="px-2.5 py-3">Description</th>
+              <th className="px-2.5 py-3">Assigned to</th>
+              <th className="px-2.5 py-3">Actions</th>
             </tr>
           </thead>
           <tbody>
             {pageRows.map((r) => (
               <tr key={r.id} className="border-b border-slate-100 align-middle text-sm hover:bg-slate-50/70">
-                <td className="px-4 py-4 font-medium tabular-nums text-slate-700">{r.id}</td>
-                <td className="whitespace-nowrap px-4 py-4 tabular-nums text-slate-600">{r.dateCreated}</td>
-                <td className="px-4 py-4">
+                <td className="px-2.5 py-4 font-medium tabular-nums text-slate-700">{r.id}</td>
+                <td className="whitespace-nowrap px-2.5 py-4 tabular-nums text-slate-600">{r.dateCreated}</td>
+                <td className="px-2.5 py-4">
                   {r.status ? (
-                    <span className={cn('whitespace-nowrap rounded-md px-2 py-0.5 text-xs font-semibold', statusClass(r.status))}>
+                    <span className={cn('inline-block rounded-md px-2 py-0.5 text-xs font-semibold leading-tight', statusClass(r.status))}>
                       {r.status}
                     </span>
                   ) : null}
                 </td>
-                <td className="px-4 py-4">
-                  <span className="inline-flex items-center gap-1.5 whitespace-nowrap font-bold text-slate-800">
+                <td className="px-2.5 py-4">
+                  <span className="inline-flex items-center gap-1.5 font-bold text-slate-800">
                     <User className="h-4 w-4 shrink-0 text-slate-500" />
                     {r.studentName}
                   </span>
                 </td>
-                <td className="whitespace-nowrap px-4 py-4 text-slate-700">{r.service}</td>
-                <td className="px-4 py-4">
-                  <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-slate-700">
+                <td className="px-2.5 py-4 text-slate-700">{r.service}</td>
+                <td className="px-2.5 py-4">
+                  <span className="inline-flex items-center gap-1.5 text-slate-700">
                     <Globe className="h-4 w-4 shrink-0 text-slate-500" />
                     {r.country}
                   </span>
                 </td>
-                <td className="max-w-44 px-4 py-4 text-slate-600">
-                  {r.description ? `${r.description.slice(0, 18)}.....` : '--'}
+                <td className="px-2.5 py-4 text-slate-600">
+                  <span className="block max-w-[90px] truncate">{r.description || '--'}</span>
                 </td>
-                <td className="px-4 py-4 text-slate-700">{r.assignedTo ?? '--'}</td>
-                <td className="px-4 py-4">
-                  <div className="flex items-center gap-2">
+                <td className="px-2.5 py-4 text-slate-700">{r.assignedTo ?? '--'}</td>
+                <td className="px-2.5 py-4">
+                  <div className="flex items-center gap-2.5">
                     <div className="group relative">
                       <button
                         onClick={() => setAssignReq(r)}
                         aria-label="Assign staff"
-                        className="text-brand-600 hover:text-brand-700"
+                        className="text-brand-600 transition-colors hover:text-brand-700"
                       >
-                        <UserRoundPen className="h-4 w-4" />
+                        <UserRoundPen className="h-[18px] w-[18px]" />
                       </button>
                       <span className="pointer-events-none absolute -top-8 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded bg-slate-700 px-2 py-1 text-xs font-medium text-white opacity-0 shadow-sm transition-opacity group-hover:opacity-100">
                         Assign staff
                       </span>
                     </div>
-                    <a
-                      href={`/services/${r.id}`}
-                      className="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-3.5 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-brand-700"
-                    >
-                      <Eye className="h-4 w-4" /> View
-                    </a>
-                    <button
-                      onClick={() => setDeleteReq(r)}
-                      className="rounded-lg bg-rose-600 px-3.5 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-rose-700"
-                    >
-                      Delete
-                    </button>
+                    <div className="group relative">
+                      <a
+                        href={`/services/${r.id}`}
+                        aria-label="View"
+                        className="text-sky-600 transition-colors hover:text-sky-700"
+                      >
+                        <Eye className="h-[18px] w-[18px]" />
+                      </a>
+                      <span className="pointer-events-none absolute -top-8 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded bg-slate-700 px-2 py-1 text-xs font-medium text-white opacity-0 shadow-sm transition-opacity group-hover:opacity-100">
+                        View
+                      </span>
+                    </div>
+                    <div className="group relative">
+                      <button
+                        onClick={() => setDeleteReq(r)}
+                        aria-label="Delete"
+                        className="text-rose-600 transition-colors hover:text-rose-700"
+                      >
+                        <Trash2 className="h-[18px] w-[18px]" />
+                      </button>
+                      <span className="pointer-events-none absolute -top-8 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded bg-slate-700 px-2 py-1 text-xs font-medium text-white opacity-0 shadow-sm transition-opacity group-hover:opacity-100">
+                        Delete
+                      </span>
+                    </div>
                   </div>
                 </td>
               </tr>
@@ -430,7 +443,7 @@ export default function AdditionalServicesPage() {
 
       {/* Toast */}
       {toast && (
-        <div className="animate-toast-in fixed right-4 top-20 z-[110] rounded-lg bg-slate-800 px-4 py-3 text-sm font-medium text-white shadow-lg">
+        <div className="animate-toast-in fixed right-4 top-20 z-[110] rounded-lg bg-slate-800 px-2.5 py-3 text-sm font-medium text-white shadow-lg">
           {toast}
         </div>
       )}
