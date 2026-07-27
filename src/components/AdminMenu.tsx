@@ -58,10 +58,16 @@ export function AdminMenu() {
             </p>
             <p className="truncate text-xs text-slate-500">{user?.email}</p>
           </div>
-          <button className="flex w-full items-center gap-2.5 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">
+          <button
+            onClick={() => { setOpen(false); navigate('/profile') }}
+            className="flex w-full items-center gap-2.5 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+          >
             <User className="h-4 w-4 text-slate-400" /> My profile
           </button>
-          <button className="flex w-full items-center gap-2.5 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">
+          <button
+            onClick={() => { setOpen(false); navigate('/settings') }}
+            className="flex w-full items-center gap-2.5 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+          >
             <Settings className="h-4 w-4 text-slate-400" /> Settings
           </button>
           <div className="my-1 border-t border-slate-100" />

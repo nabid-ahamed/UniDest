@@ -5,6 +5,7 @@ export interface AuthUser {
   name: string
   email: string
   role: string
+  phone?: string
 }
 
 interface AuthState {
@@ -13,6 +14,8 @@ interface AuthState {
   /** Mock sign-in. Replaced by a real API call in Phase 2. */
   login: (email: string, role?: string) => void
   logout: () => void
+  /** Update the signed-in user's own profile (Basic Info page). */
+  updateUser: (patch: Partial<AuthUser>) => void
 }
 
 export const useAuth = create<AuthState>()(
@@ -30,6 +33,8 @@ export const useAuth = create<AuthState>()(
           isAuthenticated: true,
         }),
       logout: () => set({ user: null, isAuthenticated: false }),
+      updateUser: (patch) =>
+        set((s) => (s.user ? { user: { ...s.user, ...patch } } : s)),
     }),
     { name: 'unidest-auth' },
   ),

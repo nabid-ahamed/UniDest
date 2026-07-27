@@ -32,7 +32,7 @@ import { useUI } from '../store/ui'
 import { useAuth } from '../store/auth'
 
 /** Top-level nav items hidden from Staff users (kept for Admin). */
-const STAFF_HIDDEN_ITEMS = new Set(['Referral', 'Staff'])
+const STAFF_HIDDEN_ITEMS = new Set(['Referral', 'Staff', 'Backups', 'Roles', 'Settings'])
 /** Submenu children hidden from Staff (e.g. CMS keeps only Blog Posts / Pages / Newsletter). */
 const STAFF_HIDDEN_CHILDREN = new Set(['Home Page', 'Countries', 'Menu Manager'])
 

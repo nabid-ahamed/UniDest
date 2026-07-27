@@ -48,18 +48,21 @@ same as admin" is a one-line change.
   **`/webinars`**, **`/invoices`**, **`/analytics`**, **`/automation`** and
   **`/student-resources`**, **`/media-library`** and the CMS subset
   **`/cms/blog`** / **`/cms/pages`** / **`/cms/newsletter`**, **`/announcements`** and
-  **`/message-templates`** (+ `/staff-portal` itself).
+  **`/message-templates`**, **`/user-management`** and **`/import`**.
   `staffCanAccess(pathname)` prefix-matches, so adding `'/leads'` would also cover
   `/leads/:id`. **To give staff another admin module, add its path here.**
 - **Guard** — one unified `RequireBackoffice` wraps the whole admin tree:
   unauthenticated → `/login`; students → `/portal`; **staff on a path not in
-  `STAFF_ALLOWED` → `/staff-portal`** (the "not built yet" placeholder); admins get
+  `STAFF_ALLOWED` → renders the 404 `NotFoundPage`** (those links are hidden from the
+  staff nav, so a direct URL is effectively a broken link for them); admins get
   everything. `RequireStudent` is unchanged. (The old separate `RequireAdmin` /
   `RequireStaff` guards were merged into `RequireBackoffice`.)
-- Result: the Sidebar/Header are literally the admin ones (no role-gating in those
-  components), so staff see the full admin nav; clicking a not-yet-enabled item
-  lands on the Staff Portal placeholder, while **Dashboard** shows the real admin
-  `DashboardPage`.
+- **Sidebar** is role-aware (`src/components/Sidebar.tsx`): `STAFF_HIDDEN_ITEMS`
+  (Referral, Staff, Backups, Roles, Settings) and `STAFF_HIDDEN_CHILDREN` (CMS: Home
+  Page, Countries, Menu Manager) are dropped for staff, so they only see items they
+  can actually use. Dashboard shows the real admin `DashboardPage`.
+- The old "Staff Portal — not built yet" placeholder page was **removed** (staff now
+  have almost every module; disallowed paths 404 instead).
 
 **Maps to (future):** `users` row with a staff role (see the admin Staff module
 `src/mock/staff.ts` → `StaffRole`) authenticating via `POST /login`; per-module
@@ -72,7 +75,6 @@ access becomes a real permission check instead of the `STAFF_ALLOWED` allowlist.
 | Module | Route | Reuses | Status |
 |--------|-------|--------|--------|
 | [Dashboard](#dashboard-dashboard) | `/dashboard` | admin `DashboardPage` (`src/mock/dashboard.ts`) | ✅ enabled |
-| [Locked placeholder](#locked-placeholder-staff-portal) | `/staff-portal` | — (placeholder) | 🚧 fallback for not-yet-enabled modules |
 | Leads | `/leads` (+ `/new`, `/:id`, `/:id/edit`) | admin `LeadsPage` / `AddLeadPage` / `LeadViewPage` / `EditLeadProfilePage` | ✅ enabled |
 | Students | `/students` (+ `/new`, `/:id`, `/:id/edit`) | admin `StudentsPage` / `StudentFormPage` / `StudentViewPage` | ✅ enabled |
 | Applications | `/applications` (+ `/:id`) | admin `ApplicationsPage` / `ApplicationViewPage` | ✅ enabled |
@@ -88,13 +90,16 @@ access becomes a real permission check instead of the `STAFF_ALLOWED` allowlist.
 | CMS (partial) | `/cms/blog` (+ `/new`, `/:id/edit`), `/cms/pages` (+ `/new`, `/:id/edit`), `/cms/newsletter` | admin `BlogPostsPage` / `BlogPostFormPage` / `PagesPage` / `PageFormPage` / `NewsletterPage` | ✅ enabled — **only Blog Posts, Pages, Newsletter** (Home Page / Countries / Menu Manager hidden via `STAFF_HIDDEN_CHILDREN`) |
 | Announcements | `/announcements` (+ `/new`, `/:id`, `/:id/edit`) | admin `AnnouncementsPage` / `AnnouncementFormPage` / `AnnouncementViewPage` | ✅ enabled |
 | Message Templates | `/message-templates/email`, `/sms`, `/whatsapp`, `/canned` (+ their `/new`, `/:id/edit`) | admin `TemplatesPage` / `TemplateFormPage` / `CannedResponsesPage` / `CannedResponseFormPage` | ✅ enabled |
-| …rest of admin nav | — | admin pages | ⬜ not enabled |
+| User Management | `/user-management` (+ `/new`, `/:id`, `/:id/edit`) | admin `UserManagementPage` / `UserFormPage` / `UserViewPage` | ✅ enabled |
+| Import | `/import` | admin `ImportPage` | ✅ enabled |
+| Course Management | `/courses`, `/course-categories`, `/universities` | admin pages | ⬜ not enabled (still visible in staff nav) |
+| Backups / Roles / Settings | — | admin pages | ⛔ hidden from staff (`STAFF_HIDDEN_ITEMS`) → 404 on direct URL |
 
 > Staff reuse the admin pages as-is; "enabling" a module = adding its path to
-> `STAFF_ALLOWED` in `src/app/router.tsx`. Until then the sidebar item is visible
-> but lands on the locked placeholder. If a module later needs a **staff-scoped**
-> variant (e.g. leads filtered to `assignedTo === current staff`), document that
-> mock/derivation here when it's built.
+> `STAFF_ALLOWED` in `src/app/router.tsx`. A disallowed path renders the **404
+> `NotFoundPage`** (`src/features/misc/NotFoundPage.tsx`). If a module later needs a
+> **staff-scoped** variant (e.g. leads filtered to `assignedTo === current staff`),
+> document that mock/derivation here when it's built.
 
 ---
 
@@ -110,11 +115,12 @@ access becomes a real permission check instead of the `STAFF_ALLOWED` allowlist.
   version that scopes the dashboard mocks to `assignedTo === current staff`
   (mirrors the admin Staff detail page's live `workload()` in `src/mock/staff.ts`).
 
-## Locked placeholder (`/staff-portal`)
+## Disallowed / broken paths → 404
 
-- **Page:** `src/features/staffPortal/StaffPortalPage.tsx` (content-only; renders
-  inside `AdminLayout`).
-- Where staff land when they open an admin path **not** in `STAFF_ALLOWED`
-  (`RequireBackoffice` redirects there). A centered card — `Construction` icon
-  tile (brand tint) + "Staff Portal" heading + "This page hasn't been built yet"
-  message. No mock data. As modules are enabled, staff hit this less and less.
+- **Page:** `src/features/misc/NotFoundPage.tsx` (standalone, no layout chrome).
+  Also wired to the router catch-all `{ path: '*' }`, so any unmatched URL shows it.
+- A staff user opening an admin path **not** in `STAFF_ALLOWED` (e.g. `/roles`,
+  `/settings`, `/courses`) gets the 404 from `RequireBackoffice` — the old "Staff
+  Portal — not built yet" placeholder was removed once staff had almost every module.
+- The 404's button reads **Back to home** (→ `homeFor(role)`) when signed in, or
+  **Back to login** otherwise.

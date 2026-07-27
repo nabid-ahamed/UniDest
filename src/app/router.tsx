@@ -87,7 +87,8 @@ import StudentPortalResourcesPage from '../features/student/StudentResourcesPage
 import StudentResourceCategoryPage from '../features/student/StudentResourceCategoryPage'
 import StudentWebinarsPage from '../features/student/StudentWebinarsPage'
 import StudentAccountPage from '../features/student/StudentAccountPage'
-import StaffPortalPage from '../features/staffPortal/StaffPortalPage'
+import NotFoundPage from '../features/misc/NotFoundPage'
+import BasicInfoPage from '../features/profile/BasicInfoPage'
 import { useAuth } from '../store/auth'
 
 const isStudent = (role?: string) => role === 'Student'
@@ -100,7 +101,7 @@ const isStaff = (role?: string) => role === 'Staff'
  * Enable a module for staff by adding its path here (prefix match covers nested
  * routes, e.g. '/leads' → '/leads/:id').
  */
-const STAFF_ALLOWED = ['/dashboard', '/staff-portal', '/leads', '/students', '/applications', '/services', '/course-finder', '/broadcast', '/webinars', '/invoices', '/analytics', '/automation', '/student-resources', '/media-library', '/cms/blog', '/cms/pages', '/cms/newsletter', '/announcements', '/message-templates']
+const STAFF_ALLOWED = ['/dashboard', '/leads', '/students', '/applications', '/services', '/course-finder', '/broadcast', '/webinars', '/invoices', '/analytics', '/automation', '/student-resources', '/media-library', '/cms/blog', '/cms/pages', '/cms/newsletter', '/announcements', '/message-templates', '/user-management', '/import', '/profile']
 const staffCanAccess = (pathname: string) =>
   STAFF_ALLOWED.some((p) => pathname === p || pathname.startsWith(p + '/'))
 
@@ -117,8 +118,9 @@ function RequireBackoffice() {
   const { pathname } = useLocation()
   if (!isAuthenticated) return <Navigate to="/login" replace />
   if (isStudent(user?.role)) return <Navigate to="/portal" replace />
-  if (isStaff(user?.role) && !staffCanAccess(pathname))
-    return <Navigate to="/staff-portal" replace />
+  // Staff hitting a module they don't have access to → 404 (those links are hidden
+  // from their nav, so a direct URL is effectively a broken link for them).
+  if (isStaff(user?.role) && !staffCanAccess(pathname)) return <NotFoundPage />
   return <Outlet />
 }
 
@@ -171,7 +173,6 @@ export const router = createBrowserRouter([
       {
         element: <AdminLayout />,
         children: [
-          { path: '/staff-portal', element: <StaffPortalPage /> },
           { path: '/dashboard', element: <DashboardPage /> },
           { path: '/leads', element: <LeadsPage /> },
           { path: '/leads/new', element: <AddLeadPage /> },
@@ -253,6 +254,7 @@ export const router = createBrowserRouter([
           { path: '/roles/:id/edit', element: <RoleFormPage /> },
           { path: '/settings', element: <SettingsPage /> },
           { path: '/notifications', element: <NotificationsPage /> },
+          { path: '/profile', element: <BasicInfoPage /> },
           { path: '/webinars', element: <WebinarsPage /> },
           { path: '/webinars/:id', element: <WebinarViewPage /> },
           { path: '/webinars/:id/edit', element: <EditWebinarPage /> },
@@ -261,5 +263,5 @@ export const router = createBrowserRouter([
       },
     ],
   },
-  { path: '*', element: <RootRedirect /> },
+  { path: '*', element: <NotFoundPage /> },
 ])
