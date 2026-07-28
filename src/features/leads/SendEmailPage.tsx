@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import {
   Bold,
   Italic,
@@ -13,23 +13,23 @@ import {
   Code,
   Paperclip,
 } from 'lucide-react'
-import { leads } from '../../mock/leads'
 import { templatesFor } from '../../mock/messageTemplates'
 import { showSuccessDialog } from '../../store/successDialog'
+import { useMessageRecipient } from '../broadcast/useMessageRecipient'
 
 /** Default signature appended to a new email (matches the reference layout). */
 const SIGNATURE = '\n\nThank You,\nGourav Kumar\nGlobalEd Support'
 const FROM = 'Portal <no-reply@globaled.inbox.mailtrap.io>'
 
 /**
- * Send Email page (route /leads/:id/email) — the "Send email" action from the
- * lead detail Actions panel redirects here, matching the reference
- * (Dashboard / Broadcast / Mail User → "Send Email"). Prototype: no real send.
+ * Send Email page — the "Send email" action from a lead OR application detail
+ * Actions panel redirects here (routes /leads/:id/email and
+ * /applications/:id/email), matching the reference (Broadcast / Mail User →
+ * "Send Email"). The recipient is resolved from the route. Prototype: no real send.
  */
 export default function SendEmailPage() {
-  const { id } = useParams()
   const navigate = useNavigate()
-  const lead = leads.find((l) => l.id === Number(id))
+  const recipient = useMessageRecipient()
 
   const emailTemplates = useMemo(() => templatesFor('email'), [])
   const [templateId, setTemplateId] = useState('')
@@ -37,7 +37,7 @@ export default function SendEmailPage() {
   const [body, setBody] = useState(SIGNATURE)
   const [files, setFiles] = useState<File[]>([])
 
-  if (!lead) {
+  if (!recipient) {
     return (
       <div className="rounded-xl border border-slate-200 bg-white p-12 text-center shadow-sm">
         <p className="text-slate-500">Recipient not found.</p>
@@ -69,8 +69,8 @@ export default function SendEmailPage() {
       showSuccessDialog('Please write a message before sending.', 'Message Required')
       return
     }
-    showSuccessDialog(`Email sent to ${lead.name} (${lead.email}).`, 'Email Sent')
-    navigate(`/leads/${lead.id}`)
+    showSuccessDialog(`Email sent to ${recipient.name} (${recipient.email}).`, 'Email Sent')
+    navigate(recipient.backTo)
   }
 
   const toolbar = [Bold, Italic, Underline, LinkIcon, List, ListOrdered, ImageIcon, Table, Quote, Code]
@@ -81,8 +81,8 @@ export default function SendEmailPage() {
 
       <div className="mt-4 space-y-1.5 text-sm">
         <p className="text-slate-600">
-          <span className="font-semibold text-slate-700">To:</span> {lead.name}{' '}
-          <span className="text-slate-400">&lt;{lead.email}&gt;</span>
+          <span className="font-semibold text-slate-700">To:</span> {recipient.name}{' '}
+          <span className="text-slate-400">&lt;{recipient.email}&gt;</span>
         </p>
         <p className="text-slate-600">
           <span className="font-semibold text-slate-700">From:</span> {FROM}
@@ -170,7 +170,7 @@ export default function SendEmailPage() {
       {/* Actions */}
       <div className="mt-8 flex items-center justify-center gap-3">
         <button
-          onClick={() => navigate(`/leads/${lead.id}`)}
+          onClick={() => navigate(recipient.backTo)}
           className="rounded-lg border border-slate-300 bg-white px-6 py-2 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50"
         >
           Cancel

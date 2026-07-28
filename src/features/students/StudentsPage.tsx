@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import { useAuth } from '../../store/auth'
 import { showSuccessDialog } from '../../store/successDialog'
 import { createPortal } from 'react-dom'
 import {
@@ -58,6 +59,7 @@ const PAGE_SIZES = [
 ]
 
 export default function StudentsPage() {
+  const loginAs = useAuth((s) => s.loginAs)
   const [search, setSearch] = useState('')
   const [statuses, setStatuses] = useState<string[]>([])
   const [countriesInterested, setCountriesInterested] = useState<string[]>([])
@@ -207,7 +209,10 @@ export default function StudentsPage() {
     if (type === 'EditProfile') return window.location.assign(`/students/${student.id}/edit`)
     if (type === 'Applications') return window.location.assign(`/students/${student.id}`)
     if (type === 'Login') {
-      showSuccessDialog(`You are now viewing the portal as ${student.name}.`, 'Logged In')
+      // Impersonate: become this student and open their portal. A "Return to
+      // admin" banner in the portal restores the original admin.
+      loginAs({ name: student.name, email: student.email, studentNo: student.studentNo })
+      window.location.assign('/portal')
       return
     }
     if (type === 'Transfer') return setTransferStudent(student)

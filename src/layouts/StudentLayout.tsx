@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Outlet } from 'react-router-dom'
 import { StudentSidebar } from '../features/student/StudentSidebar'
 import { StudentHeader } from '../features/student/StudentHeader'
+import { ImpersonationBanner } from '../features/student/ImpersonationBanner'
 import { GlobalSuccessDialog } from '../components/ui/GlobalSuccessDialog'
 
 /**
@@ -16,6 +17,7 @@ export default function StudentLayout() {
   return (
     <div className="flex min-h-screen flex-col bg-slate-100 lg:pl-64">
       <StudentSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <ImpersonationBanner />
       <StudentHeader onMenuClick={() => setSidebarOpen(true)} />
       <main className="flex-1 px-4 py-6 sm:px-6">
         <Outlet />

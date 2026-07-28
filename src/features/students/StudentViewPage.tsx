@@ -33,6 +33,12 @@ import { LeadIdentityHeader } from '../leads/components/LeadIdentityHeader'
 import { LeadProfileTab } from '../leads/components/LeadProfileTab'
 import { LeadCourseSuggestionTab } from '../leads/components/LeadCourseSuggestionTab'
 import { LeadCoursePreferencesTab } from '../leads/components/LeadCoursePreferencesTab'
+import { StudentDocumentsTab } from '../student/StudentDocumentsTab'
+import { StudentApplicationsTab } from './components/StudentApplicationsTab'
+import { StudentServicesTab } from './components/StudentServicesTab'
+import { StudentChatTab } from './components/StudentChatTab'
+import { NewFollowupDialog, type FollowupInput } from './components/NewFollowupDialog'
+import { addFollowup, loadFollowups, nextFollowupFor } from '../../mock/student/followups'
 import { students, studentStatuses, setStudentStatus, deleteStudent, studentAsLead, type Student } from '../../mock/students'
 import { addLead } from '../../mock/leads'
 
@@ -75,7 +81,11 @@ function StudentView({ student }: { student: Student }) {
   const [toast, setToast] = useState('')
   const [deleting, setDeleting] = useState(false)
   const [converting, setConverting] = useState(false)
+  const [followupOpen, setFollowupOpen] = useState(false)
   const [status, setStatus] = useState(student.status)
+  // Follow-up records + the next scheduled date (persisted per student).
+  const [followups, setFollowups] = useState(() => loadFollowups(student.id))
+  const [nextFollowup, setNextFollowup] = useState(() => nextFollowupFor(student.id))
 
   const statusColor =
     studentStatuses.find((s) => s.label === status)?.color ?? student.statusColor
@@ -92,6 +102,40 @@ function StudentView({ student }: { student: Student }) {
     setStatus(next)
     setStudentStatus(student.id, next)
     showToast(`Status changed to ${next}`)
+  }
+
+  // "dd Mon yyyy, h:mm AM" — matches the activity-log / next-follow-up styling.
+  const fmtDateTime = (value: string) =>
+    new Intl.DateTimeFormat('en-GB', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    }).format(new Date(value))
+
+  const submitFollowup = (input: FollowupInput) => {
+    const at = fmtDateTime(new Date().toISOString())
+    const nextLabel = input.next ? fmtDateTime(input.next) : ''
+    setFollowups(
+      addFollowup(student.id, {
+        details: input.details,
+        mode: input.mode,
+        status: input.status,
+        next: nextLabel,
+        at,
+        by: 'Admin Admin',
+      }),
+    )
+    if (nextLabel) setNextFollowup(nextLabel)
+    // A follow-up can also move the status forward.
+    if (input.status !== status) {
+      setStatus(input.status)
+      setStudentStatus(student.id, input.status)
+    }
+    setFollowupOpen(false)
+    showSuccessDialog('Follow-up record added successfully.', 'Follow-up Added')
   }
 
   /**
@@ -191,11 +235,12 @@ function StudentView({ student }: { student: Student }) {
               </div>
               <div className="flex items-center gap-3 text-sm">
                 <span className="text-slate-600">
-                  <span className="font-semibold text-slate-700">Next Follow-up:</span> --
+                  <span className="font-semibold text-slate-700">Next Follow-up:</span>{' '}
+                  {nextFollowup || '--'}
                 </span>
                 <button
                   type="button"
-                  onClick={() => showToast('New Follow-up Record — coming soon')}
+                  onClick={() => setFollowupOpen(true)}
                   className="inline-flex items-center gap-1.5 rounded-lg border border-brand-300 bg-white px-3 py-1.5 text-sm font-semibold text-brand-600 transition-colors hover:bg-brand-50"
                 >
                   <UserRoundPlus className="h-4 w-4" /> New Follow-up Record
@@ -244,6 +289,38 @@ function StudentView({ student }: { student: Student }) {
                 </div>
               </div>
             </section>
+
+            {/* Follow-up history — appears once the student has records. */}
+            {followups.length > 0 && (
+              <section>
+                <h2 className="text-lg font-bold text-slate-800">Follow-up History</h2>
+                <div className="mt-4 space-y-3">
+                  {followups.map((f) => (
+                    <div key={f.id} className="rounded-lg border border-slate-200 p-4">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="rounded-md bg-brand-50 px-2 py-0.5 text-xs font-semibold text-brand-700">
+                          {f.mode}
+                        </span>
+                        <span className="rounded-md bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600">
+                          {f.status}
+                        </span>
+                        {f.next && (
+                          <span className="text-xs text-slate-500">
+                            Next: <span className="font-medium text-slate-700">{f.next}</span>
+                          </span>
+                        )}
+                      </div>
+                      <p className="mt-2 text-sm text-slate-700 [overflow-wrap:anywhere]">
+                        {f.details}
+                      </p>
+                      <p className="mt-2 text-xs italic text-slate-500">
+                        {f.at} · {f.by}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
 
             <RecordsSection
               title="Invoices"
@@ -348,10 +425,32 @@ function StudentView({ student }: { student: Student }) {
         <div className="px-4 py-6 sm:px-6">
           <LeadCoursePreferencesTab lead={asLead} onToast={showToast} />
         </div>
-      ) : (
-        <div className="px-4 py-16 text-center sm:px-6">
-          <p className="text-slate-500">"{tab}" is still not built yet.</p>
+      ) : tab === 'Documents' ? (
+        <div className="px-4 py-6 sm:px-6">
+          <StudentDocumentsTab studentId={student.id} onToast={showToast} />
         </div>
+      ) : tab === 'Applications' ? (
+        <div className="px-4 py-6 sm:px-6">
+          <StudentApplicationsTab student={student} />
+        </div>
+      ) : tab === 'Services' ? (
+        <div className="px-4 py-6 sm:px-6">
+          <StudentServicesTab student={student} />
+        </div>
+      ) : (
+        <div className="px-4 py-6 sm:px-6">
+          <StudentChatTab student={student} onToast={showToast} />
+        </div>
+      )}
+
+      {/* New follow-up record */}
+      {followupOpen && (
+        <NewFollowupDialog
+          studentName={student.name}
+          currentStatus={status}
+          onClose={() => setFollowupOpen(false)}
+          onSubmit={submitFollowup}
+        />
       )}
 
       {/* Convert back to lead confirmation */}

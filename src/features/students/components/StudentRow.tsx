@@ -3,7 +3,6 @@ import {
   Mail,
   Phone,
   Pencil,
-  SquarePen,
   UserPlus,
   UserRoundPen,
   UserRound,
@@ -230,7 +229,6 @@ function MoreMenu({
           ]
         : [
             { label: `Login As ${name}`, icon: UserRound, type: 'Login' },
-            { label: 'Edit', icon: SquarePen, type: 'Edit' },
             { label: 'Edit Profile', icon: UserCog, type: 'EditProfile' },
             { label: 'Transfer Branch', icon: GitBranch, type: 'Transfer' },
             { label: 'Change Password', icon: KeyRound, type: 'Password' },

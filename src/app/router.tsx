@@ -188,6 +188,8 @@ export const router = createBrowserRouter([
           { path: '/students/:id/edit', element: <StudentFormPage /> },
           { path: '/applications', element: <ApplicationsPage /> },
           { path: '/applications/:id', element: <ApplicationViewPage /> },
+          { path: '/applications/:id/email', element: <SendEmailPage /> },
+          { path: '/applications/:id/sms', element: <SendSmsPage /> },
           { path: '/course-finder', element: <CourseFinderPage /> },
           { path: '/services', element: <AdditionalServicesPage /> },
           { path: '/services/:id', element: <ServiceViewPage /> },

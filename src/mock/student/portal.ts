@@ -5,6 +5,7 @@
 // Documented in docs/superpowers/mock-data/student.md.
 
 import { students } from '../students'
+import { useAuth } from '../../store/auth'
 import { applications, type Application } from '../applications'
 import {
   studentInvoices,
@@ -19,13 +20,25 @@ import {
 import { serviceRequests, type ServiceRequest } from '../services'
 
 /**
- * The signed-in student. The demo login (student@gmail.com) maps to one real
- * `students` record so every portal card connects to the admin modules. Chosen
+ * Default portal student for the plain demo login (student@gmail.com). Chosen
  * because this student has an application, an invoice and a service request.
  */
 const PORTAL_STUDENT_NO = 'STU-2026-1893'
 
+/**
+ * The signed-in student. When an admin used "Login As" (impersonation) the auth
+ * user carries that student's identity, so we resolve to the matching record by
+ * studentNo (then email). Otherwise the demo default. Maps to a real `students`
+ * record so every portal card connects to the admin modules.
+ */
 export function currentStudent() {
+  const user = useAuth.getState().user
+  if (user?.role === 'Student') {
+    const byNo = user.studentNo && students.find((s) => s.studentNo === user.studentNo)
+    if (byNo) return byNo
+    const byEmail = students.find((s) => s.email === user.email)
+    if (byEmail) return byEmail
+  }
   return students.find((s) => s.studentNo === PORTAL_STUDENT_NO) ?? students[0]
 }
 

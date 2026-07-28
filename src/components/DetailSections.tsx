@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { PlusCircle } from 'lucide-react'
+import { PlusCircle, Trash2 } from 'lucide-react'
 
 export function Detail({ label, value }: { label: string; value?: string }) {
   return (
@@ -20,16 +20,26 @@ export function DetailGrid({ rows }: { rows: [string, string | undefined][] }) {
   )
 }
 
-/** Empty records table with a Create button (Invoices / Support Tickets). */
+/**
+ * Records table with a Create button. Pass `rows` (cell arrays matching
+ * `headers`) to render records; omit or leave empty for the "No Records Found"
+ * state. Optional `onDelete(rowIndex)` adds a trailing remove action per row.
+ */
 export function RecordsSection({
   title,
   headers,
+  rows,
   onCreate,
+  onDelete,
 }: {
   title: string
   headers: string[]
+  rows?: (string | number)[][]
   onCreate: () => void
+  onDelete?: (rowIndex: number) => void
 }) {
+  const hasRows = !!rows && rows.length > 0
+  const colSpan = headers.length + (onDelete ? 1 : 0)
   return (
     <section>
       <div className="flex items-center justify-between">
@@ -49,14 +59,39 @@ export function RecordsSection({
                 {h}
               </th>
             ))}
+            {onDelete && <th className="px-4 py-2.5" />}
           </tr>
         </thead>
         <tbody>
-          <tr className="bg-slate-50 text-sm text-slate-500">
-            <td colSpan={headers.length} className="px-4 py-3 text-center">
-              No Records Found
-            </td>
-          </tr>
+          {hasRows ? (
+            rows!.map((row, i) => (
+              <tr key={i} className="border-b border-slate-100 text-sm text-slate-700 last:border-b-0">
+                {row.map((cell, j) => (
+                  <td key={j} className="px-4 py-3 [overflow-wrap:anywhere]">
+                    {cell}
+                  </td>
+                ))}
+                {onDelete && (
+                  <td className="px-4 py-3 text-right">
+                    <button
+                      type="button"
+                      onClick={() => onDelete(i)}
+                      aria-label="Remove record"
+                      className="text-rose-600 hover:text-rose-700"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </td>
+                )}
+              </tr>
+            ))
+          ) : (
+            <tr className="bg-slate-50 text-sm text-slate-500">
+              <td colSpan={colSpan} className="px-4 py-3 text-center">
+                No Records Found
+              </td>
+            </tr>
+          )}
         </tbody>
       </table>
     </section>

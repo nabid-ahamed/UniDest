@@ -28,6 +28,20 @@ import {
   setApplicationAssignee,
   deleteApplication,
 } from '../../mock/applications'
+import {
+  loadAppDocuments,
+  addAppDocument,
+  deleteAppDocument,
+  loadAppInvoices,
+  addAppInvoice,
+  deleteAppInvoice,
+} from '../../mock/applicationRecords'
+import {
+  AddDocumentDialog,
+  AddInvoiceDialog,
+  type DocumentInput,
+  type InvoiceInput,
+} from './components/ApplicationRecordDialogs'
 import { students } from '../../mock/students'
 
 /** Application detail page (route /applications/:id), matching the reference "View" page. */
@@ -59,9 +73,37 @@ function ApplicationView({ app }: { app: NonNullable<ReturnType<typeof getApplic
   const [assignedTo, setAssignedTo] = useState(app.assignedTo)
   const [assigning, setAssigning] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  // Per-application documents + invoices (persisted per app id).
+  const [documents, setDocuments] = useState(() => loadAppDocuments(app.id))
+  const [invoices, setInvoices] = useState(() => loadAppInvoices(app.id))
+  const [addingDoc, setAddingDoc] = useState(false)
+  const [addingInvoice, setAddingInvoice] = useState(false)
 
   // Link back to the originating student record when the studentNo matches.
   const student = students.find((s) => s.studentNo === app.studentNo)
+
+  const todayLabel = () =>
+    new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).format(
+      new Date(),
+    )
+
+  const submitDocument = (input: DocumentInput) => {
+    setDocuments(addAppDocument(app.id, { ...input, uploaded: todayLabel() }))
+    setAddingDoc(false)
+    showToast(`Document "${input.name}" added`)
+  }
+
+  const submitInvoice = (input: InvoiceInput) => {
+    setInvoices(
+      addAppInvoice(app.id, {
+        date: todayLabel(),
+        number: input.number,
+        amount: `${input.currency} ${input.amount}`,
+      }),
+    )
+    setAddingInvoice(false)
+    showToast(`Invoice ${input.number} created`)
+  }
 
   const statusColor =
     applicationStatuses.find((s) => s.label === status)?.color ?? app.statusColor
@@ -86,11 +128,51 @@ function ApplicationView({ app }: { app: NonNullable<ReturnType<typeof getApplic
     setAssigning(false)
   }
 
+  /** Open WhatsApp for the student's number (real, like the reference wa.me link). */
+  const openWhatsapp = () => {
+    const digits = (student?.phone ?? '').replace(/\D/g, '')
+    if (!digits) return showToast('No mobile number on file')
+    window.open(`https://wa.me/${digits}`, '_blank', 'noopener,noreferrer')
+  }
+
+  /** Generate + download an offer letter for this application (prototype text file). */
+  const downloadOfferLetter = () => {
+    const today = new Intl.DateTimeFormat('en-GB', { dateStyle: 'long' }).format(new Date())
+    const text = [
+      'GlobalEd — IELTS & Study Abroad Consultancy',
+      '',
+      `Date: ${today}`,
+      `Application #: ${app.id}`,
+      '',
+      `Dear ${app.student},`,
+      '',
+      `We are pleased to confirm your application to ${app.university} for the`,
+      `${app.course} programme (${app.intake} intake) in ${app.country}.`,
+      '',
+      `Current status: ${status}.`,
+      '',
+      'This letter serves as confirmation of your application record with GlobalEd.',
+      'Please contact your assigned counsellor for the next steps.',
+      '',
+      'Warm regards,',
+      'GlobalEd Admissions Team',
+    ].join('\n')
+    const url = URL.createObjectURL(new Blob([text], { type: 'text/plain' }))
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `offer-letter-application-${app.id}.txt`
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    URL.revokeObjectURL(url)
+    showToast('Offer letter downloaded')
+  }
+
   const ACTIONS = [
-    { label: 'Send email', icon: Mail },
-    { label: 'Send sms', icon: MessageSquare },
-    { label: 'Send Whatsapp', icon: MessageCircle },
-    { label: 'Download Offer Letter', icon: FileDown },
+    { label: 'Send email', icon: Mail, run: () => navigate(`/applications/${app.id}/email`) },
+    { label: 'Send sms', icon: MessageSquare, run: () => navigate(`/applications/${app.id}/sms`) },
+    { label: 'Send Whatsapp', icon: MessageCircle, run: openWhatsapp },
+    { label: 'Download Offer Letter', icon: FileDown, run: downloadOfferLetter },
   ]
 
   // Newest first; the top entry reflects a live status change on this page.
@@ -213,13 +295,25 @@ function ApplicationView({ app }: { app: NonNullable<ReturnType<typeof getApplic
           <RecordsSection
             title="Documents"
             headers={['Name', 'Type', 'Uploaded', 'Status']}
-            onCreate={() => showToast('Upload document — coming soon')}
+            rows={documents.map((d) => [d.name, d.type, d.uploaded, d.status])}
+            onCreate={() => setAddingDoc(true)}
+            onDelete={(i) => {
+              const doc = documents[i]
+              setDocuments(deleteAppDocument(app.id, doc.id))
+              showToast('Document removed')
+            }}
           />
 
           <RecordsSection
             title="Invoices"
             headers={['Date', 'Invoice #', 'Amount']}
-            onCreate={() => showToast('Create invoice — coming soon')}
+            rows={invoices.map((inv) => [inv.date, inv.number, inv.amount])}
+            onCreate={() => setAddingInvoice(true)}
+            onDelete={(i) => {
+              const inv = invoices[i]
+              setInvoices(deleteAppInvoice(app.id, inv.id))
+              showToast('Invoice removed')
+            }}
           />
 
           <section>
@@ -280,7 +374,7 @@ function ApplicationView({ app }: { app: NonNullable<ReturnType<typeof getApplic
                 <button
                   key={a.label}
                   type="button"
-                  onClick={() => showToast(`${a.label} — coming soon`)}
+                  onClick={a.run}
                   className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm font-medium text-slate-700 transition-colors hover:bg-brand-50 hover:text-brand-700"
                 >
                   <a.icon className="h-4 w-4 text-brand-600" />
@@ -316,6 +410,20 @@ function ApplicationView({ app }: { app: NonNullable<ReturnType<typeof getApplic
           staff={applicationStaff}
           onClose={() => setAssigning(false)}
           onSave={saveAssignee}
+        />
+      )}
+
+      {/* Add document */}
+      {addingDoc && (
+        <AddDocumentDialog onClose={() => setAddingDoc(false)} onSubmit={submitDocument} />
+      )}
+
+      {/* Create invoice */}
+      {addingInvoice && (
+        <AddInvoiceDialog
+          suggestedNumber={`INV-${app.id}-${invoices.length + 1}`}
+          onClose={() => setAddingInvoice(false)}
+          onSubmit={submitInvoice}
         />
       )}
 

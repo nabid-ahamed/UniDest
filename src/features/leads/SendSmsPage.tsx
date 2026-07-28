@@ -1,25 +1,24 @@
 import { useMemo, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
-import { leads } from '../../mock/leads'
+import { useNavigate } from 'react-router-dom'
 import { templatesFor } from '../../mock/messageTemplates'
 import { showSuccessDialog } from '../../store/successDialog'
+import { useMessageRecipient } from '../broadcast/useMessageRecipient'
 
 /**
- * Send SMS page (route /leads/:id/sms) — the "Send sms" action from the lead
- * detail Actions panel redirects here, matching the reference
- * (Dashboard / Broadcast / SMS User → "Send SMS"). Simpler than the email page:
- * User + Mobile, a template selector and a single message box. Prototype: no real send.
+ * Send SMS page — the "Send sms" action from a lead OR application detail
+ * Actions panel redirects here (routes /leads/:id/sms and /applications/:id/sms),
+ * matching the reference (Broadcast / SMS User → "Send SMS"). The recipient is
+ * resolved from the route. Prototype: no real send.
  */
 export default function SendSmsPage() {
-  const { id } = useParams()
   const navigate = useNavigate()
-  const lead = leads.find((l) => l.id === Number(id))
+  const recipient = useMessageRecipient()
 
   const smsTemplates = useMemo(() => templatesFor('sms'), [])
   const [templateId, setTemplateId] = useState('')
   const [message, setMessage] = useState('')
 
-  if (!lead) {
+  if (!recipient) {
     return (
       <div className="rounded-xl border border-slate-200 bg-white p-12 text-center shadow-sm">
         <p className="text-slate-500">Recipient not found.</p>
@@ -44,8 +43,8 @@ export default function SendSmsPage() {
       showSuccessDialog('Please write a message before sending.', 'Message Required')
       return
     }
-    showSuccessDialog(`SMS sent to ${lead.name} (${lead.phone}).`, 'SMS Sent')
-    navigate(`/leads/${lead.id}`)
+    showSuccessDialog(`SMS sent to ${recipient.name} (${recipient.phone}).`, 'SMS Sent')
+    navigate(recipient.backTo)
   }
 
   return (
@@ -54,10 +53,10 @@ export default function SendSmsPage() {
 
       <div className="mt-4 space-y-1.5 text-sm">
         <p className="text-slate-600">
-          <span className="font-semibold text-slate-700">User:</span> {lead.name}
+          <span className="font-semibold text-slate-700">User:</span> {recipient.name}
         </p>
         <p className="text-slate-600">
-          <span className="font-semibold text-slate-700">Mobile:</span> {lead.phone || '—'}
+          <span className="font-semibold text-slate-700">Mobile:</span> {recipient.phone || '—'}
         </p>
       </div>
 
@@ -96,7 +95,7 @@ export default function SendSmsPage() {
       {/* Actions */}
       <div className="mt-8 flex items-center justify-center gap-3">
         <button
-          onClick={() => navigate(`/leads/${lead.id}`)}
+          onClick={() => navigate(recipient.backTo)}
           className="rounded-lg border border-slate-300 bg-white px-6 py-2 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50"
         >
           Cancel
