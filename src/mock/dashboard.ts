@@ -271,3 +271,76 @@ export const leadStatusStats: AppStatusStat[] = [
   { label: 'Testing', count: 2, tone: 'neutral' },
   { label: 'Total Leads', count: 176, tone: 'total' },
 ]
+
+// ── Branch filtering ───────────────────────────────────────────────────────
+// The datasets above are the "All Branch" totals. Each branch holds a share of
+// the whole; picking one scales every number by that share so the dashboard
+// visibly re-renders. Shares (excluding "All Branch") sum to 1, so the parts
+// add back up to the totals — a believable breakdown for the prototype.
+// Replaced by real per-branch aggregation in Phase 2.
+const BRANCH_SHARE: Record<string, number> = {
+  Dhaka: 0.46,
+  Chattogram: 0.24,
+  Sylhet: 0.18,
+  Khulna: 0.12,
+}
+
+/** Scale a count by the branch share; keep totals whole and never below 0. */
+function scale(value: number, share: number): number {
+  return Math.max(0, Math.round(value * share))
+}
+
+function scaleStats<T extends { count: number }>(items: T[], share: number): T[] {
+  return items.map((s) => ({ ...s, count: scale(s.count, share) }))
+}
+
+export interface BranchDashboard {
+  branch: string
+  stats: StatCardData[]
+  monthlyTrend: TrendPoint[]
+  applicationsDaily: DailyPoint[]
+  applicationStatusStats: AppStatusStat[]
+  studentStatusStats: AppStatusStat[]
+  leadStatusStats: AppStatusStat[]
+  ticketSummary: SimpleStat[]
+  ticketsByPriority: Breakdown[]
+  yourStats: SimpleStat[]
+}
+
+/**
+ * All dashboard datasets scoped to a branch. "All Branch" (or an unknown value)
+ * returns the full totals unchanged; a named branch returns scaled copies.
+ */
+export function branchDashboard(branch: string): BranchDashboard {
+  const share = BRANCH_SHARE[branch]
+  if (!share) {
+    return {
+      branch,
+      stats: dashboardStats,
+      monthlyTrend,
+      applicationsDaily,
+      applicationStatusStats,
+      studentStatusStats,
+      leadStatusStats,
+      ticketSummary,
+      ticketsByPriority,
+      yourStats,
+    }
+  }
+  return {
+    branch,
+    stats: dashboardStats.map((s) => ({ ...s, value: scale(s.value, share) })),
+    monthlyTrend: monthlyTrend.map((p) => ({
+      ...p,
+      students: scale(p.students, share),
+      leads: scale(p.leads, share),
+    })),
+    applicationsDaily: applicationsDaily.map((p) => ({ ...p, count: scale(p.count, share) })),
+    applicationStatusStats: scaleStats(applicationStatusStats, share),
+    studentStatusStats: scaleStats(studentStatusStats, share),
+    leadStatusStats: scaleStats(leadStatusStats, share),
+    ticketSummary: ticketSummary.map((s) => ({ ...s, value: scale(s.value, share) })),
+    ticketsByPriority: scaleStats(ticketsByPriority, share),
+    yourStats: yourStats.map((s) => ({ ...s, value: scale(s.value, share) })),
+  }
+}

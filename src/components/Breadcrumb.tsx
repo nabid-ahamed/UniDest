@@ -10,7 +10,6 @@ const TITLES: Record<string, string> = {
   '/webinars': 'Webinar',
   '/course-finder': 'Course Finder',
   '/broadcast': 'Broadcast',
-  '/services': 'Additional Services',
   '/invoices/university': 'University Invoices',
   '/invoices/student': 'Student Invoices',
   '/referral/signups': 'Student Referral Signups',
@@ -88,11 +87,6 @@ function dynamicTrail(pathname: string): Crumb[] | null {
     return [{ label: 'Broadcast', to: '/broadcast' }, { label: 'SMS User' }]
   if (/^\/invoices\/student\/\d+\/edit$/.test(pathname))
     return [{ label: 'Student Invoices', to: '/invoices/student' }, { label: 'Edit Invoice' }]
-  if (/^\/services\/\d+$/.test(pathname))
-    return [
-      { label: 'Additional Services', to: '/services' },
-      { label: 'Visa & Services Detail' },
-    ]
   if (/^\/applications\/\d+$/.test(pathname))
     return [{ label: 'Applications', to: '/applications' }, { label: 'View' }]
   if (/^\/applications\/\d+\/email$/.test(pathname))

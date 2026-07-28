@@ -19,7 +19,6 @@ import { studentResources, resourceCategories } from './studentResources'
 import { media } from './mediaLibrary'
 import { announcements } from './announcements'
 import { webinars } from './webinars'
-import { serviceRequests } from './services'
 import { universityInvoices } from './invoices'
 import { studentInvoices } from './studentInvoices'
 import {
@@ -61,7 +60,6 @@ const REGISTRY: RegistryEntry[] = [
   { storageKey: 'unidest-media-library', label: 'Media Library', route: '/media-library', kind: 'data', get: () => media },
   { storageKey: 'unidest-announcements', label: 'Announcements', route: '/announcements', kind: 'data', get: () => announcements },
   { storageKey: 'unidest-webinars', label: 'Webinars', route: '/webinars', kind: 'data', get: () => webinars },
-  { storageKey: 'unidest-services', label: 'Additional Services', route: '/services', kind: 'data', get: () => serviceRequests },
   { storageKey: 'unidest-uni-invoices', label: 'University Invoices', route: '/invoices/university', kind: 'data', get: () => universityInvoices },
   { storageKey: 'unidest-student-invoices', label: 'Student Invoices', route: '/invoices/student', kind: 'data', get: () => studentInvoices },
   { storageKey: 'unidest-cms-countries', label: 'CMS · Countries', route: '/cms/countries', kind: 'data', get: () => cmsCountries },

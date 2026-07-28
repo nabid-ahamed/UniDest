@@ -1,17 +1,10 @@
+import { useMemo, useState } from 'react'
 import { useAuth } from '../../store/auth'
 import {
-  dashboardStats,
-  monthlyTrend,
-  applicationsDaily,
   leadFollowups,
   studentFollowups,
   branches,
-  ticketSummary,
-  ticketsByPriority,
-  yourStats,
-  applicationStatusStats,
-  studentStatusStats,
-  leadStatusStats,
+  branchDashboard,
 } from '../../mock/dashboard'
 import { StatCard } from './components/StatCard'
 import { CollapsibleSection } from './components/CollapsibleSection'
@@ -23,15 +16,16 @@ import { RemindersCard } from './components/RemindersCard'
 import { BreakdownCard } from './components/BreakdownCard'
 import { StatTile } from './components/StatTile'
 import { StatusTileGrid } from './components/StatusTileGrid'
+import type { TrendPoint, DailyPoint } from '../../mock/dashboard'
 
-function ChartsRow() {
+function ChartsRow({ trend, applications }: { trend: TrendPoint[]; applications: DailyPoint[] }) {
   return (
     <div className="grid gap-4 lg:grid-cols-3">
       <div className="lg:col-span-2">
-        <TrendAreaCard title="Students & Leads" data={monthlyTrend} height={280} />
+        <TrendAreaCard title="Students & Leads" data={trend} height={280} />
       </div>
       <div className="grid gap-4">
-        <ChartCard title="Applications" subtitle="Last 7 Days" data={applicationsDaily} color="#8b5cf6" height={280} />
+        <ChartCard title="Applications" subtitle="Last 7 Days" data={applications} color="#8b5cf6" height={280} />
       </div>
     </div>
   )
@@ -39,6 +33,10 @@ function ChartsRow() {
 
 export default function DashboardPage() {
   const user = useAuth((s) => s.user)
+  const [branch, setBranch] = useState(branches[0])
+
+  // All datasets scoped to the selected branch. "All Branch" is the full total.
+  const data = useMemo(() => branchDashboard(branch), [branch])
 
   return (
     <div className="space-y-2">
@@ -47,7 +45,12 @@ export default function DashboardPage() {
         <h1 className="text-xl font-bold text-slate-900">
           Welcome back, <span className="capitalize">{user?.name || 'Admin'}</span> !
         </h1>
-        <select className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500">
+        <select
+          value={branch}
+          onChange={(e) => setBranch(e.target.value)}
+          aria-label="Filter dashboard by branch"
+          className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500"
+        >
           {branches.map((b) => (
             <option key={b}>{b}</option>
           ))}
@@ -56,16 +59,16 @@ export default function DashboardPage() {
 
       {/* Stat cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {dashboardStats.map((s) => (
+        {data.stats.map((s) => (
           <StatCard key={s.key} stat={s} />
         ))}
       </div>
 
       {/* Charts */}
-      <ChartsRow />
+      <ChartsRow trend={data.monthlyTrend} applications={data.applicationsDaily} />
 
       {/* Statistics overview donut */}
-      <OverviewDonut />
+      <OverviewDonut stats={data.stats} />
 
       {/* Follow-ups */}
       <CollapsibleSection title="Follow-ups">
@@ -83,35 +86,35 @@ export default function DashboardPage() {
       {/* Study abroad stats */}
       <CollapsibleSection title="Study Abroad Stats">
         <p className="mb-3 text-sm font-semibold text-slate-600">University Applications</p>
-        <StatusTileGrid items={applicationStatusStats} />
+        <StatusTileGrid items={data.applicationStatusStats} />
       </CollapsibleSection>
 
       {/* Students */}
       <CollapsibleSection title="Students">
-        <StatusTileGrid items={studentStatusStats} />
+        <StatusTileGrid items={data.studentStatusStats} />
       </CollapsibleSection>
 
       {/* Leads */}
       <CollapsibleSection title="Leads">
-        <StatusTileGrid items={leadStatusStats} />
+        <StatusTileGrid items={data.leadStatusStats} />
       </CollapsibleSection>
 
       {/* Tickets */}
       <CollapsibleSection title="Tickets" defaultOpen={false}>
         <div className="grid gap-4 lg:grid-cols-3">
           <div className="grid grid-cols-2 gap-4 lg:col-span-2">
-            {ticketSummary.map((s) => (
+            {data.ticketSummary.map((s) => (
               <StatTile key={s.label} stat={s} />
             ))}
           </div>
-          <BreakdownCard title="By Priority" items={ticketsByPriority} />
+          <BreakdownCard title="By Priority" items={data.ticketsByPriority} />
         </div>
       </CollapsibleSection>
 
       {/* Your stats */}
       <CollapsibleSection title="Your Stats" defaultOpen={false}>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {yourStats.map((s) => (
+          {data.yourStats.map((s) => (
             <StatTile key={s.label} stat={s} />
           ))}
         </div>

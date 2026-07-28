@@ -35,7 +35,6 @@ import { LeadCourseSuggestionTab } from '../leads/components/LeadCourseSuggestio
 import { LeadCoursePreferencesTab } from '../leads/components/LeadCoursePreferencesTab'
 import { StudentDocumentsTab } from '../student/StudentDocumentsTab'
 import { StudentApplicationsTab } from './components/StudentApplicationsTab'
-import { StudentServicesTab } from './components/StudentServicesTab'
 import { StudentChatTab } from './components/StudentChatTab'
 import { NewFollowupDialog, type FollowupInput } from './components/NewFollowupDialog'
 import { addFollowup, loadFollowups, nextFollowupFor } from '../../mock/student/followups'
@@ -49,7 +48,6 @@ const TABS = [
   'Course Preferences',
   'Documents',
   'Applications',
-  'Services',
   'Chat',
 ] as const
 
@@ -432,10 +430,6 @@ function StudentView({ student }: { student: Student }) {
       ) : tab === 'Applications' ? (
         <div className="px-4 py-6 sm:px-6">
           <StudentApplicationsTab student={student} />
-        </div>
-      ) : tab === 'Services' ? (
-        <div className="px-4 py-6 sm:px-6">
-          <StudentServicesTab student={student} />
         </div>
       ) : (
         <div className="px-4 py-6 sm:px-6">

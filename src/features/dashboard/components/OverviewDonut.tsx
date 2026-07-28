@@ -1,4 +1,4 @@
-import { useRef, useState, type MouseEvent } from 'react'
+import { useMemo, useRef, useState, type MouseEvent } from 'react'
 import { cn } from '../../../lib/cn'
 import { dashboardStats, type StatCardData } from '../../../mock/dashboard'
 
@@ -17,13 +17,6 @@ interface Item {
   value: number
   color: string
 }
-
-const ALL: Item[] = dashboardStats.map((s) => ({
-  key: s.key,
-  name: s.sublabel,
-  value: s.value,
-  color: HEX[s.color],
-}))
 
 // Fixed viewBox — scales with the container, labels never clip.
 // Ring proportions follow the reference: thick band, small centre hole (~⅓).
@@ -63,12 +56,24 @@ function spread<T extends { y: number }>(list: T[]): T[] {
   return list
 }
 
-export function OverviewDonut() {
+export function OverviewDonut({ stats = dashboardStats }: { stats?: StatCardData[] }) {
   const [hidden, setHidden] = useState<Set<string>>(new Set())
   const [activeKey, setActiveKey] = useState<string | null>(null)
   const [tip, setTip] = useState<{ key: string; x: number; y: number } | null>(null)
   const wrapRef = useRef<HTMLDivElement>(null)
   const hideTimer = useRef<number | undefined>(undefined)
+
+  // Slices reflect the passed-in (branch-scoped) stats.
+  const ALL: Item[] = useMemo(
+    () =>
+      stats.map((s) => ({
+        key: s.key,
+        name: s.sublabel,
+        value: s.value,
+        color: HEX[s.color],
+      })),
+    [stats],
+  )
 
   const visible = ALL.filter((s) => !hidden.has(s.key))
   const total = visible.reduce((n, s) => n + s.value, 0)
