@@ -34,6 +34,7 @@ import { LeadProfileTab } from '../leads/components/LeadProfileTab'
 import { LeadCourseSuggestionTab } from '../leads/components/LeadCourseSuggestionTab'
 import { LeadCoursePreferencesTab } from '../leads/components/LeadCoursePreferencesTab'
 import { students, studentStatuses, setStudentStatus, deleteStudent, studentAsLead, type Student } from '../../mock/students'
+import { addLead } from '../../mock/leads'
 
 const TABS = [
   'Overview',
@@ -73,6 +74,7 @@ function StudentView({ student }: { student: Student }) {
   const [tab, setTab] = useState<(typeof TABS)[number]>('Overview')
   const [toast, setToast] = useState('')
   const [deleting, setDeleting] = useState(false)
+  const [converting, setConverting] = useState(false)
   const [status, setStatus] = useState(student.status)
 
   const statusColor =
@@ -90,6 +92,28 @@ function StudentView({ student }: { student: Student }) {
     setStatus(next)
     setStudentStatus(student.id, next)
     showToast(`Status changed to ${next}`)
+  }
+
+  /**
+   * Convert a student back into a lead: mirrors the Lead → Student flow.
+   * Recreate the record in the leads list, drop it from Students, then open
+   * the new lead. The student's fields carry over via studentAsLead().
+   */
+  const doConvertBack = () => {
+    const base = studentAsLead(student, 'New Lead')
+    // addLead assigns the id; strip it and reset lead-only bookkeeping.
+    const { id: _id, ...leadData } = base
+    void _id
+    const lead = addLead({
+      ...leadData,
+      statusColor: '#0e7490',
+      source: 'Student Convert',
+      nextFollowup: null,
+    })
+    deleteStudent(student.id)
+    setConverting(false)
+    showSuccessDialog(`${student.name} has been converted back to a lead.`, 'Converted To Lead')
+    navigate(`/leads/${lead.id}`)
   }
 
   const ACTIONS = [
@@ -278,7 +302,11 @@ function StudentView({ student }: { student: Student }) {
                     <button
                       key={a.label}
                       type="button"
-                      onClick={() => showToast(`${a.label} — coming soon`)}
+                      onClick={() =>
+                        a.label === 'Convert Back To Lead'
+                          ? setConverting(true)
+                          : showToast(`${a.label} — coming soon`)
+                      }
                       className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm font-medium text-slate-700 transition-colors hover:bg-brand-50 hover:text-brand-700"
                     >
                       <a.icon className="h-4 w-4 text-brand-600" />
@@ -325,6 +353,25 @@ function StudentView({ student }: { student: Student }) {
           <p className="text-slate-500">"{tab}" is still not built yet.</p>
         </div>
       )}
+
+      {/* Convert back to lead confirmation */}
+      {converting &&
+        createPortal(
+          <ConfirmDialog
+            open
+            title="Convert this student back to a lead?"
+            message={
+              <>
+                <span className="font-medium text-slate-700">{student.name}</span> will be moved back
+                to Lead Management. This removes them from the students list.
+              </>
+            }
+            confirmLabel="Convert"
+            onConfirm={doConvertBack}
+            onCancel={() => setConverting(false)}
+          />,
+          document.body,
+        )}
 
       {/* Delete confirmation */}
       {deleting &&

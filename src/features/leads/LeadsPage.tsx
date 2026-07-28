@@ -18,6 +18,8 @@ import { formatDateTime } from '../../components/DateTimePicker'
 import type { Lead } from '../../mock/leads'
 import {
   leads,
+  updateLead,
+  deleteLead,
   leadStatuses,
   leadStaff,
   leadCountries,
@@ -37,6 +39,9 @@ import { AssignStaffDialog } from './components/AssignStaffDialog'
 import { ConvertCounselingDialog } from './components/ConvertCounselingDialog'
 import { AlertDialog } from '../../components/ui/AlertDialog'
 import { SuccessDialog } from '../../components/ui/SuccessDialog'
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
+import { TransferBranchDialog } from './components/TransferBranchDialog'
+import { ChangePasswordDialog } from './components/ChangePasswordDialog'
 
 /** A lead may carry at most this many tags. */
 const MAX_TAGS = 5
@@ -69,6 +74,12 @@ export default function LeadsPage() {
   const [limitLead, setLimitLead] = useState<Lead | null>(null)
   const [assignLead, setAssignLead] = useState<Lead | null>(null)
   const [counselLead, setCounselLead] = useState<Lead | null>(null)
+  // Settings (gear) menu targets.
+  const [transferLead, setTransferLead] = useState<Lead | null>(null)
+  const [passwordLead, setPasswordLead] = useState<Lead | null>(null)
+  const [deleteLeadTarget, setDeleteLeadTarget] = useState<Lead | null>(null)
+  // Bumped after a delete so the table re-reads the (now shorter) leads list.
+  const [listRev, setListRev] = useState(0)
   const [successMsg, setSuccessMsg] = useState('')
   // Owner per lead id, seeded from the mock so re-assignment persists in the UI.
   const [assignees, setAssignees] = useState<Record<number, string | null>>(() =>
@@ -138,12 +149,48 @@ export default function LeadsPage() {
     }
     if (type === 'Assign') return setAssignLead(lead)
     if (type === 'View') return window.location.assign(`/leads/${lead.id}`)
+    if (type === 'Edit') return window.location.assign(`/leads/${lead.id}/edit`)
+    if (type === 'Transfer Branch') return setTransferLead(lead)
+    if (type === 'Change Password') return setPasswordLead(lead)
+    if (type === 'Delete') return setDeleteLeadTarget(lead)
     showToast(`${type}: ${lead.name} (#${lead.id})`)
+  }
+
+  const saveBranch = (branch: string) => {
+    if (!transferLead) return
+    persistLead(transferLead.id, { branch })
+    setTransferLead(null)
+    setSuccessMsg('Lead Branch Transferred Successfully')
+  }
+
+  const doChangePassword = () => {
+    const name = passwordLead?.name
+    setPasswordLead(null)
+    setSuccessMsg(`Password changed for ${name}.`)
+  }
+
+  const confirmDelete = () => {
+    if (!deleteLeadTarget) return
+    deleteLead(deleteLeadTarget.id)
+    setDeleteLeadTarget(null)
+    setSuccessMsg('Lead Deleted Successfully')
+    setListRev((n) => n + 1)
+  }
+
+  /**
+   * Persist a change to the shared leads list + localStorage so row edits
+   * (assignee, status, follow-up, tags) survive a page refresh. The per-id
+   * state above still drives the render; this keeps the source of truth in sync.
+   */
+  const persistLead = (id: number, patch: Partial<Lead>) => {
+    const lead = leads.find((l) => l.id === id)
+    if (lead) updateLead({ ...lead, ...patch })
   }
 
   const saveAssignee = (member: string) => {
     if (!assignLead) return
     setAssignees((prev) => ({ ...prev, [assignLead.id]: member }))
+    persistLead(assignLead.id, { assignedTo: member })
     setAssignLead(null)
     setSuccessMsg('Lead Assigned Successfully')
   }
@@ -161,8 +208,10 @@ export default function LeadsPage() {
     if (already) {
       showToast(`"${tag}" is already on ${tagLead.name}`)
     } else {
-      setLeadTags((prev) => ({ ...prev, [tagLead.id]: [...(prev[tagLead.id] ?? []), tag] }))
+      const nextTags = [...current, tag]
+      setLeadTags((prev) => ({ ...prev, [tagLead.id]: nextTags }))
       setRecentTags((prev) => [tag, ...prev.filter((t) => t !== tag)].slice(0, 10))
+      persistLead(tagLead.id, { tags: nextTags })
       showToast(`Tag "${tag}" added to ${tagLead.name}`)
     }
     setTagLead(null)
@@ -174,6 +223,7 @@ export default function LeadsPage() {
     if (next === 'Counseling') return setCounselLead(lead)
     if ((rowStatuses[lead.id] ?? lead.status) === next) return
     setRowStatuses((prev) => ({ ...prev, [lead.id]: next }))
+    persistLead(lead.id, { status: next })
     setSuccessMsg('Lead Status Changed Successfully')
   }
 
@@ -185,12 +235,19 @@ export default function LeadsPage() {
     // counsellor becomes the assignee.
     setFollowups((prev) => ({ ...prev, [counselLead.id]: formatted }))
     setAssignees((prev) => ({ ...prev, [counselLead.id]: counsellor }))
+    persistLead(counselLead.id, {
+      status: 'Counseling',
+      nextFollowup: formatted,
+      assignedTo: counsellor,
+    })
     setCounselLead(null)
     setSuccessMsg('Lead Status Changed Successfully')
   }
 
   const removeTag = (leadId: number, tag: string) => {
-    setLeadTags((prev) => ({ ...prev, [leadId]: (prev[leadId] ?? []).filter((t) => t !== tag) }))
+    const nextTags = (leadTags[leadId] ?? []).filter((t) => t !== tag)
+    setLeadTags((prev) => ({ ...prev, [leadId]: nextTags }))
+    persistLead(leadId, { tags: nextTags })
     showToast(`Tag "${tag}" removed`)
   }
 
@@ -208,7 +265,7 @@ export default function LeadsPage() {
       }
       return true
     })
-  }, [search, statuses, countriesInterested, staff, branch, assignees, rowStatuses])
+  }, [search, statuses, countriesInterested, staff, branch, assignees, rowStatuses, listRev])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
   const currentPage = Math.min(page, totalPages)
@@ -292,13 +349,18 @@ export default function LeadsPage() {
               Refresh List
             </span>
           </div>
-          <button
-            onClick={() => showToast('Import — coming soon')}
-            aria-label="Import"
-            className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition-colors hover:bg-slate-50"
-          >
-            <UploadCloud className="h-4 w-4" />
-          </button>
+          <div className="group relative">
+            <a
+              href="/import?tab=leads"
+              aria-label="Import Leads"
+              className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition-colors hover:bg-slate-50"
+            >
+              <UploadCloud className="h-4 w-4" />
+            </a>
+            <span className="pointer-events-none absolute left-1/2 top-full z-20 mt-1.5 -translate-x-1/2 whitespace-nowrap rounded bg-slate-700 px-2 py-1 text-xs font-medium text-white opacity-0 shadow-sm transition-opacity group-hover:opacity-100">
+              Import Leads
+            </span>
+          </div>
           <a
             href="/leads/new"
             className="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-3.5 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-700"
@@ -688,6 +750,45 @@ export default function LeadsPage() {
           onUpdate={convertToCounseling}
         />
       )}
+
+      {/* Transfer branch */}
+      {transferLead && (
+        <TransferBranchDialog
+          lead={transferLead}
+          current={transferLead.branch}
+          branches={leadBranches.filter((b) => b !== 'All Branch')}
+          onClose={() => setTransferLead(null)}
+          onSave={saveBranch}
+        />
+      )}
+
+      {/* Change password */}
+      {passwordLead && (
+        <ChangePasswordDialog
+          lead={passwordLead}
+          onClose={() => setPasswordLead(null)}
+          onSave={doChangePassword}
+        />
+      )}
+
+      {/* Delete lead */}
+      {deleteLeadTarget &&
+        createPortal(
+          <ConfirmDialog
+            open
+            title="Delete this lead?"
+            message={
+              <>
+                <span className="font-medium text-slate-700">{deleteLeadTarget.name}</span> (#
+                {deleteLeadTarget.id}) will be removed permanently.
+              </>
+            }
+            confirmLabel="Delete"
+            onConfirm={confirmDelete}
+            onCancel={() => setDeleteLeadTarget(null)}
+          />,
+          document.body,
+        )}
 
       {/* Tag limit warning */}
       {limitLead &&

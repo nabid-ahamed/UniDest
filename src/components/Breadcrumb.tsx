@@ -82,6 +82,10 @@ function dynamicTrail(pathname: string): Crumb[] | null {
     return [{ label: 'Lead Management', to: '/leads' }, { label: 'View' }]
   if (/^\/leads\/\d+\/edit$/.test(pathname))
     return [{ label: 'Lead Management', to: '/leads' }, { label: 'Edit Profile' }]
+  if (/^\/leads\/\d+\/email$/.test(pathname))
+    return [{ label: 'Broadcast', to: '/broadcast' }, { label: 'Mail User' }]
+  if (/^\/leads\/\d+\/sms$/.test(pathname))
+    return [{ label: 'Broadcast', to: '/broadcast' }, { label: 'SMS User' }]
   if (/^\/invoices\/student\/\d+\/edit$/.test(pathname))
     return [{ label: 'Student Invoices', to: '/invoices/student' }, { label: 'Edit Invoice' }]
   if (/^\/services\/\d+$/.test(pathname))

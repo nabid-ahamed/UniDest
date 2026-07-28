@@ -8,7 +8,7 @@
 // the browser, and a successful import appends live rows you can immediately see
 // in that module. Docs: docs/superpowers/mock-data/adminpage.md.
 
-import { addLead, leadStatuses, studyLevels, type Lead } from './leads'
+import { addLead, leadStatuses, leadStaff, studyLevels, type Lead } from './leads'
 import { students, studentStatuses, studentSources, type Student } from './students'
 import { addStaff, staffRoles, staffStatuses, staffBranches, type StaffMember } from './staff'
 import { addCourse, type ManagedCourse } from './courseManagement'
@@ -46,6 +46,10 @@ export interface ImportColumn {
 export interface ImportOptions {
   branch?: string
   autoPassword?: boolean
+  /** Staff member the imported records are assigned to (leads). */
+  assignTo?: string
+  /** Set every imported record's next follow-up to today (leads). */
+  followupToday?: boolean
 }
 
 export interface ImportEntity {
@@ -61,6 +65,10 @@ export interface ImportEntity {
   branchOption: boolean
   /** Show the "Auto-generate password & email" checkbox. */
   passwordOption: boolean
+  /** Show an "Assign imported leads to" (staff) dropdown + the choices. */
+  staffOptions?: readonly string[]
+  /** Show a "Set next follow-up to today's date" checkbox. */
+  followupOption?: boolean
   /** Append one validated record to the connected module. */
   importRecord: (rec: Record<string, string>, opts: ImportOptions) => void
 }
@@ -75,6 +83,8 @@ export const importEntities: ImportEntity[] = [
     count: () => leadsCount(),
     branchOption: true,
     passwordOption: false,
+    staffOptions: leadStaff,
+    followupOption: true,
     columns: [
       { header: 'First name', field: 'name', required: true, sample: 'Jamie' },
       { header: 'Email', field: 'email', required: true, sample: 'jamie@example.com' },
@@ -96,9 +106,9 @@ export const importEntities: ImportEntity[] = [
         branch: opts.branch || rec.branch || 'Dhaka',
         status: 'New Lead',
         statusColor: leadColor('New Lead'),
-        assignedTo: null,
+        assignedTo: opts.assignTo || null,
         created: today(),
-        nextFollowup: null,
+        nextFollowup: opts.followupToday ? today() : null,
         countryInterested: rec.country || '',
         studyLevel: rec.studyLevel || undefined,
         source: rec.source || 'Import',

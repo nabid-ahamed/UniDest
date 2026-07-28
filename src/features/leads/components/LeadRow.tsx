@@ -10,6 +10,10 @@ import {
   UserPlus,
   Eye,
   Settings,
+  Pencil,
+  GitBranch,
+  KeyRound,
+  Trash2,
 } from 'lucide-react'
 import { cn } from '../../../lib/cn'
 import { pickTextColor } from '../../../lib/contrast'
@@ -150,37 +154,25 @@ export function LeadRow({
         </div>
       </td>
 
-      {/* Assigned to — the assign icon stays visible after assignment so
-          re-assigning is one click, same as the Unassigned state. */}
+      {/* Assigned to — the assign action lives in the Actions column, so this
+          cell just shows the owner (name or "Unassigned"), no assign icon. */}
       <td className="px-3 py-3">
         {assignedTo ? (
-          <div className="flex items-center gap-1.5">
-            <button
-              type="button"
-              onClick={() => onAction('Assign')}
-              title="Re-assign"
-              className="text-sm font-medium text-slate-700 hover:text-brand-600 hover:underline"
-            >
-              {assignedTo}
-            </button>
-            <button
-              type="button"
-              onClick={() => onAction('Assign')}
-              aria-label="Re-assign"
-              title="Re-assign"
-              className="text-brand-600 hover:text-brand-700"
-            >
-              <UserPlus className="h-4 w-4" />
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => onAction('Assign')}
+            title="Re-assign"
+            className="text-sm font-medium text-slate-700 hover:text-brand-600 hover:underline"
+          >
+            {assignedTo}
+          </button>
         ) : (
           <button
             type="button"
             onClick={() => onAction('Assign')}
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-rose-600 hover:text-rose-700"
+            className="text-sm font-medium text-rose-600 hover:text-rose-700"
           >
             Unassigned
-            <UserPlus className="h-4 w-4" />
           </button>
         )}
       </td>
@@ -203,12 +195,7 @@ export function LeadRow({
             onClick={() => onAction('View')}
             className="border-emerald-300 text-emerald-600 hover:border-emerald-600 hover:bg-emerald-600 hover:text-white"
           />
-          <ActionIcon
-            icon={Settings}
-            label="Settings"
-            onClick={() => onAction('Settings')}
-            className="border-slate-300 text-slate-600 hover:border-slate-600 hover:bg-slate-600 hover:text-white"
-          />
+          <SettingsMenu onAction={onAction} />
         </div>
       </td>
     </tr>
@@ -289,6 +276,87 @@ function StatusMenu({
                 style={{ backgroundColor: s.color }}
               />
               {s.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/**
+ * The gear (Settings) action opens a dropdown, matching the reference:
+ * Edit · Transfer Branch · Change Password · Delete. Each item fires a distinct
+ * onAction so LeadsPage can route it (navigate, modal or confirm).
+ */
+function SettingsMenu({ onAction }: { onAction: (type: string) => void }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const onClick = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('mousedown', onClick)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onClick)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [open])
+
+  const items: { label: string; action: string; icon: typeof Pencil; danger?: boolean }[] = [
+    { label: 'Edit', action: 'Edit', icon: Pencil },
+    { label: 'Transfer Branch', action: 'Transfer Branch', icon: GitBranch },
+    { label: 'Change Password', action: 'Change Password', icon: KeyRound },
+    { label: 'Delete', action: 'Delete', icon: Trash2, danger: true },
+  ]
+
+  return (
+    <div ref={ref} className="group relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-label="Settings"
+        aria-expanded={open}
+        className={cn(
+          'flex h-7 items-center gap-0.5 rounded-md border px-1.5 transition-colors',
+          open
+            ? 'border-rose-600 bg-rose-600 text-white'
+            : 'border-rose-300 text-rose-600 hover:border-rose-600 hover:bg-rose-600 hover:text-white',
+        )}
+      >
+        <Settings className="h-3.5 w-3.5" />
+        <ChevronDown className={cn('h-3 w-3 transition-transform', open && 'rotate-180')} />
+      </button>
+
+      {!open && (
+        <span className="pointer-events-none absolute -top-8 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded bg-slate-700 px-2 py-1 text-xs font-medium text-white opacity-0 shadow-sm transition-opacity group-hover:opacity-100">
+          Settings
+        </span>
+      )}
+
+      {open && (
+        <div className="absolute right-0 top-full z-30 mt-1 w-48 rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
+          {items.map((it) => (
+            <button
+              key={it.action}
+              type="button"
+              onClick={() => {
+                setOpen(false)
+                onAction(it.action)
+              }}
+              className={cn(
+                'flex w-full items-center gap-2.5 px-4 py-2 text-left text-sm hover:bg-slate-50',
+                it.danger ? 'text-rose-600 hover:bg-rose-50' : 'text-slate-700',
+              )}
+            >
+              <it.icon className="h-4 w-4" />
+              {it.label}
             </button>
           ))}
         </div>

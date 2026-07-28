@@ -18,6 +18,8 @@ export default function ImportPanel({ entity, onImported }: { entity: ImportEnti
   const [preview, setPreview] = useState<ImportPreview | null>(null)
   const [branch, setBranch] = useState('')
   const [autoPassword, setAutoPassword] = useState(false)
+  const [assignTo, setAssignTo] = useState('')
+  const [followupToday, setFollowupToday] = useState(false)
   const [result, setResult] = useState<number | null>(null)
   const [error, setError] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
@@ -68,7 +70,12 @@ export default function ImportPanel({ entity, onImported }: { entity: ImportEnti
 
   const doImport = () => {
     if (!preview || !preview.headerOk || preview.validCount === 0) return
-    const added = runImport(entity, preview, { branch: branch || undefined, autoPassword })
+    const added = runImport(entity, preview, {
+      branch: branch || undefined,
+      autoPassword,
+      assignTo: assignTo || undefined,
+      followupToday,
+    })
     setResult(added)
     setPreview(null)
     setFileName('')
@@ -133,7 +140,7 @@ export default function ImportPanel({ entity, onImported }: { entity: ImportEnti
       )}
 
       {/* Options */}
-      {(entity.branchOption || entity.passwordOption) && (
+      {(entity.branchOption || entity.passwordOption || entity.staffOptions || entity.followupOption) && (
         <div className="grid gap-4 sm:grid-cols-2">
           {entity.branchOption && (
             <div>
@@ -148,6 +155,19 @@ export default function ImportPanel({ entity, onImported }: { entity: ImportEnti
               </select>
             </div>
           )}
+          {entity.staffOptions && (
+            <div>
+              <label htmlFor={`staff-${entity.key}`} className="mb-1 block text-sm font-semibold text-slate-700">
+                Assign imported {entity.fileNoun}s to
+              </label>
+              <select id={`staff-${entity.key}`} value={assignTo} onChange={(e) => setAssignTo(e.target.value)} className="input">
+                <option value="">Leave unassigned</option>
+                {entity.staffOptions.map((s) => (
+                  <option key={s}>{s}</option>
+                ))}
+              </select>
+            </div>
+          )}
           {entity.passwordOption && (
             <label className="flex items-end gap-2 pb-2 text-sm text-slate-600 sm:pb-0 sm:pt-7">
               <input
@@ -157,6 +177,17 @@ export default function ImportPanel({ entity, onImported }: { entity: ImportEnti
                 className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
               />
               Auto-generate password &amp; email to {entity.fileNoun}s
+            </label>
+          )}
+          {entity.followupOption && (
+            <label className="flex items-end gap-2 pb-2 text-sm text-slate-600 sm:pb-0 sm:pt-7">
+              <input
+                type="checkbox"
+                checked={followupToday}
+                onChange={(e) => setFollowupToday(e.target.checked)}
+                className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+              />
+              Set next follow-up to today's date
             </label>
           )}
         </div>

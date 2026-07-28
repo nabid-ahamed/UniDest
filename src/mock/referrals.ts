@@ -25,7 +25,11 @@ export const referralCurrency = 'BDT'
 export const formatCommission = (amount: number) =>
   `৳ ${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
-const st = (i: number) => students[i]
+// Seeds reference students by position. If a student was deleted or converted
+// back to a lead (shrinking the list), fall back to a placeholder so building
+// the seed never throws and boots the app with a stale-but-safe referral row.
+const FALLBACK_STUDENT = { id: -1, studentNo: '—', name: 'Former Student' }
+const st = (i: number) => students[i] ?? FALLBACK_STUDENT
 const SIGNUPS_KEY = 'unidest-referral-signups'
 
 const seedSignups: ReferralSignup[] = [

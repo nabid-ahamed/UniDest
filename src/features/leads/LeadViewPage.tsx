@@ -1,21 +1,7 @@
 import { useState } from 'react'
-import { createPortal } from 'react-dom'
 import { useParams } from 'react-router-dom'
-import {
-  Mail,
-  Globe,
-  MessageCircle,
-  KeyRound,
-  MessageSquare,
-  SquarePen,
-  FileSignature,
-  Link2,
-  ChevronsRight,
-  Trash2,
-  Info,
-} from 'lucide-react'
+import { Info } from 'lucide-react'
 import { cn } from '../../lib/cn'
-import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import {
   ConfidentialNotes,
   DetailGrid,
@@ -26,6 +12,7 @@ import { LeadIdentityHeader } from './components/LeadIdentityHeader'
 import { LeadProfileTab } from './components/LeadProfileTab'
 import { LeadCourseSuggestionTab } from './components/LeadCourseSuggestionTab'
 import { LeadCoursePreferencesTab } from './components/LeadCoursePreferencesTab'
+import { LeadActions } from './components/LeadActions'
 import { leads, type Lead } from '../../mock/leads'
 
 const TABS = ['Overview', 'Profile', 'Course Suggestion', 'Course Preferences'] as const
@@ -55,25 +42,12 @@ export default function LeadViewPage() {
 function LeadView({ lead }: { lead: Lead }) {
   const [tab, setTab] = useState<(typeof TABS)[number]>('Overview')
   const [toast, setToast] = useState('')
-  const [deleting, setDeleting] = useState(false)
 
   const showToast = (msg: string) => {
     setToast(msg)
     window.clearTimeout((showToast as unknown as { t?: number }).t)
     ;(showToast as unknown as { t?: number }).t = window.setTimeout(() => setToast(''), 2500)
   }
-
-  const ACTIONS = [
-    { label: 'Reset Password', icon: KeyRound },
-    { label: 'Send email', icon: Mail },
-    { label: 'Send sms', icon: MessageSquare },
-    { label: 'Send Whatsapp', icon: MessageCircle },
-    { label: 'Edit Lead Details', icon: SquarePen },
-    { label: 'Student Agreement', icon: FileSignature },
-    { label: 'Link to Agent', icon: Link2 },
-    { label: 'Country Info Permissions', icon: Globe },
-    { label: 'Convert To Student', icon: ChevronsRight },
-  ]
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
@@ -182,34 +156,7 @@ function LeadView({ lead }: { lead: Lead }) {
 
           {/* Right column */}
           <div className="space-y-6">
-            <section className="overflow-hidden rounded-lg border border-slate-200">
-              <h2 className="bg-brand-600 px-4 py-3 font-bold text-white">Actions</h2>
-              <div className="divide-y divide-slate-100">
-                {ACTIONS.map((a) => (
-                  <button
-                    key={a.label}
-                    type="button"
-                    onClick={() =>
-                      a.label === 'Edit Lead Details'
-                        ? window.location.assign(`/leads/${lead.id}/edit`)
-                        : showToast(`${a.label} — coming soon`)
-                    }
-                    className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm font-medium text-slate-700 transition-colors hover:bg-brand-50 hover:text-brand-700"
-                  >
-                    <a.icon className="h-4 w-4 text-brand-600" />
-                    {a.label}
-                  </button>
-                ))}
-                <button
-                  type="button"
-                  onClick={() => setDeleting(true)}
-                  className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm font-medium text-slate-700 transition-colors hover:bg-rose-50 hover:text-rose-700"
-                >
-                  <Trash2 className="h-4 w-4 text-brand-600" />
-                  Delete
-                </button>
-              </div>
-            </section>
+            <LeadActions lead={lead} onToast={showToast} />
 
             <ConfidentialNotes id={lead.id} onSaved={() => showToast('Note saved')} />
           </div>
@@ -231,28 +178,6 @@ function LeadView({ lead }: { lead: Lead }) {
           <LeadCoursePreferencesTab lead={lead} onToast={showToast} />
         </div>
       )}
-
-      {/* Delete confirmation */}
-      {deleting &&
-        createPortal(
-          <ConfirmDialog
-            open
-            title="Delete this lead?"
-            message={
-              <>
-                <span className="font-medium text-slate-700">{lead.name}</span> (#{lead.id}) will
-                be removed permanently.
-              </>
-            }
-            confirmLabel="Delete"
-            onConfirm={() => {
-              setDeleting(false)
-              showToast('Delete — coming soon (frontend demo)')
-            }}
-            onCancel={() => setDeleting(false)}
-          />,
-          document.body,
-        )}
 
       {/* Toast */}
       {toast && (

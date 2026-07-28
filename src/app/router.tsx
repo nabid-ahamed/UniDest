@@ -6,6 +6,8 @@ import LeadsPage from '../features/leads/LeadsPage'
 import AddLeadPage from '../features/leads/AddLeadPage'
 import LeadViewPage from '../features/leads/LeadViewPage'
 import EditLeadProfilePage from '../features/leads/EditLeadProfilePage'
+import SendEmailPage from '../features/leads/SendEmailPage'
+import SendSmsPage from '../features/leads/SendSmsPage'
 import StudentsPage from '../features/students/StudentsPage'
 import StudentFormPage from '../features/students/StudentFormPage'
 import StudentViewPage from '../features/students/StudentViewPage'
@@ -178,6 +180,8 @@ export const router = createBrowserRouter([
           { path: '/leads/new', element: <AddLeadPage /> },
           { path: '/leads/:id', element: <LeadViewPage /> },
           { path: '/leads/:id/edit', element: <EditLeadProfilePage /> },
+          { path: '/leads/:id/email', element: <SendEmailPage /> },
+          { path: '/leads/:id/sms', element: <SendSmsPage /> },
           { path: '/students', element: <StudentsPage /> },
           { path: '/students/new', element: <StudentFormPage /> },
           { path: '/students/:id', element: <StudentViewPage /> },

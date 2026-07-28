@@ -205,10 +205,11 @@ export function saveLeads(next: Lead[]) {
   }
 }
 
-/** Prepend a new lead (assigning the next id) and persist. Returns it. */
+/** Prepend a new lead (assigning the next id) to the in-memory list and persist. */
 export function addLead(data: Omit<Lead, 'id'>): Lead {
   const lead: Lead = { ...data, id: Math.max(0, ...leads.map((l) => l.id)) + 1 }
-  saveLeads([lead, ...leads])
+  leads.unshift(lead)
+  saveLeads([...leads])
   return lead
 }
 
@@ -216,5 +217,12 @@ export function addLead(data: Omit<Lead, 'id'>): Lead {
 export function updateLead(updated: Lead) {
   const i = leads.findIndex((l) => l.id === updated.id)
   if (i >= 0) leads[i] = updated
+  saveLeads([...leads])
+}
+
+/** Remove one lead (by id) from the in-memory list and persist. */
+export function deleteLead(id: number) {
+  const i = leads.findIndex((l) => l.id === id)
+  if (i >= 0) leads.splice(i, 1)
   saveLeads([...leads])
 }
