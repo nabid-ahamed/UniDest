@@ -1,14 +1,19 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { showSuccessDialog } from '../../store/successDialog'
 import { createPortal } from 'react-dom'
 import {
-  Plus,
   RefreshCw,
   UploadCloud,
   Filter,
   Search,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
+  Users,
+  UserPlus,
+  Archive,
+  Trash2,
   X,
 } from 'lucide-react'
 import { cn } from '../../lib/cn'
@@ -17,6 +22,8 @@ import { ExportButtons } from '../../components/ExportButtons'
 import { DotsLoader, Field, PageBtn, SingleSelect } from '../../components/DataTableUI'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { AssignStaffDialog } from '../leads/components/AssignStaffDialog'
+import { TransferBranchDialog } from '../leads/components/TransferBranchDialog'
+import { ChangePasswordDialog } from '../leads/components/ChangePasswordDialog'
 import type { Student } from '../../mock/students'
 import {
   students,
@@ -32,8 +39,14 @@ import {
   intakes,
   setStudentStatus,
   setStudentAssignee,
+  updateStudent,
+  studentState,
   deleteStudent,
   deleteStudents,
+  archiveStudent,
+  archiveStudents,
+  restoreStudents,
+  purgeStudents,
 } from '../../mock/students'
 import { StudentRow } from './components/StudentRow'
 
@@ -56,6 +69,23 @@ export default function StudentsPage() {
   const [university, setUniversity] = useState('')
   const [source, setSource] = useState('')
   const [filterOpen, setFilterOpen] = useState(false)
+  // Which lifecycle view the "Students" menu selected — driven by the ?view=
+  // query param so the URL is deep-linkable and the breadcrumb can label it.
+  const [searchParams, setSearchParams] = useSearchParams()
+  const viewParam = searchParams.get('view')
+  const view: 'all' | 'archived' | 'deleted' =
+    viewParam === 'archived' || viewParam === 'deleted' ? viewParam : 'all'
+  const setView = (v: 'all' | 'archived' | 'deleted') => {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev)
+        if (v === 'all') next.delete('view')
+        else next.set('view', v)
+        return next
+      },
+      { replace: true },
+    )
+  }
 
   const [pageSize, setPageSize] = useState(10)
   const [page, setPage] = useState(1)
@@ -64,10 +94,14 @@ export default function StudentsPage() {
   const [loading, setLoading] = useState(true)
   const [bulkAction, setBulkAction] = useState('')
   const [bulkValue, setBulkValue] = useState('')
-  const [bulkConfirm, setBulkConfirm] = useState(false)
+  const [bulkConfirm, setBulkConfirm] = useState<null | 'delete' | 'archive' | 'purge'>(null)
   const [toast, setToast] = useState('')
   const [assignStudent, setAssignStudent] = useState<Student | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Student | null>(null)
+  const [transferStudent, setTransferStudent] = useState<Student | null>(null)
+  const [passwordStudent, setPasswordStudent] = useState<Student | null>(null)
+  const [archiveTarget, setArchiveTarget] = useState<Student | null>(null)
+  const [purgeTarget, setPurgeTarget] = useState<Student | null>(null)
   // Re-render tick — bumped after any mutation to the shared `students` array.
   const [rev, setRev] = useState(0)
   const bump = () => setRev((n) => n + 1)
@@ -108,50 +142,87 @@ export default function StudentsPage() {
     showToast('List refreshed')
   }
 
-  // Actions that need a target value (status / staff) show a second dropdown.
-  const bulkNeedsValue =
-    bulkAction === 'Change status' ? 'status' : bulkAction === 'Assign to staff' ? 'staff' : null
+  // Bulk actions depend on which view is active: the active list gets the
+  // reference set; the Archived / Deleted views get restore + purge instead.
+  const bulkOptions =
+    view === 'archived'
+      ? ['Restore Students', 'Delete Students']
+      : view === 'deleted'
+        ? ['Restore Students', 'Delete Permanently']
+        : [...studentBulkActions]
+
+  // Only "Assign Students to Staff" needs a target-value dropdown (the staff).
+  const bulkNeedsValue = bulkAction === 'Assign Students to Staff' ? 'staff' : null
 
   const applyBulk = () => {
     if (!bulkAction) return showToast('Choose a bulk action first')
     if (selected.size === 0) return showToast('Select at least one student')
     const ids = [...selected]
 
-    if (bulkAction === 'Delete selected') return setBulkConfirm(true)
+    if (bulkAction === 'Delete Students') return setBulkConfirm('delete')
+    if (bulkAction === 'Delete Permanently') return setBulkConfirm('purge')
+    if (bulkAction === 'Archive Students') return setBulkConfirm('archive')
 
-    if (bulkAction === 'Change status') {
-      if (!bulkValue) return showToast('Choose a status to apply')
-      ids.forEach((id) => setStudentStatus(id, bulkValue))
+    if (bulkAction === 'Restore Students') {
+      restoreStudents(ids)
+      setSelected(new Set())
       bump()
-      showToast(`Status set to ${bulkValue} — ${ids.length} student(s)`)
-    } else if (bulkAction === 'Assign to staff') {
+      showSuccessDialog(`${ids.length} student(s) restored successfully`, 'Restored!')
+      setBulkAction('')
+      return
+    }
+
+    if (bulkAction === 'Assign Students to Staff') {
       if (!bulkValue) return showToast('Choose a staff member')
       ids.forEach((id) => setStudentAssignee(id, bulkValue))
       bump()
       showToast(`Assigned to ${bulkValue} — ${ids.length} student(s)`)
-    } else {
-      // Send email / Send SMS — dispatch is a Phase-2 backend job.
-      showToast(`${bulkAction} queued for ${ids.length} student(s)`)
     }
     setBulkAction('')
     setBulkValue('')
   }
 
-  const confirmBulkDelete = () => {
+  const confirmBulk = () => {
     const ids = [...selected]
-    deleteStudents(ids)
+    // Move to the Archived / Deleted bucket (or purge from the trash) so the
+    // matching view reflects the change.
+    if (bulkConfirm === 'archive') archiveStudents(ids)
+    else if (bulkConfirm === 'purge') purgeStudents(ids)
+    else deleteStudents(ids)
+    const verb =
+      bulkConfirm === 'archive' ? 'archived' : bulkConfirm === 'purge' ? 'permanently deleted' : 'deleted'
+    const title =
+      bulkConfirm === 'archive' ? 'Archived!' : bulkConfirm === 'purge' ? 'Deleted!' : 'Deleted!'
     setSelected(new Set())
-    setBulkConfirm(false)
+    setBulkConfirm(null)
     setBulkAction('')
     bump()
-    showSuccessDialog(`${ids.length} student(s) deleted successfully`)
+    showSuccessDialog(`${ids.length} student(s) ${verb} successfully`, title)
   }
 
   const rowAction = (type: string, student: Student, payload?: string) => {
     if (type === 'Assign') return setAssignStudent(student)
     if (type === 'View') return window.location.assign(`/students/${student.id}`)
     if (type === 'Edit') return window.location.assign(`/students/${student.id}/edit`)
+    if (type === 'EditProfile') return window.location.assign(`/students/${student.id}/edit`)
     if (type === 'Applications') return window.location.assign(`/students/${student.id}`)
+    if (type === 'Login') {
+      showSuccessDialog(`You are now viewing the portal as ${student.name}.`, 'Logged In')
+      return
+    }
+    if (type === 'Transfer') return setTransferStudent(student)
+    if (type === 'Password') return setPasswordStudent(student)
+    if (type === 'ClearSession') {
+      showSuccessDialog(`Active sessions for ${student.name} have been cleared.`, 'Session Cleared')
+      return
+    }
+    if (type === 'Archive') return setArchiveTarget(student)
+    if (type === 'Restore') {
+      restoreStudents([student.id])
+      bump()
+      return showSuccessDialog(`${student.name} restored successfully`, 'Restored!')
+    }
+    if (type === 'Purge') return setPurgeTarget(student)
     if (type === 'Delete') return setDeleteTarget(student)
     if (type === 'SetStatus' && payload) {
       setStudentStatus(student.id, payload)
@@ -159,6 +230,47 @@ export default function StudentsPage() {
       return showToast(`${student.name} → ${payload}`)
     }
     showToast(`${type}: ${student.name} (#${student.id})`)
+  }
+
+  const saveBranch = (branch: string) => {
+    if (!transferStudent) return
+    updateStudent(transferStudent.id, { branch })
+    bump()
+    showSuccessDialog(`${transferStudent.name} transferred to ${branch}.`, 'Transferred!')
+    setTransferStudent(null)
+  }
+
+  const doChangePassword = () => {
+    if (!passwordStudent) return
+    const name = passwordStudent.name
+    setPasswordStudent(null)
+    showSuccessDialog(`Password for ${name} has been changed.`, 'Password Changed')
+  }
+
+  const confirmArchive = () => {
+    if (!archiveTarget) return
+    archiveStudent(archiveTarget.id)
+    setSelected((prev) => {
+      const next = new Set(prev)
+      next.delete(archiveTarget.id)
+      return next
+    })
+    bump()
+    showSuccessDialog(`${archiveTarget.name} archived successfully`, 'Archived!')
+    setArchiveTarget(null)
+  }
+
+  const confirmPurge = () => {
+    if (!purgeTarget) return
+    purgeStudents([purgeTarget.id])
+    setSelected((prev) => {
+      const next = new Set(prev)
+      next.delete(purgeTarget.id)
+      return next
+    })
+    bump()
+    showSuccessDialog(`${purgeTarget.name} deleted permanently`, 'Deleted!')
+    setPurgeTarget(null)
   }
 
   const saveAssignee = (member: string) => {
@@ -183,8 +295,11 @@ export default function StudentsPage() {
   }
 
   const filtered = useMemo(() => {
+    // Each view shows its own lifecycle bucket: active / archived / deleted.
+    const wantState = view === 'all' ? 'active' : view
     const q = search.trim().toLowerCase()
     return students.filter((s) => {
+      if (studentState(s) !== wantState) return false
       if (statuses.length && !statuses.includes(s.status)) return false
       if (countriesInterested.length && !countriesInterested.includes(s.countryInterested))
         return false
@@ -212,6 +327,7 @@ export default function StudentsPage() {
     intake,
     university,
     source,
+    view,
     rev,
   ])
 
@@ -326,12 +442,16 @@ export default function StudentsPage() {
               Import Students
             </span>
           </div>
-          <a
-            href="/students/new"
-            className="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-3.5 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-700"
-          >
-            <Plus className="h-4 w-4" /> New Student
-          </a>
+          <StudentsMenu
+            view={view}
+            onView={(v) => {
+              setView(v)
+              setPage(1)
+              setSelected(new Set())
+              setBulkAction('')
+              setBulkValue('')
+            }}
+          />
         </div>
       </div>
 
@@ -576,7 +696,6 @@ export default function StudentsPage() {
                 <th className="bg-slate-50 px-3 py-3">ID</th>
                 <th className="bg-slate-50 px-3 py-3">Student</th>
                 <th className="bg-slate-50 px-3 py-3">Study Interest</th>
-                <th className="bg-slate-50 px-3 py-3">Apps</th>
                 <th className="bg-slate-50 px-3 py-3">Status</th>
                 <th className="bg-slate-50 px-3 py-3">Assigned to</th>
                 <th className="bg-slate-50 px-3 py-3">Created</th>
@@ -586,7 +705,7 @@ export default function StudentsPage() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={9} className="px-3 py-16">
+                  <td colSpan={8} className="px-3 py-16">
                     <DotsLoader />
                   </td>
                 </tr>
@@ -598,15 +717,20 @@ export default function StudentsPage() {
                       student={student}
                       assignedTo={student.assignedTo}
                       selected={selected.has(student.id)}
+                      locked={view !== 'all'}
                       onToggle={() => toggleOne(student.id)}
                       onAction={(type, payload) => rowAction(type, student, payload)}
                     />
                   ))}
                   {pageRows.length === 0 && (
                     <tr>
-                      <td colSpan={9} className="px-3 py-10 text-center text-sm text-slate-500">
-                        No students found.
-                        {activeFilterCount > 0 && (
+                      <td colSpan={8} className="px-3 py-10 text-center text-sm text-slate-500">
+                        {view === 'archived'
+                          ? 'No archived students.'
+                          : view === 'deleted'
+                            ? 'No deleted students.'
+                            : 'No students found.'}
+                        {view === 'all' && activeFilterCount > 0 && (
                           <button
                             onClick={clearFilters}
                             className="ml-1 font-semibold text-brand-600 hover:underline"
@@ -674,25 +798,12 @@ export default function StudentsPage() {
           className="input w-56"
         >
           <option value="">- Bulk Actions -</option>
-          {studentBulkActions.map((a) => (
+          {bulkOptions.map((a) => (
             <option key={a}>{a}</option>
           ))}
         </select>
 
-        {/* Secondary value picker for status / staff actions. */}
-        {bulkNeedsValue === 'status' && (
-          <select
-            value={bulkValue}
-            onChange={(e) => setBulkValue(e.target.value)}
-            aria-label="Target status"
-            className="input w-48"
-          >
-            <option value="">- Select status -</option>
-            {studentStatuses.map((s) => (
-              <option key={s.label}>{s.label}</option>
-            ))}
-          </select>
-        )}
+        {/* Secondary value picker — only "Assign Students to Staff" needs it. */}
         {bulkNeedsValue === 'staff' && (
           <select
             value={bulkValue}
@@ -746,7 +857,7 @@ export default function StudentsPage() {
             message={
               <>
                 <span className="font-medium text-slate-700">{deleteTarget.name}</span> (
-                {deleteTarget.studentNo}) will be removed permanently.
+                {deleteTarget.studentNo}) will be moved to Deleted Students.
               </>
             }
             confirmLabel="Delete"
@@ -756,16 +867,88 @@ export default function StudentsPage() {
           document.body,
         )}
 
-      {/* Bulk delete */}
+      {/* Archive one */}
+      {archiveTarget &&
+        createPortal(
+          <ConfirmDialog
+            open
+            title="Archive this student?"
+            message={
+              <>
+                <span className="font-medium text-slate-700">{archiveTarget.name}</span> (
+                {archiveTarget.studentNo}) will be moved to Archived Students.
+              </>
+            }
+            confirmLabel="Archive"
+            onConfirm={confirmArchive}
+            onCancel={() => setArchiveTarget(null)}
+          />,
+          document.body,
+        )}
+
+      {/* Delete permanently (from the trash view) */}
+      {purgeTarget &&
+        createPortal(
+          <ConfirmDialog
+            open
+            title="Delete permanently?"
+            message={
+              <>
+                <span className="font-medium text-slate-700">{purgeTarget.name}</span> (
+                {purgeTarget.studentNo}) will be erased permanently. This cannot be undone.
+              </>
+            }
+            confirmLabel="Delete"
+            onConfirm={confirmPurge}
+            onCancel={() => setPurgeTarget(null)}
+          />,
+          document.body,
+        )}
+
+      {/* Transfer branch */}
+      {transferStudent && (
+        <TransferBranchDialog
+          lead={transferStudent}
+          current={transferStudent.branch}
+          branches={studentBranches.filter((b) => b !== 'All Branch')}
+          title="Student - Transfer Branch"
+          nameLabel="Student Name"
+          onClose={() => setTransferStudent(null)}
+          onSave={saveBranch}
+        />
+      )}
+
+      {/* Change password */}
+      {passwordStudent && (
+        <ChangePasswordDialog
+          lead={passwordStudent}
+          onClose={() => setPasswordStudent(null)}
+          onSave={doChangePassword}
+        />
+      )}
+
+      {/* Bulk archive / delete / purge */}
       {bulkConfirm &&
         createPortal(
           <ConfirmDialog
             open
-            title={`Delete ${selected.size} student(s)?`}
-            message="The selected students will be removed permanently."
-            confirmLabel="Delete"
-            onConfirm={confirmBulkDelete}
-            onCancel={() => setBulkConfirm(false)}
+            title={
+              bulkConfirm === 'archive'
+                ? `Archive ${selected.size} student(s)?`
+                : bulkConfirm === 'purge'
+                  ? `Permanently delete ${selected.size} student(s)?`
+                  : `Delete ${selected.size} student(s)?`
+            }
+            message={
+              bulkConfirm === 'archive'
+                ? 'The selected students will be moved to Archived Students.'
+                : bulkConfirm === 'purge'
+                  ? 'This cannot be undone — the selected students will be erased permanently.'
+                  : 'The selected students will be moved to Deleted Students.'
+            }
+            confirmLabel={bulkConfirm === 'archive' ? 'Archive' : 'Delete'}
+            onConfirm={confirmBulk}
+            onCancel={() => setBulkConfirm(null)}
           />,
           document.body,
         )}
@@ -774,6 +957,82 @@ export default function StudentsPage() {
       {toast && (
         <div className="animate-toast-in fixed right-4 top-20 z-[60] rounded-lg bg-slate-800 px-4 py-3 text-sm font-medium text-white shadow-lg">
           {toast}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/**
+ * "Students ▾" split-primary dropdown (replaces the plain "New Student" button),
+ * matching the reference: All Students · Create Student · Archived Students ·
+ * Deleted Students. All Students / Archived / Deleted switch the table view;
+ * Create Student opens the new-student form.
+ */
+function StudentsMenu({
+  view,
+  onView,
+}: {
+  view: 'all' | 'archived' | 'deleted'
+  onView: (v: 'all' | 'archived' | 'deleted') => void
+}) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const onClick = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('mousedown', onClick)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onClick)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [open])
+
+  const items = [
+    { label: 'All Students', icon: Users, active: view === 'all', run: () => onView('all') },
+    { label: 'Create Student', icon: UserPlus, run: () => window.location.assign('/students/new') },
+    { label: 'Archived Students', icon: Archive, active: view === 'archived', run: () => onView('archived') },
+    { label: 'Deleted Students', icon: Trash2, active: view === 'deleted', run: () => onView('deleted') },
+  ]
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-3.5 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-700"
+      >
+        Students
+        <ChevronDown className={cn('h-4 w-4 transition-transform', open && 'rotate-180')} />
+      </button>
+
+      {open && (
+        <div className="absolute right-0 top-full z-30 mt-1 w-52 rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
+          {items.map((it) => (
+            <button
+              key={it.label}
+              type="button"
+              onClick={() => {
+                setOpen(false)
+                it.run()
+              }}
+              className={cn(
+                'flex w-full items-center gap-2.5 px-4 py-2 text-left text-sm hover:bg-brand-50',
+                it.active ? 'font-semibold text-brand-600' : 'text-slate-700',
+              )}
+            >
+              <it.icon className="h-4 w-4 text-brand-500" />
+              {it.label}
+            </button>
+          ))}
         </div>
       )}
     </div>

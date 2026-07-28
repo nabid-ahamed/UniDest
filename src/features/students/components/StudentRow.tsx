@@ -6,9 +6,15 @@ import {
   SquarePen,
   UserPlus,
   UserRoundPen,
+  UserRound,
+  UserCog,
+  GitBranch,
+  KeyRound,
+  LogOut,
+  Archive,
+  RotateCcw,
   Eye,
   GraduationCap,
-  FileText,
   EllipsisVertical,
   ChevronDown,
   Trash2,
@@ -21,12 +27,15 @@ export function StudentRow({
   student,
   assignedTo,
   selected,
+  locked = false,
   onToggle,
   onAction,
 }: {
   student: Student
   assignedTo: string | null
   selected: boolean
+  /** Archived / Deleted views are read-only: no status-change or re-assign. */
+  locked?: boolean
   onToggle: () => void
   onAction: (type: string, payload?: string) => void
 }) {
@@ -106,23 +115,6 @@ export function StudentRow({
         )}
       </td>
 
-      {/* Applications */}
-      <td className="px-3 py-3">
-        <button
-          type="button"
-          onClick={() => onAction('Applications')}
-          className={cn(
-            'inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-semibold transition-colors',
-            student.applications > 0
-              ? 'border-brand-200 bg-brand-50 text-brand-700 hover:bg-brand-100'
-              : 'border-slate-200 bg-slate-50 text-slate-500 hover:bg-slate-100',
-          )}
-        >
-          <FileText className="h-3.5 w-3.5" />
-          {student.applications}
-        </button>
-      </td>
-
       {/* Status */}
       <td className="px-3 py-3">
         <div className="flex items-center gap-1.5">
@@ -135,7 +127,10 @@ export function StudentRow({
           >
             {student.status}
           </span>
-          <StatusMenu current={student.status} onPick={(label) => onAction('SetStatus', label)} />
+          {/* Read-only in Archived / Deleted views. */}
+          {!locked && (
+            <StatusMenu current={student.status} onPick={(label) => onAction('SetStatus', label)} />
+          )}
         </div>
       </td>
 
@@ -147,9 +142,11 @@ export function StudentRow({
           ) : (
             <span className="inline-flex items-center gap-1.5 text-sm font-medium text-rose-600">
               Unassigned
-              <UserPlus className="h-4 w-4" />
+              {!locked && <UserPlus className="h-4 w-4" />}
             </span>
           )}
+          {/* Re-assign is disabled in Archived / Deleted views. */}
+          {!locked && (
           <div className="group relative">
             <button
               type="button"
@@ -163,6 +160,7 @@ export function StudentRow({
               {assignedTo ? 'Re-assign staff' : 'Assign staff'}
             </span>
           </div>
+          )}
         </div>
       </td>
 
@@ -178,15 +176,27 @@ export function StudentRow({
             onClick={() => onAction('View')}
             className="border-brand-600 text-brand-600 hover:bg-brand-600 hover:text-white"
           />
-          <MoreMenu onAction={onAction} />
+          <MoreMenu name={student.name} state={student.state ?? 'active'} onAction={onAction} />
         </div>
       </td>
     </tr>
   )
 }
 
-/** Red-accented 3-dot trigger opening the secondary row actions. */
-function MoreMenu({ onAction }: { onAction: (type: string) => void }) {
+/**
+ * Red-accented 3-dot trigger opening the secondary row actions. Mirrors the
+ * reference user-row menu: Login As · Edit · Edit Profile · Transfer Branch ·
+ * Change Password · Clear Session · Archive · Delete.
+ */
+function MoreMenu({
+  name,
+  state,
+  onAction,
+}: {
+  name: string
+  state: 'active' | 'archived' | 'deleted'
+  onAction: (type: string) => void
+}) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
@@ -195,15 +205,39 @@ function MoreMenu({ onAction }: { onAction: (type: string) => void }) {
     const onClick = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
     }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false)
+    }
     document.addEventListener('mousedown', onClick)
-    return () => document.removeEventListener('mousedown', onClick)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onClick)
+      document.removeEventListener('keydown', onKey)
+    }
   }, [open])
 
-  const ITEMS = [
-    { label: 'Edit', icon: SquarePen, type: 'Edit' },
-    { label: 'Assign Staff', icon: UserPlus, type: 'Assign' },
-    { label: 'Delete', icon: Trash2, type: 'Delete', danger: true },
-  ]
+  // Archived / deleted rows get restore + purge instead of the full action set.
+  const ITEMS =
+    state === 'archived'
+      ? [
+          { label: 'Restore', icon: RotateCcw, type: 'Restore' },
+          { label: 'Delete', icon: Trash2, type: 'Delete', danger: true },
+        ]
+      : state === 'deleted'
+        ? [
+            { label: 'Restore', icon: RotateCcw, type: 'Restore' },
+            { label: 'Delete Permanently', icon: Trash2, type: 'Purge', danger: true },
+          ]
+        : [
+            { label: `Login As ${name}`, icon: UserRound, type: 'Login' },
+            { label: 'Edit', icon: SquarePen, type: 'Edit' },
+            { label: 'Edit Profile', icon: UserCog, type: 'EditProfile' },
+            { label: 'Transfer Branch', icon: GitBranch, type: 'Transfer' },
+            { label: 'Change Password', icon: KeyRound, type: 'Password' },
+            { label: 'Clear Session', icon: LogOut, type: 'ClearSession' },
+            { label: 'Archive', icon: Archive, type: 'Archive' },
+            { label: 'Delete', icon: Trash2, type: 'Delete', danger: true },
+          ]
 
   return (
     <div ref={ref} className="relative">
@@ -221,7 +255,7 @@ function MoreMenu({ onAction }: { onAction: (type: string) => void }) {
         <ChevronDown className="h-3 w-3 text-rose-600" />
       </button>
       {open && (
-        <div className="absolute right-0 top-full z-30 mt-1.5 w-40 rounded-lg border border-slate-200 bg-white py-1.5 shadow-lg">
+        <div className="absolute right-0 top-full z-30 mt-1.5 w-56 rounded-lg border border-slate-200 bg-white py-1.5 shadow-lg">
           {ITEMS.map((item) => (
             <button
               key={item.label}
@@ -237,8 +271,8 @@ function MoreMenu({ onAction }: { onAction: (type: string) => void }) {
                   : 'text-slate-700 hover:bg-brand-50 hover:text-brand-700',
               )}
             >
-              <item.icon className="h-4 w-4" />
-              {item.label}
+              <item.icon className="h-4 w-4 shrink-0" />
+              <span className="truncate">{item.label}</span>
             </button>
           ))}
         </div>

@@ -11,12 +11,16 @@ export function TransferBranchDialog({
   lead,
   current,
   branches,
+  title = 'Lead - Transfer Branch',
+  nameLabel = 'Lead Name',
   onClose,
   onSave,
 }: {
   lead: { id: number; name: string }
   current: string
   branches: string[]
+  title?: string
+  nameLabel?: string
   onClose: () => void
   onSave: (branch: string) => void
 }) {
@@ -53,7 +57,7 @@ export function TransferBranchDialog({
       >
         <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
           <h2 id="transfer-title" className="text-lg font-bold text-slate-800">
-            Lead - Transfer Branch
+            {title}
           </h2>
           <button
             type="button"
@@ -66,7 +70,7 @@ export function TransferBranchDialog({
         </div>
 
         <div className="px-6 py-6">
-          <p className="text-sm font-semibold text-slate-700">Lead Name</p>
+          <p className="text-sm font-semibold text-slate-700">{nameLabel}</p>
           <p className="mt-1 text-sm text-slate-600">
             {lead.name} <span className="text-slate-400">(#{lead.id})</span>
           </p>

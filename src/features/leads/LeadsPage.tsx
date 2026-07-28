@@ -69,6 +69,8 @@ export default function LeadsPage() {
   const [refreshing, setRefreshing] = useState(false)
   const [loading, setLoading] = useState(true)
   const [bulkAction, setBulkAction] = useState('')
+  const [bulkValue, setBulkValue] = useState('')
+  const [bulkConfirm, setBulkConfirm] = useState(false)
   const [toast, setToast] = useState('')
   const [tagLead, setTagLead] = useState<Lead | null>(null)
   const [limitLead, setLimitLead] = useState<Lead | null>(null)
@@ -133,11 +135,48 @@ export default function LeadsPage() {
     showToast('List refreshed')
   }
 
+  // Bulk actions that need a target value (status / staff) show a second dropdown.
+  const bulkNeedsValue =
+    bulkAction === 'Change status' ? 'status' : bulkAction === 'Assign to staff' ? 'staff' : null
+
   const applyBulk = () => {
     if (!bulkAction) return showToast('Choose a bulk action first')
     if (selected.size === 0) return showToast('Select at least one lead')
-    showToast(`${bulkAction} — ${selected.size} lead(s)`)
+    const ids = [...selected]
+
+    if (bulkAction === 'Delete selected') return setBulkConfirm(true)
+
+    if (bulkAction === 'Change status') {
+      if (!bulkValue) return showToast('Choose a status to apply')
+      setRowStatuses((prev) => {
+        const next = { ...prev }
+        ids.forEach((id) => (next[id] = bulkValue))
+        return next
+      })
+      ids.forEach((id) => persistLead(id, { status: bulkValue }))
+      showToast(`Status set to ${bulkValue} — ${ids.length} lead(s)`)
+    } else if (bulkAction === 'Assign to staff') {
+      if (!bulkValue) return showToast('Choose a staff member')
+      setAssignees((prev) => {
+        const next = { ...prev }
+        ids.forEach((id) => (next[id] = bulkValue))
+        return next
+      })
+      ids.forEach((id) => persistLead(id, { assignedTo: bulkValue }))
+      showToast(`Assigned to ${bulkValue} — ${ids.length} lead(s)`)
+    }
     setBulkAction('')
+    setBulkValue('')
+  }
+
+  const confirmBulkDelete = () => {
+    const ids = [...selected]
+    ids.forEach((id) => deleteLead(id))
+    setSelected(new Set())
+    setBulkConfirm(false)
+    setBulkAction('')
+    setListRev((n) => n + 1)
+    setSuccessMsg(`${ids.length} lead(s) deleted successfully`)
   }
 
   const rowAction = (type: string, lead: Lead) => {
@@ -692,14 +731,46 @@ export default function LeadsPage() {
       <div className="flex flex-wrap items-center gap-2">
         <select
           value={bulkAction}
-          onChange={(e) => setBulkAction(e.target.value)}
+          onChange={(e) => {
+            setBulkAction(e.target.value)
+            setBulkValue('')
+          }}
           className="input w-56"
+          aria-label="Bulk action"
         >
           <option value="">- Bulk Actions -</option>
           <option>Assign to staff</option>
           <option>Change status</option>
           <option>Delete selected</option>
         </select>
+
+        {bulkNeedsValue === 'status' && (
+          <select
+            value={bulkValue}
+            onChange={(e) => setBulkValue(e.target.value)}
+            className="input w-48"
+            aria-label="Status to apply"
+          >
+            <option value="">- Select Status -</option>
+            {leadStatuses.map((s) => (
+              <option key={s.label}>{s.label}</option>
+            ))}
+          </select>
+        )}
+        {bulkNeedsValue === 'staff' && (
+          <select
+            value={bulkValue}
+            onChange={(e) => setBulkValue(e.target.value)}
+            className="input w-48"
+            aria-label="Staff to assign"
+          >
+            <option value="">- Select Staff -</option>
+            {leadStaff.map((s) => (
+              <option key={s}>{s}</option>
+            ))}
+          </select>
+        )}
+
         <button
           onClick={applyBulk}
           className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-700"
@@ -786,6 +857,20 @@ export default function LeadsPage() {
             confirmLabel="Delete"
             onConfirm={confirmDelete}
             onCancel={() => setDeleteLeadTarget(null)}
+          />,
+          document.body,
+        )}
+
+      {/* Bulk delete */}
+      {bulkConfirm &&
+        createPortal(
+          <ConfirmDialog
+            open
+            title={`Delete ${selected.size} lead(s)?`}
+            message="The selected leads will be removed permanently."
+            confirmLabel="Delete"
+            onConfirm={confirmBulkDelete}
+            onCancel={() => setBulkConfirm(false)}
           />,
           document.body,
         )}

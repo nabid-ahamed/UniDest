@@ -24,6 +24,12 @@ export interface Student {
   university: string | null
   applications: number
   source: string
+  /**
+   * Lifecycle bucket. Omitted/undefined = active. Archive and delete flip this
+   * so the "Archived Students" / "Deleted Students" views can list them instead
+   * of them vanishing. (Delete here is a soft delete / trash, like the reference.)
+   */
+  state?: 'active' | 'archived' | 'deleted'
 }
 
 // Badge colours are the 700/800 shades so white text clears WCAG AA (>= 4.5:1).
@@ -54,11 +60,9 @@ export const universities = [
 export const studentSources = ['Walk-in', 'Website', 'Facebook', 'Referral', 'Agent', 'Lead Convert']
 
 export const studentBulkActions = [
-  'Assign to staff',
-  'Change status',
-  'Send email',
-  'Send SMS',
-  'Delete selected',
+  'Assign Students to Staff',
+  'Archive Students',
+  'Delete Students',
 ]
 
 // Filter option lists shared with the Leads page — same lookup tables in the
@@ -172,13 +176,40 @@ export function setStudentAssignee(id: number, assignedTo: string | null) {
   updateStudent(id, { assignedTo })
 }
 
-export function deleteStudent(id: number) {
-  const i = students.findIndex((x) => x.id === id)
-  if (i >= 0) students.splice(i, 1)
+/** Lifecycle bucket of a student (defaults to 'active' when the flag is unset). */
+export const studentState = (st: Student): 'active' | 'archived' | 'deleted' => st.state ?? 'active'
+
+function setState(ids: number[], state: 'active' | 'archived' | 'deleted') {
+  const set = new Set(ids)
+  for (const st of students) if (set.has(st.id)) st.state = state
   persistStudents()
 }
 
+/** Soft-delete — moves to the "Deleted Students" (trash) view. */
+export function deleteStudent(id: number) {
+  setState([id], 'deleted')
+}
+
 export function deleteStudents(ids: number[]) {
+  setState(ids, 'deleted')
+}
+
+/** Move to the "Archived Students" view. */
+export function archiveStudent(id: number) {
+  setState([id], 'archived')
+}
+
+export function archiveStudents(ids: number[]) {
+  setState(ids, 'archived')
+}
+
+/** Restore archived/deleted student(s) back to the active list. */
+export function restoreStudents(ids: number[]) {
+  setState(ids, 'active')
+}
+
+/** Permanently remove student(s) from the array (empties the trash). */
+export function purgeStudents(ids: number[]) {
   const set = new Set(ids)
   for (let i = students.length - 1; i >= 0; i--) {
     if (set.has(students[i].id)) students.splice(i, 1)

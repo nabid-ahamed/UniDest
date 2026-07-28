@@ -2,6 +2,37 @@ import { Printer, Copy, Table } from 'lucide-react'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { cn } from '../lib/cn'
+import logoUrl from '../assets/globaled-logo.png'
+
+/**
+ * Load the brand logo once and cache it as a base64 data URL so it can be
+ * embedded in the PDF (jsPDF.addImage) and the print window (<img src>).
+ * Returns null if the image can't be loaded, so exports still work without it.
+ */
+let logoPromise: Promise<{ dataUrl: string; width: number; height: number } | null> | null = null
+function loadLogo() {
+  if (logoPromise) return logoPromise
+  logoPromise = new Promise((resolve) => {
+    const img = new Image()
+    img.crossOrigin = 'anonymous'
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas')
+        canvas.width = img.naturalWidth
+        canvas.height = img.naturalHeight
+        const ctx = canvas.getContext('2d')
+        if (!ctx) return resolve(null)
+        ctx.drawImage(img, 0, 0)
+        resolve({ dataUrl: canvas.toDataURL('image/png'), width: img.naturalWidth, height: img.naturalHeight })
+      } catch {
+        resolve(null)
+      }
+    }
+    img.onerror = () => resolve(null)
+    img.src = logoUrl
+  })
+  return logoPromise
+}
 
 /** Excel logo-style mark (lucide has no brand icon). */
 function ExcelIcon({ className }: { className?: string }) {
@@ -90,11 +121,15 @@ export function ExportButtons({
   rows: ExportCell[][]
   onDone: (message: string) => void
 }) {
-  const handleExport = (label: string) => {
+  const handleExport = async (label: string) => {
     if (label === 'Print') {
+      const logo = await loadLogo()
       const style =
-        'body{font-family:Arial,sans-serif;padding:24px;color:#0f172a}h2{margin:0 0 12px}table{width:100%;border-collapse:collapse;font-size:12px}th,td{border:1px solid #cbd5e1;padding:6px 8px;text-align:left}th{background:#1f47f5;color:#fff}'
-      const table = `<h2>${title}</h2><table><thead><tr>${header
+        'body{font-family:Arial,sans-serif;padding:24px;color:#0f172a}.brand{display:flex;align-items:center;gap:12px;border-bottom:2px solid #e2e8f0;padding-bottom:14px;margin-bottom:16px}.brand img{height:38px}.brand h2{margin:0;font-size:18px}table{width:100%;border-collapse:collapse;font-size:12px}th,td{border:1px solid #cbd5e1;padding:6px 8px;text-align:left}th{background:#1f47f5;color:#fff}'
+      const header2 = `<div class="brand">${
+        logo ? `<img src="${logo.dataUrl}" alt="GlobalEd" />` : ''
+      }<h2>${title}</h2></div>`
+      const table = `${header2}<table><thead><tr>${header
         .map((h) => `<th>${h}</th>`)
         .join('')}</tr></thead><tbody>${rows
         .map((r) => `<tr>${r.map((c) => `<td>${c}</td>`).join('')}</tr>`)
@@ -131,13 +166,22 @@ export function ExportButtons({
       downloadFile(`${filename}.xls`, html, 'application/vnd.ms-excel')
       onDone('Excel downloaded')
     } else if (label === 'PDF') {
+      const logo = await loadLogo()
       const doc = new jsPDF()
+      let cursorY = 15
+      if (logo) {
+        // Scale the logo to a fixed height, preserving aspect ratio.
+        const logoH = 12
+        const logoW = (logo.width / logo.height) * logoH
+        doc.addImage(logo.dataUrl, 'PNG', 14, 10, logoW, logoH)
+        cursorY = 10 + logoH + 6
+      }
       doc.setFontSize(14)
-      doc.text(title, 14, 15)
+      doc.text(title, 14, cursorY)
       autoTable(doc, {
         head: [header],
         body: rows.map((r) => r.map(String)),
-        startY: 20,
+        startY: cursorY + 5,
         styles: { fontSize: 8 },
         headStyles: { fillColor: [31, 71, 245] },
       })

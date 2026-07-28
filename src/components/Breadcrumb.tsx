@@ -152,9 +152,21 @@ function dynamicTrail(pathname: string): Crumb[] | null {
 }
 
 export function Breadcrumb() {
-  const { pathname } = useLocation()
+  const { pathname, search } = useLocation()
   const isDashboard = pathname === '/dashboard'
+
+  // The Students Archived / Deleted views are the same route with a ?view= param.
+  const studentsView =
+    pathname === '/students' ? new URLSearchParams(search).get('view') : null
+  const studentsTrail =
+    studentsView === 'archived'
+      ? [{ label: 'Student Management', to: '/students' }, { label: 'Archived Students' }]
+      : studentsView === 'deleted'
+        ? [{ label: 'Student Management', to: '/students' }, { label: 'Deleted Students' }]
+        : null
+
   const trail: Crumb[] =
+    studentsTrail ??
     TRAILS[pathname] ??
     dynamicTrail(pathname) ??
     (TITLES[pathname] ? [{ label: TITLES[pathname] }] : [])
