@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState, type ComponentType, type MouseEvent } from 'react'
 import { createPortal } from 'react-dom'
+import { useLocation } from 'react-router-dom'
 import {
   LayoutGrid,
   Users,
   Contact,
   ClipboardList,
+  LifeBuoy,
   Search,
   Radio,
   CalendarDays,
@@ -38,12 +40,10 @@ const STAFF_HIDDEN_CHILDREN = new Set(['Home Page', 'Countries', 'Menu Manager']
 type IconType = ComponentType<{ className?: string }>
 
 // A nav target is active on its own page AND on any nested route beneath it —
-// e.g. "/courses" stays active on "/courses/34" or "/courses/34/edit". Because
-// navigation is a full page load, this keeps a parent submenu expanded and the
-// right item highlighted after landing on a detail/edit page (instead of the
-// menu collapsing and appearing to jump away).
-function pathIsActive(to: string): boolean {
-  const path = window.location.pathname
+// e.g. "/courses" stays active on "/courses/34" or "/courses/34/edit". `path`
+// is the reactive pathname from the router, so the highlight follows both full
+// page loads AND client-side navigations (e.g. the breadcrumb's <Link>).
+function pathIsActive(path: string, to: string): boolean {
   return path === to || path.startsWith(to + '/')
 }
 
@@ -70,6 +70,7 @@ const NAV: NavGroup[] = [
       { label: 'Leads', icon: Users, to: '/leads' },
       { label: 'Students', icon: Contact, to: '/students' },
       { label: 'Applications', icon: ClipboardList, to: '/applications' },
+      { label: 'Support Tickets', icon: LifeBuoy, to: '/support-tickets' },
       { label: 'Course Finder', icon: Search, to: '/course-finder' },
       { label: 'Broadcast', icon: Radio, to: '/broadcast' },
       { label: 'Webinar & Events', icon: CalendarDays, to: '/webinars' },
@@ -154,16 +155,18 @@ const iconClass = 'h-5 w-5 shrink-0'
 function SidebarItem({
   item,
   collapsed,
+  pathname,
   onNavigate,
 }: {
   item: NavItem
   collapsed: boolean
+  pathname: string
   onNavigate: () => void
 }) {
   // True when the current page is one of this item's children (or a sub-route of
   // one, e.g. a course detail page under the "Courses" child).
-  const childActive = item.children?.some((c) => c.to && pathIsActive(c.to)) ?? false
-  const leafActive = item.to ? pathIsActive(item.to) : false
+  const childActive = item.children?.some((c) => c.to && pathIsActive(pathname, c.to)) ?? false
+  const leafActive = item.to ? pathIsActive(pathname, item.to) : false
   // Start open on a child page so the submenu stays expanded across the
   // full-page navigations between children.
   const [expanded, setExpanded] = useState(() => childActive)
@@ -296,7 +299,7 @@ function SidebarItem({
                   onClick={onNavigate}
                   className={cn(
                     'flex items-center gap-2 whitespace-nowrap rounded-md px-3 py-2 text-sm transition-colors',
-                    child.to && pathIsActive(child.to)
+                    child.to && pathIsActive(pathname, child.to)
                       ? 'bg-brand-600 text-white'
                       : 'text-slate-400 hover:bg-slate-800 hover:text-white',
                   )}
@@ -359,6 +362,9 @@ export function Sidebar() {
   const open = useUI((s) => s.sidebarOpen)
   const close = useUI((s) => s.closeSidebar)
   const collapsed = !open
+  // Reactive pathname so the active highlight follows client-side navigations
+  // (e.g. clicking "Dashboard" in the breadcrumb), not just full page loads.
+  const { pathname } = useLocation()
 
   // Staff see a trimmed nav — hide whole items and specific submenu children that
   // aren't part of their workspace.
@@ -427,6 +433,7 @@ export function Sidebar() {
                     key={item.label}
                     item={item}
                     collapsed={collapsed}
+                    pathname={pathname}
                     onNavigate={handleNavigate}
                   />
                 ))}

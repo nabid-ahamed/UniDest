@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, ShieldCheck, Upload, UserCircle2 } from 'lucide-react'
+import { ArrowLeft, ShieldCheck, Upload } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { useAuth } from '../../store/auth'
 import { showSuccessDialog } from '../../store/successDialog'
+import { AvatarUpload } from '../../components/AvatarUpload'
 import {
   Field,
   TextInput,
@@ -49,8 +50,13 @@ export default function BasicInfoPage() {
   const updateUser = useAuth((s) => s.updateUser)
   const email = user?.email ?? ''
 
-  const [p, setP] = useState<AdminProfile>(() => loadAdminProfile(user?.name ?? '', email))
+  const [p, setP] = useState<AdminProfile>(() => {
+    const loaded = loadAdminProfile(user?.name ?? '', email)
+    // Seed the photo from the saved profile, else the signed-in user's avatar.
+    return { ...loaded, photo: loaded.photo ?? user?.avatar }
+  })
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const photo = p.photo ?? null
 
   const set = (k: keyof AdminProfile, v: string) =>
     setP((prev) => ({ ...prev, [k]: v }) as AdminProfile)
@@ -124,11 +130,14 @@ export default function BasicInfoPage() {
       return
     }
     saveAdminProfile(email, p)
-    updateUser({ name: `${p.firstName} ${p.lastName}`.trim(), email: p.email, phone: p.mobile })
+    updateUser({
+      name: `${p.firstName} ${p.lastName}`.trim(),
+      email: p.email,
+      phone: p.mobile,
+      avatar: p.photo, // reflect the uploaded picture in the header avatar
+    })
     showSuccessDialog('Your profile has been updated successfully.', 'Profile Updated')
   }
-
-  const initial = (p.firstName || user?.name || 'A').charAt(0).toUpperCase()
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
@@ -150,40 +159,28 @@ export default function BasicInfoPage() {
 
       {/* Main form card */}
       <div className="space-y-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-        {/* Identity */}
-        <div className="flex items-center gap-4">
-          <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-brand-600 text-xl font-bold text-white">
-            {initial}
-          </span>
-          <div className="min-w-0">
-            <p className="truncate text-lg font-bold capitalize text-slate-900">
-              {`${p.firstName} ${p.lastName}`.trim() || user?.name || 'My Profile'}
-            </p>
-            {user?.role && (
-              <span className="mt-1 inline-flex items-center gap-1 rounded-md bg-brand-50 px-2 py-0.5 text-xs font-semibold text-brand-600">
-                <ShieldCheck className="h-3 w-3" /> {user.role}
-              </span>
-            )}
-          </div>
+        {/* Identity — name + role only; the avatar lives in the Employee Photo
+            uploader below, so no duplicate image competes for attention here. */}
+        <div className="min-w-0">
+          <p className="truncate text-lg font-bold capitalize text-slate-900">
+            {`${p.firstName} ${p.lastName}`.trim() || user?.name || 'My Profile'}
+          </p>
+          {user?.role && (
+            <span className="mt-1 inline-flex items-center gap-1 rounded-md bg-brand-50 px-2 py-0.5 text-xs font-semibold text-brand-600">
+              <ShieldCheck className="h-3 w-3" /> {user.role}
+            </span>
+          )}
         </div>
 
         {/* Basic Information */}
         <section>
           <SectionTitle>Basic Information</SectionTitle>
           <div className="mt-4">
-            <label className="mb-1.5 block text-sm font-semibold text-slate-700">Employee Photo</label>
-            <div className="flex items-center gap-4">
-              <span className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border border-slate-200 bg-slate-50 text-slate-300">
-                <UserCircle2 className="h-10 w-10" />
-              </span>
-              <div>
-                <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50">
-                  <Upload className="h-4 w-4" /> Choose File
-                  <input type="file" accept="image/*" className="hidden" onChange={(e) => set('photoName', e.target.files?.[0]?.name ?? '')} />
-                </label>
-                <p className="mt-1 text-xs text-slate-500">{p.photoName || 'File size must not exceed 2MB'}</p>
-              </div>
-            </div>
+            <AvatarUpload
+              label="Employee Photo"
+              value={photo}
+              onChange={(dataUrl) => setP((prev) => ({ ...prev, photo: dataUrl ?? undefined }) as AdminProfile)}
+            />
           </div>
           <div className="mt-4 grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
             {txt('First Name', 'firstName', { required: true })}

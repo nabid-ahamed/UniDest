@@ -14,6 +14,8 @@ import StudentViewPage from '../features/students/StudentViewPage'
 import ApplicationsPage from '../features/applications/ApplicationsPage'
 import ApplicationViewPage from '../features/applications/ApplicationViewPage'
 import CourseFinderPage from '../features/courseFinder/CourseFinderPage'
+import SupportTicketsPage from '../features/supportTickets/SupportTicketsPage'
+import SupportTicketViewPage from '../features/supportTickets/SupportTicketViewPage'
 import BroadcastPage from '../features/broadcast/BroadcastPage'
 import BroadcastHistoryPage from '../features/broadcast/BroadcastHistoryPage'
 import UniversityInvoicesPage from '../features/invoices/UniversityInvoicesPage'
@@ -101,7 +103,7 @@ const isStaff = (role?: string) => role === 'Staff'
  * Enable a module for staff by adding its path here (prefix match covers nested
  * routes, e.g. '/leads' → '/leads/:id').
  */
-const STAFF_ALLOWED = ['/dashboard', '/leads', '/students', '/applications', '/course-finder', '/broadcast', '/webinars', '/invoices', '/analytics', '/automation', '/student-resources', '/media-library', '/cms/blog', '/cms/pages', '/cms/newsletter', '/announcements', '/message-templates', '/user-management', '/import', '/profile']
+const STAFF_ALLOWED = ['/dashboard', '/leads', '/students', '/applications', '/support-tickets', '/course-finder', '/broadcast', '/webinars', '/invoices', '/analytics', '/automation', '/student-resources', '/media-library', '/cms/blog', '/cms/pages', '/cms/newsletter', '/announcements', '/message-templates', '/user-management', '/import', '/profile']
 const staffCanAccess = (pathname: string) =>
   STAFF_ALLOWED.some((p) => pathname === p || pathname.startsWith(p + '/'))
 
@@ -189,6 +191,8 @@ export const router = createBrowserRouter([
           { path: '/applications/:id/email', element: <SendEmailPage /> },
           { path: '/applications/:id/sms', element: <SendSmsPage /> },
           { path: '/course-finder', element: <CourseFinderPage /> },
+          { path: '/support-tickets', element: <SupportTicketsPage /> },
+          { path: '/support-tickets/:id', element: <SupportTicketViewPage /> },
           { path: '/broadcast', element: <BroadcastPage /> },
           { path: '/broadcast/history', element: <BroadcastHistoryPage /> },
           { path: '/invoices/university', element: <UniversityInvoicesPage /> },

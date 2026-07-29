@@ -1,4 +1,5 @@
-import { Users, User, ClipboardList, MessageSquare, UserCog } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { Users, User, ClipboardList, MessageSquare, UserCog, ArrowUpRight } from 'lucide-react'
 import type { StatCardData } from '../../../mock/dashboard'
 
 const ICONS = {
@@ -8,6 +9,15 @@ const ICONS = {
   support: MessageSquare,
   staff: UserCog,
 } as const
+
+/** Where each card drills down to — its own module's list page. */
+const ROUTES: Record<StatCardData['key'], string> = {
+  leads: '/leads',
+  students: '/students',
+  applications: '/applications',
+  support: '/support-tickets',
+  staff: '/staff',
+}
 
 interface Palette {
   strip: string // left accent bar
@@ -86,8 +96,10 @@ export function StatCard({ stat }: { stat: StatCardData }) {
   const c = COLORS[stat.color]
 
   return (
-    <div
-      className={`group relative cursor-pointer overflow-hidden rounded-2xl bg-gradient-to-br ${c.card} to-white shadow-sm ring-1 ring-slate-100 transition-all duration-300 ease-out hover:-translate-y-1.5 hover:shadow-xl ${c.hoverRing} ${c.hoverShadow} motion-reduce:transition-none motion-reduce:hover:translate-y-0`}
+    <Link
+      to={ROUTES[stat.key]}
+      aria-label={`View ${stat.sublabel}`}
+      className={`group relative block cursor-pointer overflow-hidden rounded-2xl bg-gradient-to-br ${c.card} to-white shadow-sm ring-1 ring-slate-100 transition-all duration-300 ease-out hover:-translate-y-1.5 hover:shadow-xl ${c.hoverRing} ${c.hoverShadow} focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 motion-reduce:transition-none motion-reduce:hover:translate-y-0`}
     >
       {/* Ash overlay — wipes across the whole card from left to right on hover. */}
       <span
@@ -102,6 +114,12 @@ export function StatCard({ stat }: { stat: StatCardData }) {
       {/* Left accent strip — fades out as the ash overlay wipes in. */}
       <span
         className={`absolute inset-y-0 left-0 w-1.5 ${c.strip} transition-opacity duration-300 group-hover:opacity-0`}
+        aria-hidden="true"
+      />
+
+      {/* Drill-in affordance — appears on hover/focus so the card reads as a link. */}
+      <ArrowUpRight
+        className={`pointer-events-none absolute right-4 top-4 h-4 w-4 ${c.value} opacity-0 transition-all duration-300 group-hover:translate-x-0.5 group-hover:opacity-100 group-focus-visible:opacity-100`}
         aria-hidden="true"
       />
 
@@ -120,6 +138,6 @@ export function StatCard({ stat }: { stat: StatCardData }) {
           </p>
         </div>
       </div>
-    </div>
+    </Link>
   )
 }

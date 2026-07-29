@@ -3,6 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { Field } from '../../components/DataTableUI'
+import { AvatarUpload } from '../../components/AvatarUpload'
+import { Avatar } from '../../components/Avatar'
 import {
   getStudent,
   addStudent,
@@ -44,6 +46,7 @@ export default function StudentFormPage() {
   const [intake, setIntake] = useState(editing?.intake ?? intakes[0])
   const [university, setUniversity] = useState(editing?.university ?? '')
   const [source, setSource] = useState(editing?.source ?? studentSources[0])
+  const [avatar, setAvatar] = useState<string | null>(editing?.avatar ?? null)
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   if (isEdit && !editing) {
@@ -81,6 +84,7 @@ export default function StudentFormPage() {
       intake,
       university: university || null,
       source,
+      avatar: avatar ?? undefined,
     }
 
     if (isEdit && editing) {
@@ -108,7 +112,14 @@ export default function StudentFormPage() {
         {/* Contact */}
         <section>
           <h2 className="text-sm font-bold uppercase tracking-wide text-slate-500">Contact</h2>
-          <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="mt-3">
+            <AvatarUpload
+              value={avatar}
+              onChange={setAvatar}
+              fallback={name.trim() ? <Avatar name={name} className="h-full w-full" /> : undefined}
+            />
+          </div>
+          <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="sm:col-span-2">
               <label htmlFor="sf-name" className="mb-1.5 block text-sm font-semibold text-slate-700">
                 Full Name <span className="text-rose-600">*</span>

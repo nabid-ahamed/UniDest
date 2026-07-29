@@ -3,6 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { Field } from '../../components/DataTableUI'
+import { AvatarUpload } from '../../components/AvatarUpload'
+import { Avatar } from '../../components/Avatar'
 import {
   staffRoles,
   staffBranches,
@@ -27,6 +29,7 @@ export default function StaffFormPage() {
   const [role, setRole] = useState<StaffRole | ''>(editing?.role ?? '')
   const [branch, setBranch] = useState(editing?.branch ?? '')
   const [status, setStatus] = useState<StaffStatus>(editing?.status ?? 'Active')
+  const [avatar, setAvatar] = useState<string | null>(editing?.avatar ?? null)
   const [password, setPassword] = useState('')
   const [errors, setErrors] = useState<Record<string, string>>({})
 
@@ -59,6 +62,7 @@ export default function StaffFormPage() {
       role: role as StaffRole,
       branch,
       status,
+      avatar: avatar ?? undefined,
     }
     if (isEdit && editing) {
       updateStaff(editing.id, payload)
@@ -82,6 +86,12 @@ export default function StaffFormPage() {
       </div>
 
       <div className="mt-6 max-w-2xl space-y-5">
+        <AvatarUpload
+          value={avatar}
+          onChange={setAvatar}
+          fallback={name.trim() ? <Avatar name={name} className="h-full w-full" /> : undefined}
+        />
+
         <div>
           <label htmlFor="sf-name" className="mb-1.5 block text-sm font-semibold text-slate-700">
             Full Name <span className="text-rose-600">*</span>

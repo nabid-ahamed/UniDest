@@ -12,6 +12,7 @@ export interface RepeaterRow {
 export interface AdminProfile {
   // Basic Information
   photoName: string
+  photo?: string // profile picture (data URL); falls back to the name initial
   firstName: string
   lastName: string
   email: string

@@ -10,7 +10,16 @@ import { leadStatuses, type Lead } from '../../../mock/leads'
  * avatar, name, contact row (with a working QR dialog), country, status badge
  * and the assignee on the right.
  */
-export function LeadIdentityHeader({ lead, onChat }: { lead: Lead; onChat?: () => void }) {
+export function LeadIdentityHeader({
+  lead,
+  onChat,
+  avatarSrc,
+}: {
+  lead: Lead
+  onChat?: () => void
+  /** Optional profile picture (data URL); falls back to initials when absent. */
+  avatarSrc?: string | null
+}) {
   const [qrOpen, setQrOpen] = useState(false)
   const statusColor = leadStatuses.find((s) => s.label === lead.status)?.color ?? lead.statusColor
   const initials = lead.name
@@ -22,9 +31,15 @@ export function LeadIdentityHeader({ lead, onChat }: { lead: Lead; onChat?: () =
   return (
     <div className="flex flex-wrap items-start justify-between gap-4 px-4 pt-6 sm:px-6">
       <div className="flex items-start gap-4">
-        <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-brand-100 text-xl font-bold text-brand-700">
-          {initials}
-        </div>
+        {avatarSrc ? (
+          <div className="h-16 w-16 shrink-0 overflow-hidden rounded-full">
+            <img src={avatarSrc} alt={lead.name} className="h-full w-full object-cover" />
+          </div>
+        ) : (
+          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-brand-100 text-xl font-bold text-brand-700">
+            {initials}
+          </div>
+        )}
         <div>
           <h1 className="text-xl font-bold text-slate-900">{lead.name}</h1>
           <div className="mt-1.5 flex flex-wrap items-center gap-x-5 gap-y-1 text-sm text-slate-600">

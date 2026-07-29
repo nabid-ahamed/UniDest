@@ -6,6 +6,8 @@ export interface AuthUser {
   email: string
   role: string
   phone?: string
+  /** Profile picture (data URL); falls back to the name initial when absent. */
+  avatar?: string
   /** Student No when the user is a student (drives which portal record loads). */
   studentNo?: string
 }

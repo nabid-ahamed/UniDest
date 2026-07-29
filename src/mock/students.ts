@@ -24,6 +24,7 @@ export interface Student {
   university: string | null
   applications: number
   source: string
+  avatar?: string // profile picture (data URL); falls back to coloured initials
   /**
    * Lifecycle bucket. Omitted/undefined = active. Archive and delete flip this
    * so the "Archived Students" / "Deleted Students" views can list them instead

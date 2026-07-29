@@ -163,11 +163,19 @@ export function SidebarMessenger() {
   }
 
   /* ---- shared bits ---- */
+  // The clip lives on an inner wrapper (for the round image), so the green
+  // "active" dot on the outer span isn't cut off by overflow-hidden.
   const adminAvatar = (
-    <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-600 text-sm font-bold text-white">
-      {adminInitial}
+    <span className="relative inline-flex h-9 w-9 shrink-0">
+      <span className="flex h-full w-full items-center justify-center overflow-hidden rounded-full bg-brand-600 text-sm font-bold text-white">
+        {user?.avatar ? (
+          <img src={user.avatar} alt={adminName} className="h-full w-full object-cover" />
+        ) : (
+          adminInitial
+        )}
+      </span>
       <span
-        className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-emerald-500 ring-2 ring-white"
+        className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-emerald-500 ring-2 ring-white"
         aria-label="Active"
       />
     </span>

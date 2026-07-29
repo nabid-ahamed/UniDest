@@ -20,6 +20,7 @@ import {
 } from 'lucide-react'
 import { cn } from '../../../lib/cn'
 import { pickTextColor } from '../../../lib/contrast'
+import { Avatar } from '../../../components/Avatar'
 import { studentStatuses, type Student } from '../../../mock/students'
 
 export function StudentRow({
@@ -66,6 +67,14 @@ export function StudentRow({
 
       {/* Student — identity / contact / meta, same 3-tier rhythm as LeadRow */}
       <td className="px-3 py-3">
+        <div className="flex items-start gap-2.5">
+          <Avatar
+            name={student.name}
+            src={student.avatar}
+            className="mt-0.5 h-9 w-9"
+            fontClassName="text-xs font-bold"
+          />
+          <div className="min-w-0">
         <button
           type="button"
           onClick={() => onAction('View')}
@@ -96,6 +105,8 @@ export function StudentRow({
           <span className="rounded-md border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-xs font-medium text-slate-600">
             {student.source}
           </span>
+        </div>
+          </div>
         </div>
       </td>
 

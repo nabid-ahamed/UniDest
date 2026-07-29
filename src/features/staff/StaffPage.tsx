@@ -15,16 +15,14 @@ import {
   Phone,
 } from 'lucide-react'
 import { cn } from '../../lib/cn'
-import { pickTextColor } from '../../lib/contrast'
 import { ExportButtons } from '../../components/ExportButtons'
 import { PageBtn } from '../../components/DataTableUI'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
+import { Avatar } from '../../components/Avatar'
 import {
   staff,
   staffRoles,
   staffBranches,
-  avatarColor,
-  initials,
   toggleStaffStatus,
   deleteStaff,
   workload,
@@ -186,18 +184,11 @@ export default function StaffPage() {
           <tbody>
             {pageRows.map((s) => {
               const w = workload(s.name)
-              const bg = avatarColor(s.name)
               return (
                 <tr key={s.id} className="border-b border-slate-100 align-top text-sm">
                   <td className="px-4 py-4">
                     <div className="flex items-center gap-3">
-                      <span
-                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold"
-                        style={{ backgroundColor: bg, color: pickTextColor(bg) }}
-                        aria-hidden="true"
-                      >
-                        {initials(s.name)}
-                      </span>
+                      <Avatar name={s.name} src={s.avatar} className="h-9 w-9" fontClassName="text-xs font-bold" />
                       <a href={`/staff/${s.id}`} className="font-bold text-slate-800 hover:text-brand-600 hover:underline">
                         {s.name}
                       </a>

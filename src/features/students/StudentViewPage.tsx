@@ -194,7 +194,7 @@ function StudentView({ student }: { student: Student }) {
   return (
     <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
       {/* Identity header */}
-      <LeadIdentityHeader lead={asLead} onChat={() => setTab('Chat')} />
+      <LeadIdentityHeader lead={asLead} onChat={() => setTab('Chat')} avatarSrc={student.avatar} />
 
       {/* Tabs */}
       <div className="mt-5 grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8">
@@ -380,7 +380,9 @@ function StudentView({ student }: { student: Student }) {
                       onClick={() =>
                         a.label === 'Convert Back To Lead'
                           ? setConverting(true)
-                          : showToast(`${a.label} — coming soon`)
+                          : a.label === 'View Support Tickets'
+                            ? navigate(`/support-tickets?q=${encodeURIComponent(student.name)}`)
+                            : showToast(`${a.label} — coming soon`)
                       }
                       className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm font-medium text-slate-700 transition-colors hover:bg-brand-50 hover:text-brand-700"
                     >

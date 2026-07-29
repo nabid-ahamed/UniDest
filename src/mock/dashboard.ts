@@ -2,6 +2,10 @@
 // Docs: docs/superpowers/mock-data/adminpage.md. Replace with real API in Phase 2.
 
 import { staff } from './staff'
+import { ticketStatusCounts } from './supportTickets'
+import { leads } from './leads'
+import { students, studentState } from './students'
+import { applications } from './applications'
 
 export interface StatCardData {
   key: 'leads' | 'students' | 'applications' | 'support' | 'staff'
@@ -11,11 +15,30 @@ export interface StatCardData {
   color: 'blue' | 'emerald' | 'orange' | 'purple' | 'rose'
 }
 
+// ── Live counts ─────────────────────────────────────────────────────────────
+// Every card reads its own module's live list, so the number on the dashboard
+// always matches what you see after clicking through. "Open" excludes terminal
+// statuses; "Total" excludes soft-deleted records.
+
+// Live ticket counts so the dashboard always matches the Support Tickets module.
+const _ticketCounts = ticketStatusCounts()
+
+// Leads still in the pipeline — everything except the terminal Registered /
+// Rejected states (which have left the working queue).
+const _openLeads = leads.filter((l) => l.status !== 'Registered' && l.status !== 'Rejected').length
+
+// Active students only (the default Students view; archived/deleted are excluded).
+const _totalStudents = students.filter((s) => studentState(s) === 'active').length
+
+// Applications not yet closed out — everything except Withdrawn.
+const _openApplications = applications.filter((a) => a.status !== 'Withdrawn').length
+
 export const dashboardStats: StatCardData[] = [
-  { key: 'leads', label: 'Leads', sublabel: 'Open Leads', value: 27, color: 'blue' },
-  { key: 'students', label: 'Students', sublabel: 'Total Students', value: 1876, color: 'emerald' },
-  { key: 'applications', label: 'Applications', sublabel: 'Open Applications', value: 214, color: 'orange' },
-  { key: 'support', label: 'Support Tickets', sublabel: 'Open Support Tickets', value: 96, color: 'purple' },
+  { key: 'leads', label: 'Leads', sublabel: 'Open Leads', value: _openLeads, color: 'blue' },
+  { key: 'students', label: 'Students', sublabel: 'Total Students', value: _totalStudents, color: 'emerald' },
+  { key: 'applications', label: 'Applications', sublabel: 'Open Applications', value: _openApplications, color: 'orange' },
+  // Live "Open" count from the Support Tickets module.
+  { key: 'support', label: 'Support Tickets', sublabel: 'Open Support Tickets', value: _ticketCounts.Open, color: 'purple' },
   // Live count from the Staff module so it always matches that page.
   { key: 'staff', label: 'Staff', sublabel: 'Total Staff', value: staff.length, color: 'rose' },
 ]
@@ -189,11 +212,12 @@ export interface SimpleStat {
   value: number
 }
 
+// Live counts from the Support Tickets module.
 export const ticketSummary: SimpleStat[] = [
-  { label: 'Open', value: 96 },
-  { label: 'Pending', value: 41 },
-  { label: 'Resolved', value: 312 },
-  { label: 'Closed', value: 588 },
+  { label: 'Open', value: _ticketCounts.Open },
+  { label: 'Pending', value: _ticketCounts.Pending },
+  { label: 'Resolved', value: _ticketCounts.Resolved },
+  { label: 'Closed', value: _ticketCounts.Closed },
 ]
 
 export const ticketsByPriority: Breakdown[] = [

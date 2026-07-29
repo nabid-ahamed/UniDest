@@ -46,6 +46,7 @@ export interface StaffMember {
   branch: string
   status: StaffStatus
   joined: string // e.g. "12 Jan 2025"
+  avatar?: string // profile picture (data URL); falls back to coloured initials
 }
 
 const STAFF_KEY = 'unidest-staff'

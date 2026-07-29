@@ -14,6 +14,7 @@ import { LeadCourseSuggestionTab } from './components/LeadCourseSuggestionTab'
 import { LeadCoursePreferencesTab } from './components/LeadCoursePreferencesTab'
 import { LeadActions } from './components/LeadActions'
 import { leads, type Lead } from '../../mock/leads'
+import { ticketsFor } from '../../mock/supportTickets'
 
 const TABS = ['Overview', 'Profile', 'Course Suggestion', 'Course Preferences'] as const
 
@@ -127,7 +128,15 @@ function LeadView({ lead }: { lead: Lead }) {
             <RecordsSection
               title="Support Tickets"
               headers={['Ticket', 'Assigned To', 'Status', 'Last Reply']}
-              onCreate={() => showToast('Create ticket — coming soon')}
+              rows={ticketsFor(lead.name).map((t) => [
+                `#${t.id} · ${t.subject}`,
+                t.assignedTo ?? 'Unassigned',
+                t.status,
+                t.updated,
+              ])}
+              onCreate={() =>
+                window.location.assign(`/support-tickets?q=${encodeURIComponent(lead.name)}`)
+              }
             />
 
             <section>

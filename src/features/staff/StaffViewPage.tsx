@@ -1,11 +1,9 @@
 import { useParams } from 'react-router-dom'
 import { ArrowLeft, Mail, Phone, Pencil, Users, Contact, ClipboardList, CalendarDays } from 'lucide-react'
 import { cn } from '../../lib/cn'
-import { pickTextColor } from '../../lib/contrast'
+import { Avatar } from '../../components/Avatar'
 import {
   getStaff,
-  avatarColor,
-  initials,
   workload,
   assignedLeads,
   assignedStudents,
@@ -28,7 +26,6 @@ export default function StaffViewPage() {
   }
 
   const w = workload(member.name)
-  const bg = avatarColor(member.name)
   const leads = assignedLeads(member.name)
   const students = assignedStudents(member.name)
   const applications = assignedApplications(member.name)
@@ -45,13 +42,7 @@ export default function StaffViewPage() {
       <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="flex items-center gap-4">
-            <span
-              className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full text-lg font-bold"
-              style={{ backgroundColor: bg, color: pickTextColor(bg) }}
-              aria-hidden="true"
-            >
-              {initials(member.name)}
-            </span>
+            <Avatar name={member.name} src={member.avatar} className="h-16 w-16" />
             <div>
               <div className="flex flex-wrap items-center gap-2.5">
                 <h1 className="text-xl font-bold text-slate-900">{member.name}</h1>
