@@ -41,7 +41,6 @@ import { AlertDialog } from '../../components/ui/AlertDialog'
 import { SuccessDialog } from '../../components/ui/SuccessDialog'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { TransferBranchDialog } from './components/TransferBranchDialog'
-import { ChangePasswordDialog } from './components/ChangePasswordDialog'
 
 /** A lead may carry at most this many tags. */
 const MAX_TAGS = 5
@@ -78,7 +77,6 @@ export default function LeadsPage() {
   const [counselLead, setCounselLead] = useState<Lead | null>(null)
   // Settings (gear) menu targets.
   const [transferLead, setTransferLead] = useState<Lead | null>(null)
-  const [passwordLead, setPasswordLead] = useState<Lead | null>(null)
   const [deleteLeadTarget, setDeleteLeadTarget] = useState<Lead | null>(null)
   // Bumped after a delete so the table re-reads the (now shorter) leads list.
   const [listRev, setListRev] = useState(0)
@@ -190,7 +188,6 @@ export default function LeadsPage() {
     if (type === 'View') return window.location.assign(`/leads/${lead.id}`)
     if (type === 'Edit') return window.location.assign(`/leads/${lead.id}/edit`)
     if (type === 'Transfer Branch') return setTransferLead(lead)
-    if (type === 'Change Password') return setPasswordLead(lead)
     if (type === 'Delete') return setDeleteLeadTarget(lead)
     showToast(`${type}: ${lead.name} (#${lead.id})`)
   }
@@ -200,12 +197,6 @@ export default function LeadsPage() {
     persistLead(transferLead.id, { branch })
     setTransferLead(null)
     setSuccessMsg('Lead Branch Transferred Successfully')
-  }
-
-  const doChangePassword = () => {
-    const name = passwordLead?.name
-    setPasswordLead(null)
-    setSuccessMsg(`Password changed for ${name}.`)
   }
 
   const confirmDelete = () => {
@@ -445,7 +436,7 @@ export default function LeadsPage() {
           <Field label="Assigned To Staff">
             <select value={staff} onChange={(e) => { setStaff(e.target.value); resetToFirst() }} className="input">
               <option value="">- Select -</option>
-              {leadStaff.map((s) => (
+              {leadStaff().map((s) => (
                 <option key={s}>{s}</option>
               ))}
             </select>
@@ -765,7 +756,7 @@ export default function LeadsPage() {
             aria-label="Staff to assign"
           >
             <option value="">- Select Staff -</option>
-            {leadStaff.map((s) => (
+            {leadStaff().map((s) => (
               <option key={s}>{s}</option>
             ))}
           </select>
@@ -805,7 +796,7 @@ export default function LeadsPage() {
         <AssignStaffDialog
           lead={assignLead}
           assignedTo={assignees[assignLead.id] ?? null}
-          staff={leadStaff}
+          staff={leadStaff()}
           onClose={() => setAssignLead(null)}
           onSave={saveAssignee}
         />
@@ -815,7 +806,7 @@ export default function LeadsPage() {
       {counselLead && (
         <ConvertCounselingDialog
           lead={counselLead}
-          counsellors={leadStaff}
+          counsellors={leadStaff()}
           initialCounsellor={assignees[counselLead.id]}
           onClose={() => setCounselLead(null)}
           onUpdate={convertToCounseling}
@@ -830,15 +821,6 @@ export default function LeadsPage() {
           branches={leadBranches.filter((b) => b !== 'All Branch')}
           onClose={() => setTransferLead(null)}
           onSave={saveBranch}
-        />
-      )}
-
-      {/* Change password */}
-      {passwordLead && (
-        <ChangePasswordDialog
-          lead={passwordLead}
-          onClose={() => setPasswordLead(null)}
-          onSave={doChangePassword}
         />
       )}
 

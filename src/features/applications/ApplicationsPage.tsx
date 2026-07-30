@@ -353,7 +353,7 @@ export default function ApplicationsPage() {
                       className="input"
                     >
                       <option value="">- Assigned To -</option>
-                      {applicationStaff.map((s) => (
+                      {applicationStaff().map((s) => (
                         <option key={s}>{s}</option>
                       ))}
                     </select>
@@ -602,7 +602,7 @@ export default function ApplicationsPage() {
             className="input w-48"
           >
             <option value="">- Select staff -</option>
-            {applicationStaff.map((s) => (
+            {applicationStaff().map((s) => (
               <option key={s}>{s}</option>
             ))}
           </select>
@@ -626,7 +626,7 @@ export default function ApplicationsPage() {
           title="Application - Assign Staff"
           nameLabel="Student Name"
           assignedTo={assignApp.assignedTo}
-          staff={applicationStaff}
+          staff={applicationStaff()}
           onClose={() => setAssignApp(null)}
           onSave={saveAssignee}
         />

@@ -319,7 +319,7 @@ export default function SupportTicketViewPage() {
           title="Ticket - Assign Staff"
           nameLabel="Requester"
           assignedTo={ticket.assignedTo}
-          staff={ticketStaff}
+          staff={ticketStaff()}
           onClose={() => setAssignOpen(false)}
           onSave={saveAssignee}
         />

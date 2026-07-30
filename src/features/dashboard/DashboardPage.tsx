@@ -1,8 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useAuth } from '../../store/auth'
 import {
-  leadFollowups,
-  studentFollowups,
   branches,
   branchDashboard,
 } from '../../mock/dashboard'
@@ -73,14 +71,14 @@ export default function DashboardPage() {
       {/* Follow-ups */}
       <CollapsibleSection title="Follow-ups">
         <div className="grid gap-4 lg:grid-cols-2">
-          <FollowUpCard title="Lead Follow-ups" buckets={leadFollowups} />
-          <FollowUpCard title="Student Follow-ups" buckets={studentFollowups} />
+          <FollowUpCard title="Lead Follow-ups" buckets={data.leadFollowups} />
+          <FollowUpCard title="Student Follow-ups" buckets={data.studentFollowups} />
         </div>
       </CollapsibleSection>
 
       {/* Reminders */}
       <CollapsibleSection title="Reminders">
-        <RemindersCard />
+        <RemindersCard reminders={data.reminders} />
       </CollapsibleSection>
 
       {/* Study abroad stats */}

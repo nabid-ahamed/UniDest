@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import {
-  KeyRound,
   Mail,
   MessageSquare,
   MessageCircle,
@@ -13,7 +12,6 @@ import {
   ChevronsRight,
   Trash2,
   X,
-  RefreshCw,
 } from 'lucide-react'
 import { ConfirmDialog } from '../../../components/ui/ConfirmDialog'
 import { showSuccessDialog } from '../../../store/successDialog'
@@ -43,7 +41,7 @@ function saveMap(key: string, map: Record<string, unknown>) {
 const AGENT_KEY = 'unidest-lead-agent'
 const PERM_KEY = 'unidest-country-perms'
 
-type Modal = null | 'reset' | 'agreement' | 'agent' | 'country'
+type Modal = null | 'agreement' | 'agent' | 'country'
 
 function ModalShell({
   title,
@@ -100,10 +98,6 @@ export function LeadActions({ lead, onToast }: { lead: Lead; onToast: (m: string
   const [modal, setModal] = useState<Modal>(null)
   const [confirm, setConfirm] = useState<null | 'convert' | 'delete'>(null)
 
-  // Reset password
-  const [pw, setPw] = useState('')
-  const [pw2, setPw2] = useState('')
-  const [pwErr, setPwErr] = useState('')
   // Agreement note
   const [note, setNote] = useState('')
   // Link to agent
@@ -115,9 +109,6 @@ export function LeadActions({ lead, onToast }: { lead: Lead; onToast: (m: string
 
   const close = () => {
     setModal(null)
-    setPw('')
-    setPw2('')
-    setPwErr('')
     setNote('')
   }
 
@@ -130,8 +121,7 @@ export function LeadActions({ lead, onToast }: { lead: Lead; onToast: (m: string
     window.open(`https://wa.me/${digits.replace('+', '')}`, '_blank', 'noopener')
   }
 
-  const ACTIONS: { label: string; icon: typeof KeyRound; run: () => void }[] = [
-    { label: 'Reset Password', icon: KeyRound, run: () => setModal('reset') },
+  const ACTIONS: { label: string; icon: typeof Mail; run: () => void }[] = [
     { label: 'Send email', icon: Mail, run: () => navigate(`/leads/${lead.id}/email`) },
     { label: 'Send sms', icon: MessageSquare, run: () => navigate(`/leads/${lead.id}/sms`) },
     { label: 'Send Whatsapp', icon: MessageCircle, run: openWhatsapp },
@@ -141,13 +131,6 @@ export function LeadActions({ lead, onToast }: { lead: Lead; onToast: (m: string
     { label: 'Country Info Permissions', icon: Globe, run: () => setModal('country') },
     { label: 'Convert To Student', icon: ChevronsRight, run: () => setConfirm('convert') },
   ]
-
-  const doResetPassword = () => {
-    if (pw.length < 6) return setPwErr('Password must be at least 6 characters.')
-    if (pw !== pw2) return setPwErr('Passwords do not match.')
-    close()
-    showSuccessDialog(`Password reset for ${lead.name}.`, 'Password Reset')
-  }
 
   const doAgreement = () => {
     close()
@@ -223,37 +206,6 @@ export function LeadActions({ lead, onToast }: { lead: Lead; onToast: (m: string
           </button>
         </div>
       </section>
-
-      {/* Reset Password */}
-      {modal === 'reset' && (
-        <ModalShell
-          title="Reset Password"
-          onClose={close}
-          footer={<><Btn tone="ghost" onClick={close}>Cancel</Btn><Btn onClick={doResetPassword}>Reset Password</Btn></>}
-        >
-          <div className="space-y-4">
-            <ReadOnly label="User" value={`${lead.name} · ${lead.email}`} />
-            <div>
-              <div className="mb-1.5 flex items-center justify-between">
-                <label className="text-sm font-semibold text-slate-700">New Password</label>
-                <button
-                  type="button"
-                  onClick={() => { const g = Math.random().toString(36).slice(-8); setPw(g); setPw2(g); setPwErr('') }}
-                  className="inline-flex items-center gap-1 text-xs font-semibold text-brand-600 hover:text-brand-700"
-                >
-                  <RefreshCw className="h-3 w-3" /> Generate
-                </button>
-              </div>
-              <input value={pw} onChange={(e) => { setPw(e.target.value); setPwErr('') }} className="input" placeholder="Enter new password" />
-            </div>
-            <div>
-              <label className="mb-1.5 block text-sm font-semibold text-slate-700">Confirm Password</label>
-              <input value={pw2} onChange={(e) => { setPw2(e.target.value); setPwErr('') }} className="input" placeholder="Re-enter new password" />
-            </div>
-            {pwErr && <p className="text-sm text-rose-600">{pwErr}</p>}
-          </div>
-        </ModalShell>
-      )}
 
       {/* Student Agreement */}
       {modal === 'agreement' && (

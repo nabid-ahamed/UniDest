@@ -41,7 +41,7 @@ export const agentEmails = [
 ]
 
 /** Staff emails derived from the shared staff lookup. */
-export const staffEmails = leadStaff.map(
+export const staffEmails = leadStaff().map(
   (n) => `${n.toLowerCase().replace(/[^a-z]+/g, '.')}@globaled.com`,
 )
 

@@ -382,7 +382,7 @@ export default function SupportTicketsPage() {
                       className="input"
                     >
                       <option value="">- Assigned To -</option>
-                      {ticketStaff.map((s) => (
+                      {ticketStaff().map((s) => (
                         <option key={s}>{s}</option>
                       ))}
                     </select>
@@ -621,7 +621,7 @@ export default function SupportTicketsPage() {
             className="input w-48"
           >
             <option value="">- Select staff -</option>
-            {ticketStaff.map((s) => (
+            {ticketStaff().map((s) => (
               <option key={s}>{s}</option>
             ))}
           </select>
@@ -643,7 +643,7 @@ export default function SupportTicketsPage() {
           title="Ticket - Assign Staff"
           nameLabel="Requester"
           assignedTo={assignTicket.assignedTo}
-          staff={ticketStaff}
+          staff={ticketStaff()}
           onClose={() => setAssignTicket(null)}
           onSave={saveAssignee}
         />

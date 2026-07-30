@@ -70,3 +70,12 @@ export function addFollowup(
 export function nextFollowupFor(studentId: number): string {
   return loadFollowups(studentId).find((r) => r.next)?.next ?? ''
 }
+
+/**
+ * The most recent record that has a scheduled next follow-up (or null). Used by
+ * the dashboard to list who is due — carries both the `next` date and the
+ * `details` describing what the follow-up is about.
+ */
+export function nextScheduledFollowup(studentId: number): FollowupRecord | null {
+  return loadFollowups(studentId).find((r) => r.next) ?? null
+}

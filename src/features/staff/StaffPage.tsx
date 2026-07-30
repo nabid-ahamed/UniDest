@@ -216,9 +216,6 @@ export default function StaffPage() {
                       <span className="rounded-md bg-violet-50 px-2 py-1 font-semibold text-violet-700" title="Assigned students">
                         {w.students} Students
                       </span>
-                      <span className="rounded-md bg-emerald-50 px-2 py-1 font-semibold text-emerald-700" title="Assigned applications">
-                        {w.applications} Apps
-                      </span>
                     </div>
                   </td>
                   <td className="px-4 py-4">

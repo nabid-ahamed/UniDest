@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { showSuccessDialog } from '../../store/successDialog'
 import { createPortal } from 'react-dom'
 import { useNavigate, useParams } from 'react-router-dom'
@@ -14,6 +14,7 @@ import {
   Trash2,
   Info,
   ArrowLeft,
+  BellRing,
 } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { pickTextColor } from '../../lib/contrast'
@@ -42,6 +43,8 @@ import {
   type DocumentInput,
   type InvoiceInput,
 } from './components/ApplicationRecordDialogs'
+import { ReminderMessagesDialog } from './components/ReminderMessagesDialog'
+import { reminderMessageFor } from '../../mock/reminderMessages'
 import { students } from '../../mock/students'
 
 /** Application detail page (route /applications/:id), matching the reference "View" page. */
@@ -73,6 +76,9 @@ function ApplicationView({ app }: { app: NonNullable<ReturnType<typeof getApplic
   const [assignedTo, setAssignedTo] = useState(app.assignedTo)
   const [assigning, setAssigning] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [editingReminders, setEditingReminders] = useState(false)
+  // Bumped after saving in the editor so the "current reminder" line re-reads.
+  const [reminderRev, setReminderRev] = useState(0)
   // Per-application documents + invoices (persisted per app id).
   const [documents, setDocuments] = useState(() => loadAppDocuments(app.id))
   const [invoices, setInvoices] = useState(() => loadAppInvoices(app.id))
@@ -107,6 +113,13 @@ function ApplicationView({ app }: { app: NonNullable<ReturnType<typeof getApplic
 
   const statusColor =
     applicationStatuses.find((s) => s.label === status)?.color ?? app.statusColor
+
+  // The reminder line the dashboard shows for this status (re-read after edits;
+  // reminderRev bumps when the editor saves).
+  const reminderMsg = useMemo(
+    () => reminderMessageFor(status),
+    [status, reminderRev],
+  )
 
   const showToast = (msg: string) => {
     setToast(msg)
@@ -237,6 +250,20 @@ function ApplicationView({ app }: { app: NonNullable<ReturnType<typeof getApplic
               {status}
             </span>
             <StatusMenu current={status} onPick={changeStatus} />
+          </div>
+          {/* Dashboard reminder message for this status — customisable inline. */}
+          <div className="flex items-center gap-2 text-xs text-slate-500 sm:justify-end">
+            <BellRing className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+            <span className="max-w-[16rem] truncate" title={reminderMsg || 'No reminder for this status'}>
+              {reminderMsg || 'No reminder for this status'}
+            </span>
+            <button
+              type="button"
+              onClick={() => setEditingReminders(true)}
+              className="shrink-0 font-semibold text-brand-600 hover:text-brand-700 hover:underline"
+            >
+              Customise
+            </button>
           </div>
           <div className="flex items-center gap-2 text-sm text-slate-600">
             <span className="font-semibold text-slate-700">Assigned:</span>
@@ -407,7 +434,7 @@ function ApplicationView({ app }: { app: NonNullable<ReturnType<typeof getApplic
           title="Application - Assign Staff"
           nameLabel="Student Name"
           assignedTo={assignedTo}
-          staff={applicationStaff}
+          staff={applicationStaff()}
           onClose={() => setAssigning(false)}
           onSave={saveAssignee}
         />
@@ -450,6 +477,14 @@ function ApplicationView({ app }: { app: NonNullable<ReturnType<typeof getApplic
           />,
           document.body,
         )}
+
+      {/* Reminder messages editor */}
+      {editingReminders && (
+        <ReminderMessagesDialog
+          onClose={() => setEditingReminders(false)}
+          onSaved={(msg) => { showToast(msg); setReminderRev((n) => n + 1) }}
+        />
+      )}
 
       {/* Toast */}
       {toast && (

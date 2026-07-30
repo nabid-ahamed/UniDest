@@ -5,7 +5,6 @@ import { cn } from '../../lib/cn'
 import {
   ConfidentialNotes,
   DetailGrid,
-  Detail,
   RecordsSection,
 } from '../../components/DetailSections'
 import { LeadIdentityHeader } from './components/LeadIdentityHeader'
@@ -113,8 +112,6 @@ function LeadView({ lead }: { lead: Lead }) {
                       Active
                     </span>
                   </div>
-                  <Detail label="Last Login At" value="N/A" />
-                  <Detail label="Last Login IP" value="N/A" />
                 </div>
               </div>
             </section>

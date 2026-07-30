@@ -8,11 +8,11 @@ import {
   SquarePen,
   ChevronDown,
   UserPlus,
+  UserRound,
   Eye,
   Settings,
   Pencil,
   GitBranch,
-  KeyRound,
   Trash2,
 } from 'lucide-react'
 import { cn } from '../../../lib/cn'
@@ -154,25 +154,31 @@ export function LeadRow({
         </div>
       </td>
 
-      {/* Assigned to — the assign action lives in the Actions column, so this
-          cell just shows the owner (name or "Unassigned"), no assign icon. */}
+      {/* Assigned to — owner name (or "Unassigned") with a person icon beside it.
+          Clicking still opens the re-assign dialog. */}
       <td className="px-3 py-3">
         {assignedTo ? (
           <button
             type="button"
             onClick={() => onAction('Assign')}
             title="Re-assign"
-            className="text-sm font-medium text-slate-700 hover:text-brand-600 hover:underline"
+            className="group inline-flex items-center gap-1.5 text-sm font-medium text-slate-700 hover:text-brand-600"
           >
-            {assignedTo}
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-50 text-brand-600">
+              <UserRound className="h-3.5 w-3.5" />
+            </span>
+            <span className="group-hover:underline">{assignedTo}</span>
           </button>
         ) : (
           <button
             type="button"
             onClick={() => onAction('Assign')}
-            className="text-sm font-medium text-rose-600 hover:text-rose-700"
+            className="group inline-flex items-center gap-1.5 text-sm font-medium text-rose-600 hover:text-rose-700"
           >
-            Unassigned
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-rose-50 text-rose-600">
+              <UserPlus className="h-3.5 w-3.5" />
+            </span>
+            <span className="group-hover:underline">Unassigned</span>
           </button>
         )}
       </td>
@@ -285,9 +291,10 @@ function StatusMenu({
 }
 
 /**
- * The gear (Settings) action opens a dropdown, matching the reference:
- * Edit · Transfer Branch · Change Password · Delete. Each item fires a distinct
+ * The gear (Settings) action opens a dropdown:
+ * Edit · Transfer Branch · Delete. Each item fires a distinct
  * onAction so LeadsPage can route it (navigate, modal or confirm).
+ * (Leads have no login, so there's no password action here.)
  */
 function SettingsMenu({ onAction }: { onAction: (type: string) => void }) {
   const [open, setOpen] = useState(false)
@@ -312,7 +319,6 @@ function SettingsMenu({ onAction }: { onAction: (type: string) => void }) {
   const items: { label: string; action: string; icon: typeof Pencil; danger?: boolean }[] = [
     { label: 'Edit', action: 'Edit', icon: Pencil },
     { label: 'Transfer Branch', action: 'Transfer Branch', icon: GitBranch },
-    { label: 'Change Password', action: 'Change Password', icon: KeyRound },
     { label: 'Delete', action: 'Delete', icon: Trash2, danger: true },
   ]
 

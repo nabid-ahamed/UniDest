@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Save, X, RefreshCw } from 'lucide-react'
+import { Save, X } from 'lucide-react'
 import { MultiSelect } from '../../components/MultiSelect'
 import {
   studyLevels,
@@ -7,6 +7,7 @@ import {
   intakes,
   services,
   leadCountries,
+  leadBranches,
   allCountries,
   qualifications,
   phoneCountryCodes,
@@ -15,19 +16,15 @@ import {
   addLead,
 } from '../../mock/leads'
 
+// Assignable branches — the dashboard's "All Branch" is a filter, not a real
+// office, so it's excluded from the picker.
+const assignableBranches = leadBranches.filter((b) => b !== 'All Branch')
+
 export default function AddLeadPage() {
   const [gender, setGender] = useState('Male')
   const [sameAsMobile, setSameAsMobile] = useState(false)
-  const [password, setPassword] = useState('')
   const [countriesInterested, setCountriesInterested] = useState<string[]>([])
   const [saved, setSaved] = useState(false)
-
-  const generatePassword = () => {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789@#$'
-    let out = ''
-    for (let i = 0; i < 10; i++) out += chars[Math.floor(Math.random() * chars.length)]
-    setPassword(out)
-  }
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -52,7 +49,7 @@ export default function AddLeadPage() {
       phoneNote: 'New lead',
       whatsapp: sameAsMobile,
       leadAgeDays: 0,
-      branch: 'Dhaka',
+      branch: get('branch'),
       status: 'New Lead',
       statusColor: leadStatuses.find((x) => x.label === 'New Lead')?.color ?? '#0e7490',
       assignedTo: null,
@@ -162,6 +159,16 @@ export default function AddLeadPage() {
           <Field label="City">
             <input className="input" placeholder="Select City" />
           </Field>
+          <Field label="Branch" required>
+            <select name="branch" className="input" defaultValue="" required>
+              <option value="" disabled>
+                Select Branch
+              </option>
+              {assignableBranches.map((b) => (
+                <option key={b}>{b}</option>
+              ))}
+            </select>
+          </Field>
         </div>
       </Section>
 
@@ -220,26 +227,9 @@ export default function AddLeadPage() {
         </div>
       </Section>
 
-      {/* Account & academic */}
-      <Section title="Account & Academic">
+      {/* Academic */}
+      <Section title="Academic">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <Field label="Login Password">
-            <div className="flex items-center gap-2">
-              <input
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="input flex-1"
-                placeholder="Login Password"
-              />
-              <button
-                type="button"
-                onClick={generatePassword}
-                className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-brand-300 bg-white px-3 py-2 text-xs font-semibold text-brand-600 transition-colors hover:bg-brand-50"
-              >
-                <RefreshCw className="h-3.5 w-3.5" /> Generate
-              </button>
-            </div>
-          </Field>
           <Field label="Qualification">
             <select name="qualification" className="input" defaultValue="">
               <option value="">Select Qualification</option>

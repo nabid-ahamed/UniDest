@@ -3,9 +3,9 @@ import { createPortal } from 'react-dom'
 import { X, RefreshCw } from 'lucide-react'
 
 /**
- * "Change Password" modal from the lead row's gear menu — matches the reference
- * (/auth/user/:id/lead/password/change): new + confirm password, with a
- * generator. Prototype: no password is stored; it just validates + confirms.
+ * "Change Password" modal — new + confirm password, with a generator. Used for
+ * portal users (students); leads have no login, so this is not shown for them.
+ * Prototype: no password is stored; it just validates + confirms.
  */
 export function ChangePasswordDialog({
   lead,

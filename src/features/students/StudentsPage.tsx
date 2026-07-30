@@ -503,7 +503,7 @@ export default function StudentsPage() {
                       className="input"
                     >
                       <option value="">- Select -</option>
-                      {studentStaff.map((s) => (
+                      {studentStaff().map((s) => (
                         <option key={s}>{s}</option>
                       ))}
                     </select>
@@ -817,7 +817,7 @@ export default function StudentsPage() {
             className="input w-48"
           >
             <option value="">- Select staff -</option>
-            {studentStaff.map((s) => (
+            {studentStaff().map((s) => (
               <option key={s}>{s}</option>
             ))}
           </select>
@@ -847,7 +847,7 @@ export default function StudentsPage() {
           title="Student - Assign Staff"
           nameLabel="Student Name"
           assignedTo={assignStudent.assignedTo}
-          staff={studentStaff}
+          staff={studentStaff()}
           onClose={() => setAssignStudent(null)}
           onSave={saveAssignee}
         />

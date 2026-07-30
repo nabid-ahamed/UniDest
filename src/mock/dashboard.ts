@@ -6,6 +6,8 @@ import { ticketStatusCounts } from './supportTickets'
 import { leads } from './leads'
 import { students, studentState } from './students'
 import { applications } from './applications'
+import { nextScheduledFollowup } from './student/followups'
+import { reminderMessageFor } from './reminderMessages'
 
 export interface StatCardData {
   key: 'leads' | 'students' | 'applications' | 'support' | 'staff'
@@ -110,11 +112,23 @@ export const monthlyTrend: TrendPoint[] = [
   { month: 'Jul', students: 96, leads: 128 },
 ]
 
+// Per-branch share of the whole (also used to scale the stat datasets below).
+// Declared here because the derived follow-up lists (which run at module load)
+// consult it to decide whether a branch filter is active.
+const BRANCH_SHARE: Record<string, number> = {
+  Dhaka: 0.46,
+  Chattogram: 0.24,
+  Sylhet: 0.18,
+  Khulna: 0.12,
+}
+
 export interface FollowUp {
   id: number
   name: string
   detail: string
   when: string
+  /** Where clicking the row navigates (the lead/student detail page). */
+  href?: string
 }
 
 export interface FollowUpBuckets {
@@ -123,27 +137,116 @@ export interface FollowUpBuckets {
   upcoming: FollowUp[]
 }
 
-export const leadFollowups: FollowUpBuckets = {
-  today: [],
-  due: [
-    { id: 1, name: 'Karim Hossain', detail: 'UK — Masters in Data Science', when: 'Yesterday' },
-    { id: 2, name: 'Priya Sharma', detail: 'Canada — Bachelors', when: '2 days ago' },
-  ],
-  upcoming: [
-    { id: 3, name: 'Nadia Rahman', detail: 'Australia — MBA', when: 'Tomorrow' },
-  ],
+// ── Follow-ups (derived, branch-aware) ───────────────────────────────────────
+// Real follow-ups are read from the live Leads list (each lead's `nextFollowup`
+// date) and from student follow-up records, then bucketed against "today":
+//   date < today → Due (overdue) · date == today → Today · date > today → Upcoming
+// Clicking a row opens that lead/student. Replaced by API aggregation in Phase 2.
+
+// Demo "today". Seed follow-up dates cluster around late Jul 2026, so we anchor
+// to the app's current date rather than the wall clock (which would dump every
+// item into Due). One place to change when the demo data moves.
+const FOLLOWUP_TODAY = new Date(2026, 6, 30) // 30 Jul 2026 (month is 0-based)
+
+const MONTHS: Record<string, number> = {
+  Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5,
+  Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11,
 }
 
-export const studentFollowups: FollowUpBuckets = {
-  today: [],
-  due: [
-    { id: 1, name: 'Tanvir Ahmed', detail: 'Visa document review', when: 'Yesterday' },
-  ],
-  upcoming: [
-    { id: 2, name: 'Sadia Islam', detail: 'Offer letter follow-up', when: 'In 2 days' },
-    { id: 3, name: 'Rahul Verma', detail: 'Tuition deposit reminder', when: 'Next week' },
-  ],
+/** Parse a "DD Mon YYYY" (optionally "…, h:mm AM") date string → date-only Date, or null. */
+function parseFollowupDate(raw: string | null | undefined): Date | null {
+  if (!raw) return null
+  const m = raw.match(/(\d{1,2})\s+([A-Za-z]{3})[a-z]*\s+(\d{4})/)
+  if (!m) return null
+  const day = Number(m[1])
+  const month = MONTHS[m[2].slice(0, 3)]
+  const year = Number(m[3])
+  if (month === undefined) return null
+  return new Date(year, month, day)
 }
+
+/** Whole-day difference (target − today); negative = overdue, 0 = today. */
+function dayDelta(target: Date): number {
+  const MS = 24 * 60 * 60 * 1000
+  const a = Date.UTC(target.getFullYear(), target.getMonth(), target.getDate())
+  const b = Date.UTC(FOLLOWUP_TODAY.getFullYear(), FOLLOWUP_TODAY.getMonth(), FOLLOWUP_TODAY.getDate())
+  return Math.round((a - b) / MS)
+}
+
+/** Human relative label for a day delta ("Today", "Yesterday", "In 3 days"…). */
+function relativeWhen(delta: number): string {
+  if (delta === 0) return 'Today'
+  if (delta === 1) return 'Tomorrow'
+  if (delta === -1) return 'Yesterday'
+  if (delta < 0) return `${-delta} days ago`
+  return `In ${delta} days`
+}
+
+type BucketKey = keyof FollowUpBuckets
+function bucketFor(delta: number): BucketKey {
+  if (delta < 0) return 'due'
+  if (delta === 0) return 'today'
+  return 'upcoming'
+}
+
+const matchesBranch = (branch: string, recordBranch: string) =>
+  !BRANCH_SHARE[branch] || recordBranch === branch
+
+/** Empty bucket set. */
+const emptyBuckets = (): FollowUpBuckets => ({ today: [], due: [], upcoming: [] })
+
+/**
+ * Lead follow-ups for a branch. "All Branch" (or an unknown value) includes
+ * every branch; a named branch keeps only its own leads. Rows are sorted so the
+ * most-overdue appears first within each bucket.
+ */
+export function leadFollowupsFor(branch: string): FollowUpBuckets {
+  const buckets = emptyBuckets()
+  for (const l of leads) {
+    const date = parseFollowupDate(l.nextFollowup)
+    if (!date || !matchesBranch(branch, l.branch)) continue
+    const delta = dayDelta(date)
+    buckets[bucketFor(delta)].push({
+      id: l.id,
+      name: l.name,
+      detail: `${l.countryInterested} — ${l.status}`,
+      when: relativeWhen(delta),
+      href: `/leads/${l.id}`,
+    })
+  }
+  return buckets
+}
+
+/**
+ * Student follow-ups for a branch, same bucketing as leads. These come straight
+ * from the student follow-up store — the exact records created on a student's
+ * page via "New Follow-up Record" (its "Next Follow-up" date). No follow-up
+ * logged there → the student doesn't appear here. So the dashboard and the
+ * student page always agree.
+ */
+export function studentFollowupsFor(branch: string): FollowUpBuckets {
+  const buckets = emptyBuckets()
+  for (const student of students) {
+    if (studentState(student) !== 'active') continue
+    if (!matchesBranch(branch, student.branch)) continue
+    const record = nextScheduledFollowup(student.id)
+    const date = parseFollowupDate(record?.next)
+    if (!record || !date) continue
+    const delta = dayDelta(date)
+    buckets[bucketFor(delta)].push({
+      id: student.id,
+      name: student.name,
+      detail: record.details || 'Follow-up',
+      when: relativeWhen(delta),
+      href: `/students/${student.id}`,
+    })
+  }
+  return buckets
+}
+
+// "All Branch" defaults kept for any caller that imports them directly.
+export const leadFollowups: FollowUpBuckets = leadFollowupsFor('All Branch')
+export const studentFollowups: FollowUpBuckets = studentFollowupsFor('All Branch')
 
 export interface Reminder {
   id: number
@@ -152,33 +255,72 @@ export interface Reminder {
   deadline: string
   owner: string
   activity: string
+  /** Days until the deadline (negative = overdue) — drives the Overdue badge. */
+  daysLeft: number
+  overdue: boolean
+  branch: string
+  /** Where clicking the row navigates (the application detail page). */
+  href: string
 }
 
-export const applicationReminders: Reminder[] = [
-  { id: 1, name: 'Rahim Uddin', applicationNo: '354134', deadline: '25 Sep 2025', owner: 'Admin Two Test', activity: 'Submit final transcripts' },
-  { id: 2, name: 'Ishant Khatiwada', applicationNo: '537634', deadline: '17 Oct 2025', owner: 'Mohammed Saleh', activity: 'Please pay the bill' },
-  { id: 3, name: 'Puneet Jindal', applicationNo: '150967', deadline: '24 Nov 2025', owner: 'You', activity: 'Loan process to start' },
-  { id: 4, name: 'Usaid Khan', applicationNo: '302122', deadline: '23 Apr 2026', owner: 'Moses Otieno', activity: 'Check documents' },
-  { id: 5, name: 'Ayesha Siddiqua', applicationNo: '418260', deadline: '12 May 2026', owner: 'Sarah Ali', activity: 'Book visa appointment' },
-  { id: 6, name: 'Tenzin Norbu', applicationNo: '229845', deadline: '03 Jun 2026', owner: 'You', activity: 'Follow up on offer letter' },
-  { id: 7, name: 'Farhan Chowdhury', applicationNo: '481037', deadline: '28 Jun 2026', owner: 'Sarah Ali', activity: 'Upload IELTS scorecard' },
-  { id: 8, name: 'Meera Nair', applicationNo: '190558', deadline: '02 Jul 2026', owner: 'You', activity: 'Confirm intake selection' },
-  { id: 9, name: 'Arjun Mehta', applicationNo: '673021', deadline: '09 Jul 2026', owner: 'Mohammed Saleh', activity: 'Sign offer acceptance' },
-  { id: 10, name: 'Sadia Karim', applicationNo: '558914', deadline: '15 Jul 2026', owner: 'Moses Otieno', activity: 'Pay tuition deposit' },
-  { id: 11, name: 'Rohit Sharma', applicationNo: '204776', deadline: '21 Jul 2026', owner: 'You', activity: 'Prepare SOP draft' },
-  { id: 12, name: 'Nabila Haque', applicationNo: '839210', deadline: '27 Jul 2026', owner: 'Sarah Ali', activity: 'Collect bank statement' },
-  { id: 13, name: 'Dinesh Patel', applicationNo: '116402', deadline: '04 Aug 2026', owner: 'Admin Two Test', activity: 'Verify passport validity' },
-  { id: 14, name: 'Lakshmi Reddy', applicationNo: '927315', deadline: '11 Aug 2026', owner: 'You', activity: 'Schedule counselling call' },
-  { id: 15, name: 'Imran Hossain', applicationNo: '345198', deadline: '19 Aug 2026', owner: 'Mohammed Saleh', activity: 'Request LOR from referee' },
-  { id: 16, name: 'Priyanka Das', applicationNo: '760284', deadline: '26 Aug 2026', owner: 'Moses Otieno', activity: 'Book biometrics appointment' },
-  { id: 17, name: 'Kabir Ahmed', applicationNo: '502631', deadline: '02 Sep 2026', owner: 'You', activity: 'Submit visa application' },
-  { id: 18, name: 'Sneha Iyer', applicationNo: '288457', deadline: '10 Sep 2026', owner: 'Sarah Ali', activity: 'Arrange accommodation proof' },
-  { id: 19, name: 'Tariq Aziz', applicationNo: '634509', deadline: '18 Sep 2026', owner: 'Admin Two Test', activity: 'Pay application fee' },
-  { id: 20, name: 'Ananya Ghosh', applicationNo: '419876', deadline: '25 Sep 2026', owner: 'You', activity: 'Attend pre-departure briefing' },
-  { id: 21, name: 'Yusuf Rahman', applicationNo: '805142', deadline: '01 Oct 2026', owner: 'Mohammed Saleh', activity: 'Finalize course choice' },
-  { id: 22, name: 'Divya Menon', applicationNo: '573098', deadline: '08 Oct 2026', owner: 'Moses Otieno', activity: 'Get medical test done' },
-  { id: 23, name: 'Shahriar Kabir', applicationNo: '260713', deadline: '16 Oct 2026', owner: 'You', activity: 'Confirm flight booking' },
-]
+// ── Reminders (derived from the live Applications list) ──────────────────────
+// Each open application yields one reminder. The next action comes from the
+// admin-editable status→message map (see mock/reminderMessages.ts — customised
+// from the Application view), and the deadline from its intake (the month before
+// intake — when paperwork must be in). Overdue rows (deadline < today) are
+// flagged and float to the top. A status with no configured message (e.g.
+// Withdrawn) produces no reminder. Replaced by real per-application deadlines
+// in Phase 2.
+
+/** Parse an intake "Month YYYY" (e.g. "July 2026") → first-of-month Date, or null. */
+function parseMonthYear(raw: string): Date | null {
+  const m = raw.match(/([A-Za-z]{3,})\s+(\d{4})/)
+  if (!m) return null
+  const month = MONTHS[m[1].slice(0, 3)]
+  if (month === undefined) return null
+  return new Date(Number(m[2]), month, 1)
+}
+
+/** "DD Mon YYYY" label for a Date (matches the reminder row format). */
+const MONTH_ABBR = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+function formatDeadline(d: Date): string {
+  return `${String(d.getDate()).padStart(2, '0')} ${MONTH_ABBR[d.getMonth()]} ${d.getFullYear()}`
+}
+
+/**
+ * Reminders for a branch, newest-priority first: overdue rows lead, then by
+ * soonest deadline. "All Branch" (or an unknown value) includes every branch.
+ */
+export function remindersFor(branch: string): Reminder[] {
+  const rows: Reminder[] = []
+  for (const app of applications) {
+    const activity = reminderMessageFor(app.status)
+    if (!activity) continue // no message configured for this status → skip
+    if (!matchesBranch(branch, app.branch)) continue
+    const intake = parseMonthYear(app.intake)
+    if (!intake) continue
+    // Deadline = the 15th of the month before intake (paperwork cut-off).
+    const deadline = new Date(intake.getFullYear(), intake.getMonth() - 1, 15)
+    const daysLeft = dayDelta(deadline)
+    rows.push({
+      id: app.id,
+      name: app.student,
+      applicationNo: String(app.id),
+      deadline: formatDeadline(deadline),
+      owner: app.assignedTo ?? 'Unassigned',
+      activity,
+      daysLeft,
+      overdue: daysLeft < 0,
+      branch: app.branch,
+      href: `/applications/${app.id}`,
+    })
+  }
+  // Overdue first, then soonest deadline.
+  return rows.sort((a, b) => a.daysLeft - b.daysLeft)
+}
+
+/** "All Branch" reminders — the default list kept for direct importers. */
+export const applicationReminders: Reminder[] = remindersFor('All Branch')
 
 export const reminderCount = applicationReminders.length
 
@@ -302,12 +444,7 @@ export const leadStatusStats: AppStatusStat[] = [
 // visibly re-renders. Shares (excluding "All Branch") sum to 1, so the parts
 // add back up to the totals — a believable breakdown for the prototype.
 // Replaced by real per-branch aggregation in Phase 2.
-const BRANCH_SHARE: Record<string, number> = {
-  Dhaka: 0.46,
-  Chattogram: 0.24,
-  Sylhet: 0.18,
-  Khulna: 0.12,
-}
+// (BRANCH_SHARE is declared near the top — the follow-up lists read it at load.)
 
 /** Scale a count by the branch share; keep totals whole and never below 0. */
 function scale(value: number, share: number): number {
@@ -329,6 +466,9 @@ export interface BranchDashboard {
   ticketSummary: SimpleStat[]
   ticketsByPriority: Breakdown[]
   yourStats: SimpleStat[]
+  leadFollowups: FollowUpBuckets
+  studentFollowups: FollowUpBuckets
+  reminders: Reminder[]
 }
 
 /**
@@ -349,6 +489,9 @@ export function branchDashboard(branch: string): BranchDashboard {
       ticketSummary,
       ticketsByPriority,
       yourStats,
+      leadFollowups,
+      studentFollowups,
+      reminders: applicationReminders,
     }
   }
   return {
@@ -366,5 +509,9 @@ export function branchDashboard(branch: string): BranchDashboard {
     ticketSummary: ticketSummary.map((s) => ({ ...s, value: scale(s.value, share) })),
     ticketsByPriority: scaleStats(ticketsByPriority, share),
     yourStats: yourStats.map((s) => ({ ...s, value: scale(s.value, share) })),
+    // Follow-ups filter by branch (not scaled) — they're real per-record rows.
+    leadFollowups: leadFollowupsFor(branch),
+    studentFollowups: studentFollowupsFor(branch),
+    reminders: remindersFor(branch),
   }
 }

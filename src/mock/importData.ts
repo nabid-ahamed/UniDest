@@ -83,7 +83,7 @@ export const importEntities: ImportEntity[] = [
     count: () => leadsCount(),
     branchOption: true,
     passwordOption: false,
-    staffOptions: leadStaff,
+    staffOptions: leadStaff(),
     followupOption: true,
     columns: [
       { header: 'First name', field: 'name', required: true, sample: 'Jamie' },

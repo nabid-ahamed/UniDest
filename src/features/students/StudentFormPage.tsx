@@ -244,7 +244,7 @@ export default function StudentFormPage() {
             <Field label="Assigned To Staff">
               <select value={assignedTo} onChange={(e) => setAssignedTo(e.target.value)} className="input">
                 <option value="">Unassigned</option>
-                {studentStaff.map((x) => (
+                {studentStaff().map((x) => (
                   <option key={x}>{x}</option>
                 ))}
               </select>
