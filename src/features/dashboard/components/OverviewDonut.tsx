@@ -62,6 +62,11 @@ export function OverviewDonut({ stats = dashboardStats }: { stats?: StatCardData
   const [tip, setTip] = useState<{ key: string; x: number; y: number } | null>(null)
   const wrapRef = useRef<HTMLDivElement>(null)
   const hideTimer = useRef<number | undefined>(undefined)
+  // Accumulated rotation (degrees) for the highlight border. We add the SHORTEST
+  // signed step to the previous angle each time, so the border always sweeps the
+  // short way to the next slice instead of unwinding the long way round when the
+  // target angle wraps past 0°/360°.
+  const rotAccum = useRef(0)
 
   // Slices reflect the passed-in (branch-scoped) stats.
   const ALL: Item[] = useMemo(
@@ -141,10 +146,10 @@ export function OverviewDonut({ stats = dashboardStats }: { stats?: StatCardData
 
       <div className="mt-6 flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between lg:py-4">
         {/* Donut (hand-rolled SVG so labels never clip or overlap) */}
-        <div ref={wrapRef} className="relative w-full lg:flex-1">
+        <div ref={wrapRef} className="relative mx-auto w-full max-w-3xl lg:flex-1">
           <svg
             viewBox={`0 0 ${VBW} ${VBH}`}
-            className="h-auto w-full"
+            className="mx-auto h-auto w-full max-w-2xl"
             role="img"
             aria-label="Statistics distribution donut chart"
           >
@@ -173,6 +178,11 @@ export function OverviewDonut({ stats = dashboardStats }: { stats?: StatCardData
               const a = arcs.find((x) => x.key === activeKey)
               if (!a) return null
               const w = a.a2 - a.a1
+              // Advance the accumulated angle by the shortest signed step to the
+              // new target, so the border never sweeps the long way round.
+              const target = a.mid - 90
+              const step = ((target - rotAccum.current + 540) % 360) - 180
+              rotAccum.current += step
               return (
                 <path
                   d={arcPath(90 - w / 2, 90 + w / 2)} // drawn centred at the top, then rotated
@@ -184,7 +194,7 @@ export function OverviewDonut({ stats = dashboardStats }: { stats?: StatCardData
                   style={{
                     transformBox: 'view-box',
                     transformOrigin: `${CX}px ${CY}px`,
-                    transform: `rotate(${a.mid - 90}deg)`,
+                    transform: `rotate(${rotAccum.current}deg)`,
                     transition: 'transform 620ms cubic-bezier(0.4, 0, 0.2, 1)',
                   }}
                 />

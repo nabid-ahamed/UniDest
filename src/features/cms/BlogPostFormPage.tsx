@@ -98,7 +98,7 @@ export default function BlogPostFormPage() {
         <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
           <div className="space-y-4">
             <div>
-              <label htmlFor="title" className="mb-1 block text-sm font-semibold text-slate-700">Title *</label>
+              <label htmlFor="title" className="mb-1 block text-sm font-semibold text-slate-700">Title <span className="text-rose-500">*</span></label>
               <input id="title" value={title} onChange={(e) => onTitle(e.target.value)} className="input" placeholder="Post title" />
             </div>
             <div>

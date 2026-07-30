@@ -87,7 +87,7 @@ export default function PageFormPage() {
       <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
         <div className="space-y-4">
           <div>
-            <label htmlFor="name" className="mb-1 block text-sm font-semibold text-slate-700">Name *</label>
+            <label htmlFor="name" className="mb-1 block text-sm font-semibold text-slate-700">Name <span className="text-rose-500">*</span></label>
             <input id="name" value={name} onChange={(e) => onName(e.target.value)} disabled={isSystem} className="input disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400" />
           </div>
           <div>

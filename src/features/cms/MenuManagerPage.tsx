@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { showSuccessDialog } from '../../store/successDialog'
 import { createPortal } from 'react-dom'
 import {
@@ -300,16 +300,31 @@ function EditModal({
   const [parentId, setParentId] = useState<string>(item.parentId ? String(item.parentId) : '')
   const [newTab, setNewTab] = useState(item.newTab)
 
+  // Close on Escape — matches every other dialog in the app.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [onClose])
+
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 p-4" onMouseDown={onClose}>
-      <div className="w-full max-w-md rounded-xl bg-white p-5 shadow-xl" onMouseDown={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between">
-          <h3 className="text-base font-bold text-slate-900">Edit Menu Item</h3>
-          <button onClick={onClose} aria-label="Close" className="rounded-md p-1 text-slate-400 hover:bg-slate-100">
-            <X className="h-4 w-4" />
+    <div className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto p-4">
+      <div className="animate-fade-in absolute inset-0 bg-slate-500/60" onClick={onClose} />
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Edit menu item"
+        className="animate-dialog-in relative my-16 w-full max-w-md rounded-xl bg-white shadow-xl"
+      >
+        <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
+          <h3 className="text-lg font-bold text-slate-800">Edit Menu Item</h3>
+          <button onClick={onClose} aria-label="Close" className="rounded-lg p-1 text-slate-500 hover:bg-slate-100 hover:text-slate-600">
+            <X className="h-5 w-5" />
           </button>
         </div>
-        <div className="mt-4 space-y-3">
+        <div className="space-y-3 px-6 py-5">
           <div>
             <label htmlFor="e-label" className="mb-1 block text-xs font-semibold text-slate-600">Label</label>
             <input id="e-label" value={label} onChange={(e) => setLabel(e.target.value)} className="input" />
@@ -336,13 +351,13 @@ function EditModal({
             Open in new tab
           </label>
         </div>
-        <div className="mt-5 flex justify-end gap-2">
-          <button onClick={onClose} className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50">
+        <div className="flex items-center justify-end gap-2 border-t border-slate-200 px-6 py-4">
+          <button onClick={onClose} className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50">
             Cancel
           </button>
           <button
             onClick={() => onSave({ label: label.trim() || item.label, linkType, parentId: parentId ? Number(parentId) : null, newTab })}
-            className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700"
+            className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-700"
           >
             Save
           </button>
