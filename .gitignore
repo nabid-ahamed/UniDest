@@ -45,3 +45,6 @@ Thumbs.db
 *.njsproj
 *.sln
 *.sw?
+
+# Local-only working docs (not for GitHub)
+temp-docs/
