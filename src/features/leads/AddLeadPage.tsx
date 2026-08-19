@@ -13,8 +13,8 @@ import {
   phoneCountryCodes,
   englishTests,
   leadStatuses,
-  addLead,
 } from '../../mock/leads'
+import { useCreateLead } from '../../lib/api'
 
 // Assignable branches — the dashboard's "All Branch" is a filter, not a real
 // office, so it's excluded from the picker.
@@ -25,6 +25,7 @@ export default function AddLeadPage() {
   const [sameAsMobile, setSameAsMobile] = useState(false)
   const [countriesInterested, setCountriesInterested] = useState<string[]>([])
   const [saved, setSaved] = useState(false)
+  const createLead = useCreateLead()
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -41,7 +42,7 @@ export default function AddLeadPage() {
       now,
     )
 
-    addLead({
+    createLead.mutate({
       name: `${get('firstName')} ${get('lastName')}`.trim(),
       email: get('email'),
       emailDate,

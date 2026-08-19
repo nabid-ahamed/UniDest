@@ -15,8 +15,8 @@ import {
 } from 'lucide-react'
 import { ConfirmDialog } from '../../../components/ui/ConfirmDialog'
 import { showSuccessDialog } from '../../../store/successDialog'
-import { deleteLead, type Lead } from '../../../mock/leads'
-import { addStudent } from '../../../mock/students'
+import type { Lead } from '../../../mock/leads'
+import { useConvertLead, useDeleteLead } from '../../../lib/api'
 
 /** Agents a lead/student can be linked to (mock — Phase 2: real agents table). */
 const AGENTS = ['Global Study Partners', 'EduLink Consultancy', 'BrightPath Agents', 'Overseas Connect', 'GlobalEd Direct']
@@ -95,6 +95,8 @@ const ReadOnly = ({ label, value }: { label: string; value: string }) => (
 /** Actions panel for the lead detail page — every button wired to a real behaviour. */
 export function LeadActions({ lead, onToast }: { lead: Lead; onToast: (m: string) => void }) {
   const navigate = useNavigate()
+  const deleteLeadMutation = useDeleteLead()
+  const convertLead = useConvertLead()
   const [modal, setModal] = useState<Modal>(null)
   const [confirm, setConfirm] = useState<null | 'convert' | 'delete'>(null)
 
@@ -150,31 +152,36 @@ export function LeadActions({ lead, onToast }: { lead: Lead; onToast: (m: string
     showSuccessDialog('Country info permissions updated.', 'Permissions Saved')
   }
 
+  /**
+   * Convert this lead into a student.
+   *
+   * The API keeps BOTH rows and links them (lead.convertedStudentId /
+   * student.leadId), then moves the lead to the won status. It used to create
+   * the student and delete the lead, which destroyed funnel lineage and made
+   * conversion-rate reporting impossible.
+   */
   const doConvert = () => {
-    const student = addStudent({
-      name: lead.name,
-      email: lead.email,
-      phone: lead.phone,
-      phoneNote: lead.phoneNote,
-      branch: lead.branch,
-      status: 'Active',
-      assignedTo: lead.assignedTo,
-      countryOfResidence: lead.countryOfResidence ?? '',
-      countryInterested: lead.countryInterested,
-      studyLevel: lead.studyLevel ?? '',
-      course: '',
-      intake: '',
-      university: null,
-      source: 'Lead Convert',
-    })
-    deleteLead(lead.id)
-    setConfirm(null)
-    showSuccessDialog(`${lead.name} has been converted to a student.`, 'Converted To Student')
-    navigate(`/students/${student.id}`)
+    convertLead.mutate(
+      { leadId: lead.id },
+      {
+        onSuccess: (student) => {
+          setConfirm(null)
+          showSuccessDialog(
+            `${lead.name} has been converted to a student.`,
+            'Converted To Student',
+          )
+          navigate(`/students/${student.id}`)
+        },
+        onError: () => {
+          setConfirm(null)
+          onToast('Could not convert this lead. Please try again.')
+        },
+      },
+    )
   }
 
   const doDelete = () => {
-    deleteLead(lead.id)
+    deleteLeadMutation.mutate(lead.id)
     setConfirm(null)
     showSuccessDialog(`${lead.name} (#${lead.id}) has been deleted.`, 'Lead Deleted')
     navigate('/leads')

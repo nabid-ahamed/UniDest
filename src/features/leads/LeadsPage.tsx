@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import {
   Plus,
@@ -16,10 +16,8 @@ import { ExportButtons } from '../../components/ExportButtons'
 import { DotsLoader, Field, PageBtn, SingleSelect } from '../../components/DataTableUI'
 import { formatDateTime } from '../../components/DateTimePicker'
 import type { Lead } from '../../mock/leads'
+import { useLeads, useUpdateLead, useDeleteLead } from '../../lib/api'
 import {
-  leads,
-  updateLead,
-  deleteLead,
   leadStatuses,
   leadStaff,
   leadCountries,
@@ -66,7 +64,6 @@ export default function LeadsPage() {
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [filterOpen, setFilterOpen] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
-  const [loading, setLoading] = useState(true)
   const [bulkAction, setBulkAction] = useState('')
   const [bulkValue, setBulkValue] = useState('')
   const [bulkConfirm, setBulkConfirm] = useState(false)
@@ -78,32 +75,37 @@ export default function LeadsPage() {
   // Settings (gear) menu targets.
   const [transferLead, setTransferLead] = useState<Lead | null>(null)
   const [deleteLeadTarget, setDeleteLeadTarget] = useState<Lead | null>(null)
-  // Bumped after a delete so the table re-reads the (now shorter) leads list.
-  const [listRev, setListRev] = useState(0)
   const [successMsg, setSuccessMsg] = useState('')
-  // Owner per lead id, seeded from the mock so re-assignment persists in the UI.
-  const [assignees, setAssignees] = useState<Record<number, string | null>>(() =>
-    Object.fromEntries(leads.map((l) => [l.id, l.assignedTo])),
-  )
+
+  // Server state. Mutations invalidate the query, so the table refreshes itself
+  // — that replaces the per-field override maps this page used to keep, which
+  // existed only because the mock array could not notify React of a change.
+  const { data: leads = [], isPending, refetch } = useLeads()
+  const updateLeadMutation = useUpdateLead()
+  const deleteLeadMutation = useDeleteLead()
+
   const [recentTags, setRecentTags] = useState<string[]>(initialRecentTags)
-  // Status per lead id, seeded from the mock so "Change Status to" persists in the UI.
-  const [rowStatuses, setRowStatuses] = useState<Record<number, string>>(() =>
-    Object.fromEntries(leads.map((l) => [l.id, l.status])),
+
+  /** Row values now come straight from the server row. */
+  const assignees = useMemo(
+    () => Object.fromEntries(leads.map((l) => [l.id, l.assignedTo])),
+    [leads],
   )
-  // Next follow-up per lead id — scheduling a counselling session updates it.
-  const [followups, setFollowups] = useState<Record<number, string | null>>(() =>
-    Object.fromEntries(leads.map((l) => [l.id, l.nextFollowup])),
+  const rowStatuses = useMemo(
+    () => Object.fromEntries(leads.map((l) => [l.id, l.status])),
+    [leads],
   )
-  // Tags per lead id, seeded from the mock. Kept in state so add/remove works.
-  const [leadTags, setLeadTags] = useState<Record<number, string[]>>(() =>
-    Object.fromEntries(leads.map((l) => [l.id, l.tags ?? []])),
+  const followups = useMemo(
+    () => Object.fromEntries(leads.map((l) => [l.id, l.nextFollowup])),
+    [leads],
+  )
+  const leadTags = useMemo(
+    () => Object.fromEntries(leads.map((l) => [l.id, l.tags ?? []])),
+    [leads],
   )
 
-  // Initial "fetch" preloader on mount.
-  useEffect(() => {
-    const t = window.setTimeout(() => setLoading(false), 700)
-    return () => window.clearTimeout(t)
-  }, [])
+  // Real fetch state from React Query — no artificial preloader needed.
+  const loading = isPending
 
   const showToast = (msg: string) => {
     setToast(msg)
@@ -125,11 +127,7 @@ export default function LeadsPage() {
 
   const handleRefresh = () => {
     setRefreshing(true)
-    setLoading(true)
-    window.setTimeout(() => {
-      setRefreshing(false)
-      setLoading(false)
-    }, 700)
+    refetch().finally(() => setRefreshing(false))
     showToast('List refreshed')
   }
 
@@ -146,20 +144,10 @@ export default function LeadsPage() {
 
     if (bulkAction === 'Change status') {
       if (!bulkValue) return showToast('Choose a status to apply')
-      setRowStatuses((prev) => {
-        const next = { ...prev }
-        ids.forEach((id) => (next[id] = bulkValue))
-        return next
-      })
       ids.forEach((id) => persistLead(id, { status: bulkValue }))
       showToast(`Status set to ${bulkValue} — ${ids.length} lead(s)`)
     } else if (bulkAction === 'Assign to staff') {
       if (!bulkValue) return showToast('Choose a staff member')
-      setAssignees((prev) => {
-        const next = { ...prev }
-        ids.forEach((id) => (next[id] = bulkValue))
-        return next
-      })
       ids.forEach((id) => persistLead(id, { assignedTo: bulkValue }))
       showToast(`Assigned to ${bulkValue} — ${ids.length} lead(s)`)
     }
@@ -169,11 +157,10 @@ export default function LeadsPage() {
 
   const confirmBulkDelete = () => {
     const ids = [...selected]
-    ids.forEach((id) => deleteLead(id))
+    ids.forEach((id) => deleteLeadMutation.mutate(id))
     setSelected(new Set())
     setBulkConfirm(false)
     setBulkAction('')
-    setListRev((n) => n + 1)
     setSuccessMsg(`${ids.length} lead(s) deleted successfully`)
   }
 
@@ -201,25 +188,23 @@ export default function LeadsPage() {
 
   const confirmDelete = () => {
     if (!deleteLeadTarget) return
-    deleteLead(deleteLeadTarget.id)
+    deleteLeadMutation.mutate(deleteLeadTarget.id)
     setDeleteLeadTarget(null)
     setSuccessMsg('Lead Deleted Successfully')
-    setListRev((n) => n + 1)
   }
 
   /**
-   * Persist a change to the shared leads list + localStorage so row edits
-   * (assignee, status, follow-up, tags) survive a page refresh. The per-id
-   * state above still drives the render; this keeps the source of truth in sync.
+   * Send a row edit (assignee, status, follow-up, tags) to the API. The
+   * mutation invalidates the leads query on success, so the table re-renders
+   * with the server's version — no local copy to keep in sync.
    */
   const persistLead = (id: number, patch: Partial<Lead>) => {
     const lead = leads.find((l) => l.id === id)
-    if (lead) updateLead({ ...lead, ...patch })
+    if (lead) updateLeadMutation.mutate({ ...lead, ...patch })
   }
 
   const saveAssignee = (member: string) => {
     if (!assignLead) return
-    setAssignees((prev) => ({ ...prev, [assignLead.id]: member }))
     persistLead(assignLead.id, { assignedTo: member })
     setAssignLead(null)
     setSuccessMsg('Lead Assigned Successfully')
@@ -239,7 +224,6 @@ export default function LeadsPage() {
       showToast(`"${tag}" is already on ${tagLead.name}`)
     } else {
       const nextTags = [...current, tag]
-      setLeadTags((prev) => ({ ...prev, [tagLead.id]: nextTags }))
       setRecentTags((prev) => [tag, ...prev.filter((t) => t !== tag)].slice(0, 10))
       persistLead(tagLead.id, { tags: nextTags })
       showToast(`Tag "${tag}" added to ${tagLead.name}`)
@@ -252,7 +236,6 @@ export default function LeadsPage() {
     // status itself on Update. Re-selecting it re-opens the dialog to modify.
     if (next === 'Counseling') return setCounselLead(lead)
     if ((rowStatuses[lead.id] ?? lead.status) === next) return
-    setRowStatuses((prev) => ({ ...prev, [lead.id]: next }))
     persistLead(lead.id, { status: next })
     setSuccessMsg('Lead Status Changed Successfully')
   }
@@ -260,11 +243,8 @@ export default function LeadsPage() {
   const convertToCounseling = (counsellor: string, when: Date) => {
     if (!counselLead) return
     const formatted = formatDateTime(when)
-    setRowStatuses((prev) => ({ ...prev, [counselLead.id]: 'Counseling' }))
     // The counselling slot becomes the lead's next follow-up, and the
     // counsellor becomes the assignee.
-    setFollowups((prev) => ({ ...prev, [counselLead.id]: formatted }))
-    setAssignees((prev) => ({ ...prev, [counselLead.id]: counsellor }))
     persistLead(counselLead.id, {
       status: 'Counseling',
       nextFollowup: formatted,
@@ -276,7 +256,6 @@ export default function LeadsPage() {
 
   const removeTag = (leadId: number, tag: string) => {
     const nextTags = (leadTags[leadId] ?? []).filter((t) => t !== tag)
-    setLeadTags((prev) => ({ ...prev, [leadId]: nextTags }))
     persistLead(leadId, { tags: nextTags })
     showToast(`Tag "${tag}" removed`)
   }
@@ -295,7 +274,7 @@ export default function LeadsPage() {
       }
       return true
     })
-  }, [search, statuses, countriesInterested, staff, branch, assignees, rowStatuses, listRev])
+  }, [leads, search, statuses, countriesInterested, staff, branch, assignees, rowStatuses])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
   const currentPage = Math.min(page, totalPages)

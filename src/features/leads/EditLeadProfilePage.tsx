@@ -9,12 +9,12 @@ import {
   allCountries,
   leadCountries,
   leadSources,
-  leads,
+
   qualifications,
   studyLevels,
-  updateLead,
   type Lead,
 } from '../../mock/leads'
+import { useLead, useUpdateLead } from '../../lib/api'
 
 /** Keeps the current value selectable even when it's not in the option list. */
 function withCurrent(options: string[], current?: string) {
@@ -24,7 +24,15 @@ function withCurrent(options: string[], current?: string) {
 /** Full-page "Edit Profile" (route /leads/:id/edit), headed like the detail page. */
 export default function EditLeadProfilePage() {
   const { id } = useParams()
-  const lead = leads.find((l) => l.id === Number(id))
+  const { data: lead, isPending } = useLead(id ? Number(id) : undefined)
+
+  if (isPending) {
+    return (
+      <div className="rounded-xl border border-slate-200 bg-white p-12 text-center shadow-sm">
+        <p className="text-slate-500">Loading lead…</p>
+      </div>
+    )
+  }
 
   if (!lead) {
     return (
@@ -44,6 +52,7 @@ export default function EditLeadProfilePage() {
 }
 
 function EditForm({ lead }: { lead: Lead }) {
+  const updateLeadMutation = useUpdateLead()
   const parts = lead.name.trim().split(/\s+/)
   const [firstName, setFirstName] = useState(parts[0] ?? '')
   const [lastName, setLastName] = useState(parts.slice(1).join(' '))
@@ -66,7 +75,7 @@ function EditForm({ lead }: { lead: Lead }) {
     if (!phone.trim()) next.phone = 'Please enter a mobile number.'
     setErrors(next)
     if (Object.keys(next).length) return
-    updateLead({
+    updateLeadMutation.mutate({
       ...lead,
       name: `${firstName.trim()} ${lastName.trim()}`.trim(),
       email: email.trim(),
