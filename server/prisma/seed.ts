@@ -67,6 +67,10 @@ const BRANCHES = ['Dhaka', 'Chattogram', 'Sylhet', 'Khulna']
 /** src/mock/staffStore.ts `staffRoles`. Super Admin is the undeletable system role. */
 const ROLES = [
   { name: 'Super Admin', isSystem: true, permissions: ['*'] },
+  // Not a staff role — the portal login for students. Kept in the same table so
+  // one auth path serves everyone; `toUiRole` maps this name to 'Student',
+  // which is what src/app/router.tsx gates the /portal routes on.
+  { name: 'Student', isSystem: true, permissions: [] },
   { name: 'Branch Manager', permissions: ['view-leads', 'lead-create-update', 'lead-assignment', 'view-students', 'view-applications', 'view-reports'] },
   { name: 'Counsellor', permissions: ['view-leads', 'lead-create-update', 'view-students', 'view-applications'] },
   { name: 'Admission Officer', permissions: ['view-applications', 'application-create-update', 'view-students'] },
@@ -90,6 +94,7 @@ const DEMO_PASSWORD = '123456'
 const DEMO_USERS = [
   { name: 'Admin', email: 'admin@gmail.com', role: 'Super Admin', branch: 'Dhaka' },
   { name: 'Staff User', email: 'staff@gmail.com', role: 'Counsellor', branch: 'Dhaka' },
+  { name: 'Rohan Das', email: 'student@gmail.com', role: 'Student', branch: 'Dhaka' },
 ]
 
 /** A small country set; the full ~190 list lands with the catalog in Stage 6. */
@@ -213,11 +218,29 @@ async function main() {
     (await prisma.user.findMany({ where: { tenantId: TENANT_ID } })).map((u) => [u.name, u.id]),
   )
 
+  /** All 15 leads from src/mock/leads.ts, so /leads looks the same after the swap. */
   const SEED_LEADS = [
-    { name: 'Aarav Sharma', email: 'aarav.sharma@gmail.com', phone: '+880 1845 012345', status: 'new-lead', branch: 'Sylhet', country: 'United Kingdom', gender: 'Male', studyLevel: 'Short Term Programs', qualification: 'Bachelors', source: 'Facebook', tags: ['High Commission', 'Mid Priority'] },
-    { name: 'Fatima Rahman', email: 'fatima.r@gmail.com', phone: '+880 1712 445566', status: 'new-lead', branch: 'Khulna', country: 'Canada' },
-    { name: 'Rohan Das', email: 'rohan.das@gmail.com', phone: '+880 1900 801122', status: 'contacted', branch: 'Dhaka', country: 'Australia', assignedTo: 'Sarah Ali', gender: 'Male', studyLevel: 'Masters', qualification: 'Bachelors', source: 'Website', tags: ['Hot Lead'] },
-  ]
+    { name: 'Aarav Sharma', email: 'aarav.sharma@gmail.com', phone: '+880 1845 012345', phoneNote: 'at the time', whatsapp: true, status: 'new-lead', branch: 'Sylhet', country: 'United Kingdom', gender: 'Male', studyLevel: 'Short Term Programs', qualification: 'Bachelors', source: 'Facebook', tags: ['High Commission', 'Mid Priority'] },
+    { name: 'Fatima Rahman', email: 'fatima.r@gmail.com', phone: '+880 1712 445566', phoneNote: 'Human resource', status: 'new-lead', branch: 'Khulna', country: 'Canada', nextFollowUp: '2026-07-22' },
+    { name: 'Rohan Das', email: 'rohan.das@gmail.com', phone: '+880 1900 801122', phoneNote: 'Column four', whatsapp: true, status: 'contacted', branch: 'Dhaka', country: 'Australia', assignedTo: 'Sarah Ali', gender: 'Male', studyLevel: 'Masters', qualification: 'Bachelors', source: 'Website', tags: ['Hot Lead'] },
+    { name: 'Ayesha Khan', email: 'ayesha.khan@gmail.com', phone: '+92 300 4455667', phoneNote: 'Agent created', status: 'new-lead', branch: 'Dhaka', country: 'United States' },
+    { name: 'Vikram Patel', email: 'vikram.p@gmail.com', phone: '+880 1876 543210', phoneNote: 'IELTS test', status: 'warm', branch: 'Sylhet', country: 'United Kingdom', assignedTo: 'Mohammed Saleh', nextFollowUp: '2026-07-30', tags: ['Scholarship Seeker', 'Follow Up'] },
+    { name: 'Nabila Haque', email: 'nabila.h@gmail.com', phone: '+880 1811 223344', phoneNote: 'country wise', status: 'new-lead', branch: 'Chattogram', country: 'Canada' },
+    { name: 'Arjun Mehta', email: 'arjun.mehta@gmail.com', phone: '+880 1988 766554', phoneNote: 'university', status: 'counseling', branch: 'Khulna', country: 'Germany', assignedTo: 'Moses Otieno' },
+    { name: 'Sadia Islam', email: 'sadia.islam@gmail.com', phone: '+880 1911 556677', phoneNote: 'Linking of', status: 'new-lead', branch: 'Dhaka', country: 'Australia' },
+    { name: 'Karim Uddin', email: 'karim.uddin@gmail.com', phone: '+880 1611 778899', phoneNote: 'If we want', whatsapp: true, status: 'cold', branch: 'Sylhet', country: 'United States' },
+    { name: 'Priya Nair', email: 'priya.nair@gmail.com', phone: '+880 1900 001111', phoneNote: 'Welcome note', whatsapp: true, status: 'registered', branch: 'Khulna', country: 'United Kingdom', assignedTo: 'Sarah Ali' },
+    { name: 'Tanvir Ahmed', email: 'tanvir.ahmed@gmail.com', phone: '+880 1521 334455', phoneNote: 'follow up', status: 'contacted', branch: 'Chattogram', country: 'Canada', nextFollowUp: '2026-07-20' },
+    { name: 'Meera Iyer', email: 'meera.iyer@gmail.com', phone: '+880 1811 122233', phoneNote: 'scholarship', whatsapp: true, status: 'new-lead', branch: 'Sylhet', country: 'Australia' },
+    { name: 'Imran Ali', email: 'imran.ali@gmail.com', phone: '+92 301 5566778', phoneNote: 'visa query', status: 'rejected', branch: 'Dhaka', country: 'United States', assignedTo: 'Mohammed Saleh' },
+    { name: 'Sneha Reddy', email: 'sneha.reddy@gmail.com', phone: '+880 1955 544422', phoneNote: 'course finder', whatsapp: true, status: 'warm', branch: 'Khulna', country: 'United Kingdom', assignedTo: 'Moses Otieno', nextFollowUp: '2026-08-02' },
+    { name: 'Zara Sheikh', email: 'zara.sheikh@gmail.com', phone: '+880 1733 665544', phoneNote: 'walk in', status: 'counseling', branch: 'Dhaka', country: 'Ireland', assignedTo: 'Sarah Ali' },
+  ] as Array<{
+    name: string; email: string; phone: string; phoneNote?: string; whatsapp?: boolean
+    status: string; branch: string; country: string; assignedTo?: string
+    gender?: string; studyLevel?: string; qualification?: string; source?: string
+    tags?: string[]; nextFollowUp?: string
+  }>
 
   for (const l of SEED_LEADS) {
     const existing = await prisma.lead.findFirst({
@@ -230,6 +253,9 @@ async function main() {
         name: l.name,
         email: l.email,
         phone: l.phone,
+        phoneNote: l.phoneNote ?? null,
+        whatsapp: l.whatsapp ?? false,
+        nextFollowUpAt: l.nextFollowUp ? new Date(l.nextFollowUp) : null,
         gender: l.gender ?? null,
         studyLevel: l.studyLevel ?? null,
         qualification: l.qualification ?? null,
@@ -243,6 +269,234 @@ async function main() {
     })
   }
   console.log(`  leads: ${SEED_LEADS.length}`)
+
+  // --- Students -------------------------------------------------------------
+  const studentStatusByKey = new Map(
+    (await prisma.studentStatus.findMany({ where: { tenantId: TENANT_ID } })).map((s) => [s.key, s.id]),
+  )
+
+  /** From src/mock/students.ts `seedStudents`. */
+  const SEED_STUDENTS = [
+    { name: 'Aarav Sharma', email: 'aarav.sharma@gmail.com', phone: '+880 1845 012345', phoneNote: 'Primary', branch: 'Sylhet', status: 'active', assignedTo: 'Sarah Ali', residence: 'India', interest: 'United Kingdom', studyLevel: 'Masters', course: 'Computer Science', intake: 'September 2026', university: 'University of Manchester', source: 'Lead Convert' },
+    { name: 'Fatima Rahman', email: 'fatima.r@gmail.com', phone: '+880 1712 445566', phoneNote: 'WhatsApp', branch: 'Khulna', status: 'docs-pending', residence: 'Bangladesh', interest: 'Canada', studyLevel: 'Bachelors', course: 'Business & Management', intake: 'January 2027', source: 'Walk-in' },
+    { name: 'Rohan Das', email: 'rohan.das@gmail.com', phone: '+880 1900 801122', phoneNote: 'Primary', branch: 'Dhaka', status: 'applied', assignedTo: 'Mohammed Saleh', residence: 'India', interest: 'Australia', studyLevel: 'Masters', course: 'Engineering', intake: 'February 2027', university: 'University of Melbourne', source: 'Referral' },
+    { name: 'Ayesha Khan', email: 'ayesha.khan@gmail.com', phone: '+92 300 4455667', phoneNote: 'Father', branch: 'Dhaka', status: 'offer-received', assignedTo: 'Moses Otieno', residence: 'Bangladesh', interest: 'United States', studyLevel: 'Bachelors', course: 'Health Sciences', intake: 'September 2026', university: 'Arizona State University', source: 'Website' },
+    { name: 'Vikram Patel', email: 'vikram.p@gmail.com', phone: '+880 1876 543210', phoneNote: 'Primary', branch: 'Sylhet', status: 'visa-applied', assignedTo: 'Sarah Ali', residence: 'India', interest: 'United Kingdom', studyLevel: 'Masters', course: 'Data Science', intake: 'September 2026', university: 'University of Leeds', source: 'Facebook' },
+    { name: 'Nabila Haque', email: 'nabila.h@gmail.com', phone: '+880 1811 223344', phoneNote: 'Primary', branch: 'Chattogram', status: 'enrolled', assignedTo: 'Moses Otieno', residence: 'Bangladesh', interest: 'Canada', studyLevel: 'Bachelors', course: 'Nursing', intake: 'January 2027', university: 'University of Toronto', source: 'Referral' },
+  ] as Array<{
+    name: string; email: string; phone: string; phoneNote?: string; branch: string
+    status: string; assignedTo?: string; residence?: string; interest?: string
+    studyLevel?: string; course?: string; intake?: string; university?: string; source?: string
+  }>
+
+  for (const st of SEED_STUDENTS) {
+    const existing = await prisma.student.findFirst({
+      where: { tenantId: TENANT_ID, email: st.email, deletedAt: null },
+    })
+    if (existing) continue
+
+    // studentNo needs the generated id, so insert with a placeholder then patch.
+    const created = await prisma.student.create({
+      data: {
+        tenantId: TENANT_ID,
+        studentNo: `PENDING-${st.email}`,
+        name: st.name,
+        email: st.email,
+        phone: st.phone,
+        phoneNote: st.phoneNote ?? null,
+        source: st.source ?? null,
+        studyLevel: st.studyLevel ?? null,
+        course: st.course ?? null,
+        intake: st.intake ?? null,
+        university: st.university ?? null,
+        statusId: studentStatusByKey.get(st.status)!,
+        branchId: branchByName.get(st.branch) ?? null,
+        assignedToId: st.assignedTo ? (userByName.get(st.assignedTo) ?? null) : null,
+        residenceCountryId: st.residence ? (countryByName.get(st.residence) ?? null) : null,
+        interestCountryId: st.interest ? (countryByName.get(st.interest) ?? null) : null,
+      },
+    })
+    await prisma.student.update({
+      where: { id: created.id },
+      data: { studentNo: `STU-${created.createdAt.getFullYear()}-${created.id}` },
+    })
+  }
+  console.log(`  students: ${SEED_STUDENTS.length}`)
+
+  // --- University catalog ---------------------------------------------------
+  //
+  // The mock stores money as one string ("USD 100000") and intakes in three
+  // different formats. Both are normalised here so the columns are sortable and
+  // filterable rather than needing to be parsed on every read.
+
+  /** "USD 100000" -> { amount: 100000, currency: 'USD' }. Null stays null. */
+  const parseMoney = (raw: string | null | undefined) => {
+    if (!raw) return { amount: null as number | null, currency: null as string | null }
+    const m = raw.trim().match(/^([A-Z]{3})\s+([\d.,]+)$/)
+    if (!m) return { amount: null, currency: null }
+    return { amount: Number(m[2].replace(/,/g, '')), currency: m[1] }
+  }
+
+  /**
+   * The mock's `commission` is polymorphic: either a fixed amount ("USD 40000")
+   * or a formula ("10% of first year fee"). Keeping the type explicit avoids
+   * having to guess which it is at read time.
+   */
+  const parseCommission = (raw: string | null | undefined) => {
+    if (!raw) return { commissionType: null as string | null, commissionValue: null as string | null }
+    return /^[A-Z]{3}\s/.test(raw.trim())
+      ? { commissionType: 'fixed', commissionValue: raw.trim() }
+      : { commissionType: 'percentage', commissionValue: raw.trim() }
+  }
+
+  const MONTH_INDEX: Record<string, number> = {
+    Jan: 1, Feb: 2, Mar: 3, Apr: 4, May: 5, Jun: 6,
+    Jul: 7, Aug: 8, Sep: 9, Oct: 10, Nov: 11, Dec: 12,
+  }
+
+  const CATEGORIES = [
+    'Engineering', 'IT', 'Commerce, Business and Administration', 'Health',
+    'Law', 'Architecture and Building', 'Mathematics', 'Education',
+  ]
+
+  /** From src/mock/courseFinder.ts `finderCourses`. */
+  const SEED_COURSES = [
+    { title: 'Bachelor of Computer Science', university: 'University of Newcastle', city: 'Newcastle', country: 'Australia', studyLevel: 'Undergraduate', studyArea: 'IT', discipline: 'Software Engineering', durationYears: 3, intakes: ['Jan', 'Mar'], tuitionFee: 'USD 100000', applicationFee: null, commission: 'USD 40000', ielts: 6.0, ieltsNoBand: 5.5, toefl: 78, pte: 54 },
+    { title: 'Animation, Game Design', university: 'Kent State University', city: 'Kent, Ohio', country: 'United States', studyLevel: 'Undergraduate', studyArea: 'IT', discipline: 'Game Design', durationYears: 4, intakes: ['Aug'], tuitionFee: 'USD 32000', applicationFee: 'USD 70', commission: '10% of first year fee', ielts: 6.0, ieltsNoBand: 5.5, toefl: 71, pte: 50 },
+    { title: 'Game Design and Simulation Development', university: 'Marshall University', city: 'Huntington, West Virginia', country: 'United States', studyLevel: 'Undergraduate', studyArea: 'IT', discipline: 'Game Design', durationYears: 4, intakes: ['Jan', 'Aug'], tuitionFee: 'USD 20000', applicationFee: 'USD 40', commission: 'USD 2000', ielts: 6.5, ieltsNoBand: 6.0, toefl: 80, pte: 58 },
+    { title: 'MSc Data Science', university: 'University of Manchester', city: 'Manchester', country: 'United Kingdom', studyLevel: 'Postgraduate', studyArea: 'IT', discipline: 'Data Science', durationYears: 1, intakes: ['Sep'], tuitionFee: 'GBP 28000', applicationFee: 'GBP 60', commission: '12% of first year fee', ielts: 6.5, ieltsNoBand: 6.0, toefl: 90, pte: 62 },
+    { title: 'MSc Computer Science', university: 'University of Helsinki', city: 'Helsinki', country: 'Finland', studyLevel: 'Postgraduate', studyArea: 'IT', discipline: 'Software Engineering', durationYears: 2, intakes: ['Aug'], tuitionFee: 'EUR 15000', applicationFee: null, commission: 'EUR 1500', ielts: 6.5, ieltsNoBand: 6.0, toefl: 92, pte: 62 },
+    { title: 'Bachelor of Nursing', university: 'University of Toronto', city: 'Toronto', country: 'Canada', studyLevel: 'Undergraduate', studyArea: 'Health', discipline: 'Nursing', durationYears: 4, intakes: ['Jan', 'Sep'], tuitionFee: 'CAD 45000', applicationFee: 'CAD 120', commission: '15% of first year fee', ielts: 6.5, ieltsNoBand: 6.0, toefl: 89, pte: 60 },
+    { title: 'Master of Engineering', university: 'University of Melbourne', city: 'Melbourne', country: 'Australia', studyLevel: 'Postgraduate', studyArea: 'Engineering', discipline: 'Civil Engineering', durationYears: 2, intakes: ['Feb', 'Jul'], tuitionFee: 'AUD 48000', applicationFee: 'AUD 100', commission: 'AUD 5000', ielts: 6.5, ieltsNoBand: 6.0, toefl: 79, pte: 58 },
+    { title: 'MBA', university: 'Arizona State University', city: 'Tempe, Arizona', country: 'United States', studyLevel: 'Postgraduate', studyArea: 'Commerce, Business and Administration', discipline: 'Business Administration', durationYears: 2, intakes: ['Aug'], tuitionFee: 'USD 62000', applicationFee: 'USD 90', commission: '10% of first year fee', ielts: 7.0, ieltsNoBand: 6.5, toefl: 100, pte: 68, gmat: 600 },
+    { title: 'BSc Business & Management', university: 'University of Leeds', city: 'Leeds', country: 'United Kingdom', studyLevel: 'Undergraduate', studyArea: 'Commerce, Business and Administration', discipline: 'Business Administration', durationYears: 3, intakes: ['Sep'], tuitionFee: 'GBP 24000', applicationFee: null, commission: 'GBP 2400', ielts: 6.0, ieltsNoBand: 5.5, toefl: 80, pte: 56 },
+  ] as Array<{
+    title: string; university: string; city: string; country: string
+    studyLevel: string; studyArea: string; discipline: string
+    durationYears: number | null; intakes: string[]
+    tuitionFee: string | null; applicationFee: string | null; commission: string
+    ielts?: number; ieltsNoBand?: number; toefl?: number; pte?: number; gre?: number; gmat?: number
+  }>
+
+  // Countries referenced by the catalog but missing from the earlier list.
+  for (const name of [...new Set(SEED_COURSES.map((c) => c.country))]) {
+    await prisma.country.upsert({
+      where: { name },
+      update: {},
+      create: { tenantId: TENANT_ID, name },
+    })
+  }
+  const allCountryByName = new Map(
+    (await prisma.country.findMany()).map((c) => [c.name, c.id]),
+  )
+
+  // Two-level category tree: study areas on top, discipline areas beneath.
+  // upsert cannot key on a nullable column (Prisma rejects `parentId: null` in
+  // a compound where), so top-level categories use find-then-create.
+  for (const [i, name] of CATEGORIES.entries()) {
+    const existing = await prisma.courseCategory.findFirst({ where: { name, parentId: null } })
+    if (!existing) {
+      await prisma.courseCategory.create({
+        data: { tenantId: TENANT_ID, name, displayOrder: i },
+      })
+    }
+  }
+  const topCategories = await prisma.courseCategory.findMany({ where: { parentId: null } })
+  const topByName = new Map(topCategories.map((c) => [c.name, c.id]))
+
+  for (const c of SEED_COURSES) {
+    const parentId = topByName.get(c.studyArea)
+    if (!parentId) continue
+    const existingChild = await prisma.courseCategory.findFirst({
+      where: { name: c.discipline, parentId },
+    })
+    if (!existingChild) {
+      await prisma.courseCategory.create({
+        data: { tenantId: TENANT_ID, name: c.discipline, parentId },
+      })
+    }
+  }
+  const childCategories = await prisma.courseCategory.findMany({ where: { parentId: { not: null } } })
+  const childByName = new Map(childCategories.map((c) => [c.name, c.id]))
+  console.log(`  course categories: ${topCategories.length} areas + ${childCategories.length} disciplines`)
+
+  // Universities, de-duplicated from the course list (as the mock derives them).
+  const uniqueUnis = new Map<string, { name: string; city: string; country: string }>()
+  for (const c of SEED_COURSES) {
+    if (!uniqueUnis.has(c.university)) {
+      uniqueUnis.set(c.university, { name: c.university, city: c.city, country: c.country })
+    }
+  }
+  for (const u of uniqueUnis.values()) {
+    const countryId = allCountryByName.get(u.country)
+    if (!countryId) continue
+    await prisma.university.upsert({
+      where: { name_countryId: { name: u.name, countryId } },
+      update: {},
+      create: { tenantId: TENANT_ID, name: u.name, city: u.city, countryId },
+    })
+  }
+  const universities = await prisma.university.findMany()
+  const uniByName = new Map(universities.map((u) => [u.name, u.id]))
+  console.log(`  universities: ${universities.length}`)
+
+  for (const c of SEED_COURSES) {
+    const universityId = uniByName.get(c.university)
+    if (!universityId) continue
+
+    const tuition = parseMoney(c.tuitionFee)
+    const appFee = parseMoney(c.applicationFee)
+    const commission = parseCommission(c.commission)
+
+    const existing = await prisma.course.findFirst({
+      where: { title: c.title, universityId, deletedAt: null },
+    })
+    const course =
+      existing ??
+      (await prisma.course.create({
+        data: {
+          tenantId: TENANT_ID,
+          universityId,
+          categoryId: childByName.get(c.discipline) ?? null,
+          title: c.title,
+          studyLevel: c.studyLevel,
+          durationYears: c.durationYears,
+          durationMonths: c.durationYears ? c.durationYears * 12 : null,
+          tuitionFee: tuition.amount,
+          applicationFee: appFee.amount,
+          currency: tuition.currency ?? appFee.currency,
+          commissionType: commission.commissionType,
+          commissionValue: commission.commissionValue,
+          // Admission minimums — the course side. A student's own scores are a
+          // separate concern (student_test_scores, deferred to a later stage).
+          requirements: {
+            ielts: c.ielts ?? null,
+            ieltsNoBand: c.ieltsNoBand ?? null,
+            toefl: c.toefl ?? null,
+            pte: c.pte ?? null,
+            gre: c.gre ?? null,
+            gmat: c.gmat ?? null,
+          },
+        },
+      }))
+
+    // Bare month names mean "recurring", so year stays null.
+    for (const m of c.intakes) {
+      const month = MONTH_INDEX[m]
+      if (!month) continue
+      const existingIntake = await prisma.intake.findFirst({
+        where: { courseId: course.id, month, year: null },
+      })
+      if (!existingIntake) {
+        await prisma.intake.create({
+          data: { tenantId: TENANT_ID, courseId: course.id, month },
+        })
+      }
+    }
+  }
+  const courseCount = await prisma.course.count()
+  const intakeCount = await prisma.intake.count()
+  console.log(`  courses: ${courseCount} (${intakeCount} intakes)`)
 
   console.log('Seed complete.')
 }

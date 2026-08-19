@@ -51,8 +51,9 @@ model Branch {
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
-  users User[]
-  leads Lead[]
+  users    User[]
+  leads    Lead[]
+  students Student[]
 
   @@unique([tenantId, name])
   @@index([tenantId])
@@ -101,9 +102,10 @@ model User {
   updatedAt    DateTime  @updatedAt
   deletedAt    DateTime?
 
-  branch        Branch? @relation(fields: [branchId], references: [id])
-  role          Role    @relation(fields: [roleId], references: [id])
-  assignedLeads Lead[]  @relation("LeadAssignee")
+  branch           Branch?   @relation(fields: [branchId], references: [id])
+  role             Role      @relation(fields: [roleId], references: [id])
+  assignedLeads    Lead[]    @relation("LeadAssignee")
+  assignedStudents Student[] @relation("StudentAssignee")
 
   @@unique([tenantId, email])
   @@index([tenantId, roleId])
@@ -160,6 +162,8 @@ model StudentStatus {
   updatedAt  DateTime  @updatedAt
   deletedAt  DateTime?
 
+  students Student[]
+
   @@unique([tenantId, key])
   @@index([tenantId, sortOrder])
   @@map("student_statuses")
@@ -204,10 +208,137 @@ model Country {
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
-  interestedLeads Lead[] @relation("LeadPrimaryInterest")
+  interestedLeads    Lead[]    @relation("LeadPrimaryInterest")
+  residentStudents   Student[] @relation("StudentResidence")
+  interestedStudents Student[] @relation("StudentInterest")
+  universities       University[]
 
   @@index([tenantId])
   @@map("countries")
+}
+
+model University {
+  id        BigInt    @id @default(autoincrement())
+  publicId  String    @unique @default(uuid()) @db.Uuid
+  tenantId  BigInt?
+  countryId BigInt
+  name      String
+  city      String?
+  website   String?
+  logoUrl   String?
+  /// 'Public' | 'Private'
+  type        String?
+  established Int?
+  ranking     Int?
+  showToAgent Boolean @default(true)
+  /// 'Active' | 'Inactive'
+  status    String    @default("Active")
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  country Country  @relation(fields: [countryId], references: [id])
+  courses Course[]
+
+  @@unique([name, countryId])
+  @@index([tenantId])
+  @@index([countryId])
+  @@map("universities")
+}
+
+/// Self-referencing two-level tree: study areas at the top (parentId NULL),
+/// discipline areas beneath. Mirrors CourseCategory in src/mock/courseManagement.ts.
+model CourseCategory {
+  id           BigInt    @id @default(autoincrement())
+  publicId     String    @unique @default(uuid()) @db.Uuid
+  tenantId     BigInt?
+  name         String
+  parentId     BigInt?
+  description  String?
+  displayOrder Int       @default(0)
+  status       String    @default("Active")
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime?
+
+  parent   CourseCategory?  @relation("CategoryTree", fields: [parentId], references: [id])
+  children CourseCategory[] @relation("CategoryTree")
+  courses  Course[]
+
+  @@unique([name, parentId])
+  @@index([tenantId])
+  @@map("course_categories")
+}
+
+/// Money is split into amount + currency rather than the mock's single
+/// "USD 100000" string, so fees can be summed, compared, and filtered.
+/// Admission test minimums stay in `requirements` JSONB (spec §5.5) — they are
+/// course-side thresholds, distinct from a student's own scores.
+model Course {
+  id           BigInt  @id @default(autoincrement())
+  publicId     String  @unique @default(uuid()) @db.Uuid
+  tenantId     BigInt?
+  universityId BigInt
+  categoryId   BigInt?
+
+  title      String
+  studyLevel String?
+  /// Kept alongside durationMonths because the UI shows years.
+  durationYears  Int?
+  durationMonths Int?
+
+  tuitionFee     Decimal? @db.Decimal(12, 2)
+  applicationFee Decimal? @db.Decimal(12, 2)
+  currency       String?  @db.VarChar(3)
+
+  /// Fixed amount, or a formula like "10% of first year fee" — the mock mixes
+  /// both, so the type is kept explicit rather than guessed at read time.
+  commissionType  String?
+  commissionValue String?
+
+  /// { ielts, ieltsNoBand, toefl, pte, gre, gmat } — admission minimums.
+  requirements Json @default("{}")
+
+  description       String?
+  entryRequirements String?
+  websiteUrl        String?
+  /// 'Enabled' | 'Disabled'
+  status String @default("Enabled")
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  university University      @relation(fields: [universityId], references: [id])
+  category   CourseCategory? @relation(fields: [categoryId], references: [id])
+  intakes    Intake[]
+
+  @@index([tenantId])
+  @@index([universityId])
+  @@index([categoryId])
+  @@map("courses")
+}
+
+/// One row per intake month. `year` is nullable: the Course Finder's mock data
+/// carries bare months (['Jan','Mar']) meaning "recurring every year", while
+/// leads/students carry a specific "September 2026".
+model Intake {
+  id                  BigInt    @id @default(autoincrement())
+  publicId            String    @unique @default(uuid()) @db.Uuid
+  tenantId            BigInt?
+  courseId            BigInt
+  month               Int
+  year                Int?
+  applicationDeadline DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  deletedAt           DateTime?
+
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([courseId, month, year])
+  @@index([tenantId])
+  @@map("intakes")
 }
 
 // ---------------------------------------------------------------------------
@@ -259,9 +390,88 @@ model Lead {
   status                 LeadStatus @relation(fields: [statusId], references: [id])
   primaryInterestCountry Country?   @relation("LeadPrimaryInterest", fields: [primaryInterestCountryId], references: [id])
 
+  /// The student this lead became. Paired with Student.lead so the funnel can
+  /// be walked from either end.
+  convertedStudent Student? @relation("LeadConversion", fields: [convertedStudentId], references: [id])
+  /// Back-reference for Student.lead.
+  studentFromLead  Student? @relation("StudentFromLead")
+
   @@index([tenantId, statusId])
   @@index([tenantId, assignedToId])
   @@index([tenantId, nextFollowUpAt])
   @@index([tenantId, deletedAt])
   @@map("leads")
+}
+
+// ---------------------------------------------------------------------------
+// Students
+// ---------------------------------------------------------------------------
+
+/// Fields deliberately NOT stored (the API's response mapper computes them, so
+/// the existing UI renders unchanged):
+///   statusColor  -> from StudentStatus.color
+///   status       -> from StudentStatus.label
+///   assignedTo   -> from User.name
+///   branch       -> from Branch.name
+///   applications -> COUNT of related applications, never a stored counter
+///   emailDate    -> formatted from createdAt
+model Student {
+  id       BigInt @id @default(autoincrement())
+  publicId String @unique @default(uuid()) @db.Uuid
+  tenantId BigInt @default(1)
+
+  /// Human-facing business key shown throughout the UI, e.g. "STU-2026-1902".
+  /// Generated server-side as STU-{year}-{id} after insert.
+  studentNo String @unique
+
+  /// Kept as one column for Phase 2. The spec splits first/last name, but that
+  /// would touch ~40 UI files for no user-visible gain, and South-Asian names
+  /// split badly. Noted as a Phase 3 migration.
+  name      String
+  email     String?
+  phone     String?
+  phoneNote String?
+  gender    String?
+  source    String?
+
+  branchId     BigInt?
+  assignedToId BigInt?
+  statusId     BigInt
+
+  residenceCountryId BigInt?
+  interestCountryId  BigInt?
+
+  /// Free text until the catalog lands in Stage 6, then these become FKs.
+  studyLevel String?
+  course     String?
+  intake     String?
+  university String?
+
+  avatarUrl String?
+
+  /// The lead this student was converted from — NULL for direct sign-ups.
+  leadId BigInt? @unique
+
+  /// Set when the student is archived. Distinct from deletedAt: archived rows
+  /// are still real students the user can restore, deleted ones are in the bin.
+  archivedAt DateTime?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  branch           Branch?       @relation(fields: [branchId], references: [id])
+  assignedTo       User?         @relation("StudentAssignee", fields: [assignedToId], references: [id])
+  status           StudentStatus @relation(fields: [statusId], references: [id])
+  residenceCountry Country?      @relation("StudentResidence", fields: [residenceCountryId], references: [id])
+  interestCountry  Country?      @relation("StudentInterest", fields: [interestCountryId], references: [id])
+  lead             Lead?         @relation("StudentFromLead", fields: [leadId], references: [id])
+
+  /// Back-reference for Lead.convertedStudent.
+  convertedFromLeads Lead[] @relation("LeadConversion")
+
+  @@index([tenantId, statusId])
+  @@index([tenantId, assignedToId])
+  @@index([tenantId, deletedAt])
+  @@map("students")
 }
