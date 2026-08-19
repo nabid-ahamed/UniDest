@@ -1,7 +1,7 @@
 import { FolderOpen, Building2, MapPin, Eye, GraduationCap } from 'lucide-react'
 import { cn } from '../../../lib/cn'
 import { pickTextColor } from '../../../lib/contrast'
-import { applications } from '../../../mock/applications'
+import { useApplications } from '../../../lib/api'
 import type { Student } from '../../../mock/students'
 
 /**
@@ -12,6 +12,7 @@ import type { Student } from '../../../mock/students'
  * + subtitle, then a card list (or an empty state).
  */
 export function StudentApplicationsTab({ student }: { student: Student }) {
+  const { data: applications = [] } = useApplications()
   const rows = applications.filter((a) => a.studentNo === student.studentNo)
 
   return (

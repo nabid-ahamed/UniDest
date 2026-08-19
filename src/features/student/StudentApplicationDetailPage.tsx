@@ -4,7 +4,7 @@ import { ArrowLeft, GraduationCap, Clock, Send, Paperclip } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { StatusPill } from './components/StatusPill'
 import { SectionHead } from './components/SectionHead'
-import { getApplication } from '../../mock/applications'
+import { useApplication, type Application } from '../../lib/api'
 import { currentStudent, documentRequests, documentStatusColor } from '../../mock/student/portal'
 import { loadMessages, sendMessage, type AppMessage } from '../../mock/student/applicationMessages'
 
@@ -16,7 +16,15 @@ import { loadMessages, sendMessage, type AppMessage } from '../../mock/student/a
 export default function StudentApplicationDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const app = getApplication(Number(id))
+  const { data: app, isPending } = useApplication(id ? Number(id) : undefined)
+
+  if (isPending) {
+    return (
+      <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center shadow-sm">
+        <p className="text-slate-500">Loading application…</p>
+      </div>
+    )
+  }
 
   // Guard: students only see their own applications.
   if (!app || app.studentNo !== currentStudent().studentNo) {
@@ -37,7 +45,7 @@ export default function StudentApplicationDetailPage() {
   return <ApplicationDetail key={app.id} app={app} />
 }
 
-function ApplicationDetail({ app }: { app: NonNullable<ReturnType<typeof getApplication>> }) {
+function ApplicationDetail({ app }: { app: Application }) {
   const navigate = useNavigate()
 
   const docs = documentRequests.filter((d) => d.applicationRef === `University Application #${app.id}`)

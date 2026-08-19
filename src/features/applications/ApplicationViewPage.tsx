@@ -45,7 +45,7 @@ import {
 } from './components/ApplicationRecordDialogs'
 import { ReminderMessagesDialog } from './components/ReminderMessagesDialog'
 import { reminderMessageFor } from '../../mock/reminderMessages'
-import { students } from '../../mock/students'
+import { useStudents } from '../../lib/api'
 
 /** Application detail page (route /applications/:id), matching the reference "View" page. */
 export default function ApplicationViewPage() {
@@ -95,6 +95,7 @@ function ApplicationView({ app }: { app: Application }) {
   const [addingInvoice, setAddingInvoice] = useState(false)
 
   // Link back to the originating student record when the studentNo matches.
+  const { data: students = [] } = useStudents()
   const student = students.find((s) => s.studentNo === app.studentNo)
 
   const todayLabel = () =>

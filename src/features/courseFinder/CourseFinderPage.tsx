@@ -20,8 +20,7 @@ import { cn } from '../../lib/cn'
 import { MultiSelect } from '../../components/MultiSelect'
 import { ExportButtons } from '../../components/ExportButtons'
 import { DotsLoader, Field, PageBtn, SingleSelect } from '../../components/DataTableUI'
-import { leads, intakes } from '../../mock/leads'
-import { students } from '../../mock/students'
+import { intakes } from '../../mock/leads'
 import {
   finderCountries,
   finderStudyLevels,
@@ -35,7 +34,7 @@ import {
   inDurationBucket,
   type FinderCourse,
 } from '../../mock/courseFinder'
-import { useCourses } from '../../lib/api'
+import { useCourses, useStudents, useLeads } from '../../lib/api'
 
 /* ---------- persistence ---------- */
 
@@ -73,11 +72,6 @@ interface Person {
   group: 'Students' | 'Leads'
 }
 
-const PEOPLE: Person[] = [
-  ...students.map((s): Person => ({ id: s.id, label: `${s.name} (${s.studentNo})`, group: 'Students' })),
-  ...leads.map((l): Person => ({ id: l.id, label: `${l.name} (Lead #${l.id})`, group: 'Leads' })),
-]
-
 const YEARS = ['2026', '2027', '2028']
 
 /* ---------- page ---------- */
@@ -87,6 +81,17 @@ export default function CourseFinderPage() {
   // the API also accepts the same filters as query params if the catalog grows
   // past what is sensible to ship in one response.
   const { data: finderCourses = [] } = useCourses()
+  const { data: allStudents = [] } = useStudents()
+  const { data: allLeads = [] } = useLeads()
+
+  /** "Suggest to" targets — built from server data rather than a module const. */
+  const PEOPLE = useMemo<Person[]>(
+    () => [
+      ...allStudents.map((s): Person => ({ id: s.id, label: `${s.name} (${s.studentNo})`, group: 'Students' })),
+      ...allLeads.map((l): Person => ({ id: l.id, label: `${l.name} (Lead #${l.id})`, group: 'Leads' })),
+    ],
+    [allStudents, allLeads],
+  )
 
   // Top search bar (applied on Search, like the reference).
   const [studyLevel, setStudyLevel] = useState('Undergraduate')
@@ -803,6 +808,19 @@ function PersonSelect({
   onChange: (v: number | '') => void
   invalid?: boolean
 }) {
+  // Reads the hooks directly instead of taking PEOPLE as a prop: this sits
+  // three layers below the page (page -> modal -> select), and React Query
+  // dedupes the request anyway.
+  const { data: allStudents = [] } = useStudents()
+  const { data: allLeads = [] } = useLeads()
+  const PEOPLE = useMemo<Person[]>(
+    () => [
+      ...allStudents.map((s): Person => ({ id: s.id, label: `${s.name} (${s.studentNo})`, group: 'Students' })),
+      ...allLeads.map((l): Person => ({ id: l.id, label: `${l.name} (Lead #${l.id})`, group: 'Leads' })),
+    ],
+    [allStudents, allLeads],
+  )
+
   return (
     <div>
       <label className="mb-1.5 block text-sm font-semibold text-slate-700">

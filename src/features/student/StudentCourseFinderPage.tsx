@@ -14,7 +14,6 @@ import { SingleSelect } from '../../components/DataTableUI'
 import { showSuccessDialog } from '../../store/successDialog'
 import { currentStudent } from '../../mock/student/portal'
 import {
-  finderCourses,
   finderCountries,
   finderStudyLevels,
   studyAreas,
@@ -25,12 +24,14 @@ import {
   inDurationBucket,
   type FinderCourse,
 } from '../../mock/courseFinder'
+import { useCourses } from '../../lib/api'
 import { loadBookmarks, toggleBookmark, applyToCourse } from '../../mock/student/finderActions'
 
 const ANY_LEVEL = 'Any Study Level'
 const ALL_COUNTRIES = 'All Countries'
 
 export default function StudentCourseFinderPage() {
+  const { data: finderCourses = [] } = useCourses()
   const studentId = currentStudent().id
 
   const [keyword, setKeyword] = useState('')
@@ -81,7 +82,7 @@ export default function StudentCourseFinderPage() {
     else if (sortBy === 'Course Fee High to Low')
       list = [...list].sort((a, b) => (feeAmount(b) ?? -1) - (feeAmount(a) ?? -1))
     return list
-  }, [keyword, studyLevel, country, studyArea, discipline, duration, sortBy])
+  }, [finderCourses, keyword, studyLevel, country, studyArea, discipline, duration, sortBy])
 
   const onBookmark = (c: FinderCourse) => {
     const next = toggleBookmark(studentId, c.id)
