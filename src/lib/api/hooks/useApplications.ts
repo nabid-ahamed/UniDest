@@ -24,6 +24,42 @@ function useInvalidateApplications() {
   return () => qc.invalidateQueries({ queryKey: qk.applications.all })
 }
 
+/**
+ * Status timeline for one application. Separate from the detail query because
+ * it only appears on the detail page and would otherwise be fetched with every
+ * list row.
+ */
+export function useApplicationHistory(id: number | undefined) {
+  return useQuery({
+    queryKey: [...qk.applications.detail(id!), 'history'],
+    queryFn: () => applicationsApi.history(id!),
+    enabled: id !== undefined,
+  })
+}
+
+export function useCreateApplication() {
+  const invalidate = useInvalidateApplications()
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: Parameters<typeof applicationsApi.create>[0]) =>
+      applicationsApi.create(data),
+    onSuccess: () => {
+      invalidate()
+      // A new application changes the student's application count.
+      qc.invalidateQueries({ queryKey: qk.students.all })
+    },
+  })
+}
+
+export function useSetApplicationAssignee() {
+  const invalidate = useInvalidateApplications()
+  return useMutation({
+    mutationFn: ({ id, assignedTo }: { id: number; assignedTo: string | null }) =>
+      applicationsApi.setAssignee(id, assignedTo),
+    onSuccess: invalidate,
+  })
+}
+
 export function useUpdateApplication() {
   const invalidate = useInvalidateApplications()
   return useMutation({
@@ -36,8 +72,10 @@ export function useUpdateApplication() {
 export function useSetApplicationStatus() {
   const invalidate = useInvalidateApplications()
   return useMutation({
-    mutationFn: ({ id, status }: { id: number; status: string }) =>
-      applicationsApi.setStatus(id, status),
+    mutationFn: ({ id, status, note }: { id: number; status: string; note?: string }) =>
+      applicationsApi.setStatus(id, status, note),
+    // Also refresh the timeline: the server writes a history row on every
+    // status change, so a stale cache would hide the entry just created.
     onSuccess: invalidate,
   })
 }

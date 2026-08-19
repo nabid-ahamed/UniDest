@@ -42,7 +42,11 @@ export {
 export {
   useApplications,
   useApplication,
+  useApplicationHistory,
+  useCreateApplication,
   useUpdateApplication,
   useSetApplicationStatus,
+  useSetApplicationAssignee,
   useDeleteApplication,
 } from './hooks/useApplications'
+export type { StatusHistoryEntry } from './resources/applications'
