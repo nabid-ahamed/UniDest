@@ -51,9 +51,10 @@ model Branch {
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
-  users    User[]
-  leads    Lead[]
-  students Student[]
+  users        User[]
+  leads        Lead[]
+  students     Student[]
+  applications Application[]
 
   @@unique([tenantId, name])
   @@index([tenantId])
@@ -104,8 +105,10 @@ model User {
 
   branch           Branch?   @relation(fields: [branchId], references: [id])
   role             Role      @relation(fields: [roleId], references: [id])
-  assignedLeads    Lead[]    @relation("LeadAssignee")
-  assignedStudents Student[] @relation("StudentAssignee")
+  assignedLeads       Lead[]                     @relation("LeadAssignee")
+  assignedStudents    Student[]                  @relation("StudentAssignee")
+  assignedApplications Application[]             @relation("ApplicationAssignee")
+  statusChanges       ApplicationStatusHistory[] @relation("StatusChangedBy")
 
   @@unique([tenantId, email])
   @@index([tenantId, roleId])
@@ -183,6 +186,10 @@ model ApplicationStatus {
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
   deletedAt  DateTime?
+
+  applications  Application[]
+  historyFrom   ApplicationStatusHistory[] @relation("HistoryFrom")
+  historyTo     ApplicationStatusHistory[] @relation("HistoryTo")
 
   @@unique([tenantId, key])
   @@index([tenantId, sortOrder])
@@ -309,9 +316,10 @@ model Course {
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
-  university University      @relation(fields: [universityId], references: [id])
-  category   CourseCategory? @relation(fields: [categoryId], references: [id])
-  intakes    Intake[]
+  university   University      @relation(fields: [universityId], references: [id])
+  category     CourseCategory? @relation(fields: [categoryId], references: [id])
+  intakes      Intake[]
+  applications Application[]
 
   @@index([tenantId])
   @@index([universityId])
@@ -334,11 +342,113 @@ model Intake {
   updatedAt           DateTime  @updatedAt
   deletedAt           DateTime?
 
-  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  course       Course        @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  applications Application[]
 
   @@unique([courseId, month, year])
   @@index([tenantId])
   @@map("intakes")
+}
+
+// ---------------------------------------------------------------------------
+// Applications
+// ---------------------------------------------------------------------------
+
+/// Fields the API computes rather than stores (so the existing UI is unchanged):
+///   status / statusColor -> joined from ApplicationStatus
+///   student / studentNo  -> joined from Student
+///   university / course / country -> joined through Course -> University -> Country
+///   assignedTo / branch  -> joined names
+model Application {
+  id       BigInt @id @default(autoincrement())
+  publicId String @unique @default(uuid()) @db.Uuid
+  tenantId BigInt @default(1)
+
+  studentId BigInt
+  courseId  BigInt?
+  intakeId  BigInt?
+
+  branchId     BigInt?
+  assignedToId BigInt?
+  statusId     BigInt
+
+  /// Submission channel: DIRECT | Applyboard | Adventus | INTO Global. Kept as
+  /// a plain column because it is not admin-edited in the UI.
+  appliedThrough String @default("DIRECT")
+
+  /// Free text until the agents table lands in Phase 4 (spec 5.8).
+  agentName String?
+
+  /// 'low' | 'normal' | 'high'
+  priority String @default("normal")
+
+  submittedAt DateTime?
+  decisionAt  DateTime?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  student    Student           @relation(fields: [studentId], references: [id])
+  course     Course?           @relation(fields: [courseId], references: [id])
+  intake     Intake?           @relation(fields: [intakeId], references: [id])
+  branch     Branch?           @relation(fields: [branchId], references: [id])
+  assignedTo User?             @relation("ApplicationAssignee", fields: [assignedToId], references: [id])
+  status     ApplicationStatus @relation(fields: [statusId], references: [id])
+
+  statusHistory ApplicationStatusHistory[]
+  documents     ApplicationDocument[]
+
+  @@index([tenantId, statusId])
+  @@index([tenantId, studentId])
+  @@index([tenantId, deletedAt])
+  @@map("applications")
+}
+
+/// Written on every status change, inside the same transaction as the update.
+/// Gives the detail page a free timeline and an audit trail of who moved what.
+model ApplicationStatusHistory {
+  id            BigInt   @id @default(autoincrement())
+  publicId      String   @unique @default(uuid()) @db.Uuid
+  tenantId      BigInt   @default(1)
+  applicationId BigInt
+  fromStatusId  BigInt?
+  toStatusId    BigInt
+  note          String?
+  changedById   BigInt?
+  changedAt     DateTime @default(now())
+
+  application Application       @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  fromStatus  ApplicationStatus? @relation("HistoryFrom", fields: [fromStatusId], references: [id])
+  toStatus    ApplicationStatus  @relation("HistoryTo", fields: [toStatusId], references: [id])
+  changedBy   User?              @relation("StatusChangedBy", fields: [changedById], references: [id])
+
+  @@index([tenantId, applicationId])
+  @@map("application_status_history")
+}
+
+/// Schema only in Phase 2 — fileUrl stays unpopulated until object storage
+/// lands in Phase 3 (spec 8 defers the provider decision).
+model ApplicationDocument {
+  id            BigInt    @id @default(autoincrement())
+  publicId      String    @unique @default(uuid()) @db.Uuid
+  tenantId      BigInt    @default(1)
+  applicationId BigInt
+  name          String
+  type          String
+  fileUrl       String?
+  fileSize      Int?
+  /// 'Uploaded' | 'Pending Review' | 'Verified' | 'Rejected'
+  status     String    @default("Pending Review")
+  uploadedAt DateTime  @default(now())
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  deletedAt  DateTime?
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, applicationId])
+  @@map("application_documents")
 }
 
 // ---------------------------------------------------------------------------
@@ -468,7 +578,8 @@ model Student {
   lead             Lead?         @relation("StudentFromLead", fields: [leadId], references: [id])
 
   /// Back-reference for Lead.convertedStudent.
-  convertedFromLeads Lead[] @relation("LeadConversion")
+  convertedFromLeads Lead[]        @relation("LeadConversion")
+  applications       Application[]
 
   @@index([tenantId, statusId])
   @@index([tenantId, assignedToId])

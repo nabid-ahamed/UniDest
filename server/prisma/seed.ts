@@ -498,6 +498,76 @@ async function main() {
   const intakeCount = await prisma.intake.count()
   console.log(`  courses: ${courseCount} (${intakeCount} intakes)`)
 
+  // --- Applications ---------------------------------------------------------
+  const appStatusByKey = new Map(
+    (await prisma.applicationStatus.findMany({ where: { tenantId: TENANT_ID } })).map((s) => [s.key, s.id]),
+  )
+  const seededStudents = await prisma.student.findMany({
+    where: { tenantId: TENANT_ID, deletedAt: null },
+    orderBy: { id: 'asc' },
+  })
+  const allCourses = await prisma.course.findMany({
+    where: { deletedAt: null },
+    include: { intakes: true },
+    orderBy: { id: 'asc' },
+  })
+
+  /**
+   * Applications are attached to the seeded students by position, so every
+   * demo student has a plausible pipeline. The mock had no id generator for
+   * applications at all — they could only be read — so there is no fixed set
+   * of rows to reproduce here.
+   */
+  const SEED_APPLICATIONS = [
+    { studentIndex: 0, courseIndex: 3, status: 'payment-received', channel: 'DIRECT', assignedTo: 'Sarah Ali' },
+    { studentIndex: 0, courseIndex: 8, status: 'pending', channel: 'Applyboard', assignedTo: 'Sarah Ali' },
+    { studentIndex: 2, courseIndex: 6, status: 'offer-letter-received', channel: 'DIRECT', assignedTo: 'Mohammed Saleh' },
+    { studentIndex: 3, courseIndex: 7, status: 'admission-criteria-met', channel: 'Adventus', assignedTo: 'Moses Otieno' },
+    { studentIndex: 4, courseIndex: 3, status: 'funds-under-assessment', channel: 'DIRECT', assignedTo: 'Sarah Ali' },
+    { studentIndex: 5, courseIndex: 5, status: 'offer-letter-received', channel: 'INTO Global', assignedTo: 'Moses Otieno' },
+  ]
+
+  let appsCreated = 0
+  for (const a of SEED_APPLICATIONS) {
+    const student = seededStudents[a.studentIndex]
+    const course = allCourses[a.courseIndex]
+    if (!student || !course) continue
+
+    const existing = await prisma.application.findFirst({
+      where: { studentId: student.id, courseId: course.id, deletedAt: null },
+    })
+    if (existing) continue
+
+    const statusId = appStatusByKey.get(a.status)
+    if (!statusId) continue
+
+    const application = await prisma.application.create({
+      data: {
+        tenantId: TENANT_ID,
+        studentId: student.id,
+        courseId: course.id,
+        intakeId: course.intakes[0]?.id ?? null,
+        statusId,
+        branchId: student.branchId,
+        assignedToId: userByName.get(a.assignedTo) ?? null,
+        appliedThrough: a.channel,
+      },
+    })
+
+    // Seed the timeline with the creation entry, matching what the service
+    // writes on every later status change.
+    await prisma.applicationStatusHistory.create({
+      data: {
+        tenantId: TENANT_ID,
+        applicationId: application.id,
+        toStatusId: statusId,
+        note: 'Application created',
+      },
+    })
+    appsCreated++
+  }
+  console.log(`  applications: ${appsCreated}`)
+
   console.log('Seed complete.')
 }
 
