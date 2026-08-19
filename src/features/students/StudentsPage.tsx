@@ -27,7 +27,6 @@ import { TransferBranchDialog } from '../leads/components/TransferBranchDialog'
 import { ChangePasswordDialog } from '../leads/components/ChangePasswordDialog'
 import type { Student } from '../../mock/students'
 import {
-  students,
   studentStatuses,
   studentStaff,
   studentBranches,
@@ -38,17 +37,16 @@ import {
   allCountries,
   studyLevels,
   intakes,
-  setStudentStatus,
-  setStudentAssignee,
-  updateStudent,
   studentState,
-  deleteStudent,
-  deleteStudents,
-  archiveStudent,
-  archiveStudents,
-  restoreStudents,
-  purgeStudents,
 } from '../../mock/students'
+import {
+  useStudents,
+  useUpdateStudent,
+  useSetStudentStatus,
+  useSetStudentAssignee,
+  useSetStudentState,
+  usePurgeStudents,
+} from '../../lib/api'
 import { StudentRow } from './components/StudentRow'
 
 const PAGE_SIZES = [
@@ -93,7 +91,6 @@ export default function StudentsPage() {
   const [page, setPage] = useState(1)
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [refreshing, setRefreshing] = useState(false)
-  const [loading, setLoading] = useState(true)
   const [bulkAction, setBulkAction] = useState('')
   const [bulkValue, setBulkValue] = useState('')
   const [bulkConfirm, setBulkConfirm] = useState<null | 'delete' | 'archive' | 'purge'>(null)
@@ -104,15 +101,16 @@ export default function StudentsPage() {
   const [passwordStudent, setPasswordStudent] = useState<Student | null>(null)
   const [archiveTarget, setArchiveTarget] = useState<Student | null>(null)
   const [purgeTarget, setPurgeTarget] = useState<Student | null>(null)
-  // Re-render tick — bumped after any mutation to the shared `students` array.
-  const [rev, setRev] = useState(0)
-  const bump = () => setRev((n) => n + 1)
-
-  // Initial "fetch" preloader on mount.
-  useEffect(() => {
-    const t = window.setTimeout(() => setLoading(false), 700)
-    return () => window.clearTimeout(t)
-  }, [])
+  // Server state. Mutations invalidate the query, so the table refreshes itself
+  // — that replaces the manual `rev` tick this page used to bump, which existed
+  // only because the mock array could not notify React of a change.
+  const { data: students = [], isPending, refetch } = useStudents()
+  const updateStudentM = useUpdateStudent()
+  const setStatusM = useSetStudentStatus()
+  const setAssigneeM = useSetStudentAssignee()
+  const setStateM = useSetStudentState()
+  const purgeM = usePurgeStudents()
+  const loading = isPending
 
   const showToast = (msg: string) => {
     setToast(msg)
@@ -136,11 +134,7 @@ export default function StudentsPage() {
 
   const handleRefresh = () => {
     setRefreshing(true)
-    setLoading(true)
-    window.setTimeout(() => {
-      setRefreshing(false)
-      setLoading(false)
-    }, 700)
+    refetch().finally(() => setRefreshing(false))
     showToast('List refreshed')
   }
 
@@ -166,9 +160,8 @@ export default function StudentsPage() {
     if (bulkAction === 'Archive Students') return setBulkConfirm('archive')
 
     if (bulkAction === 'Restore Students') {
-      restoreStudents(ids)
+      ids.forEach((id) => setStateM.mutate({ id, state: 'active' }))
       setSelected(new Set())
-      bump()
       showSuccessDialog(`${ids.length} student(s) restored successfully`, 'Restored!')
       setBulkAction('')
       return
@@ -176,8 +169,7 @@ export default function StudentsPage() {
 
     if (bulkAction === 'Assign Students to Staff') {
       if (!bulkValue) return showToast('Choose a staff member')
-      ids.forEach((id) => setStudentAssignee(id, bulkValue))
-      bump()
+      ids.forEach((id) => setAssigneeM.mutate({ id, assignedTo: bulkValue }))
       showToast(`Assigned to ${bulkValue} — ${ids.length} student(s)`)
     }
     setBulkAction('')
@@ -188,9 +180,9 @@ export default function StudentsPage() {
     const ids = [...selected]
     // Move to the Archived / Deleted bucket (or purge from the trash) so the
     // matching view reflects the change.
-    if (bulkConfirm === 'archive') archiveStudents(ids)
-    else if (bulkConfirm === 'purge') purgeStudents(ids)
-    else deleteStudents(ids)
+    if (bulkConfirm === 'archive') ids.forEach((id) => setStateM.mutate({ id, state: 'archived' }))
+    else if (bulkConfirm === 'purge') purgeM.mutate(ids)
+    else ids.forEach((id) => setStateM.mutate({ id, state: 'deleted' }))
     const verb =
       bulkConfirm === 'archive' ? 'archived' : bulkConfirm === 'purge' ? 'permanently deleted' : 'deleted'
     const title =
@@ -198,7 +190,6 @@ export default function StudentsPage() {
     setSelected(new Set())
     setBulkConfirm(null)
     setBulkAction('')
-    bump()
     showSuccessDialog(`${ids.length} student(s) ${verb} successfully`, title)
   }
 
@@ -223,15 +214,13 @@ export default function StudentsPage() {
     }
     if (type === 'Archive') return setArchiveTarget(student)
     if (type === 'Restore') {
-      restoreStudents([student.id])
-      bump()
+      setStateM.mutate({ id: student.id, state: 'active' })
       return showSuccessDialog(`${student.name} restored successfully`, 'Restored!')
     }
     if (type === 'Purge') return setPurgeTarget(student)
     if (type === 'Delete') return setDeleteTarget(student)
     if (type === 'SetStatus' && payload) {
-      setStudentStatus(student.id, payload)
-      bump()
+      setStatusM.mutate({ id: student.id, status: payload })
       return showToast(`${student.name} → ${payload}`)
     }
     showToast(`${type}: ${student.name} (#${student.id})`)
@@ -239,8 +228,7 @@ export default function StudentsPage() {
 
   const saveBranch = (branch: string) => {
     if (!transferStudent) return
-    updateStudent(transferStudent.id, { branch })
-    bump()
+    updateStudentM.mutate({ id: transferStudent.id, patch: { branch } })
     showSuccessDialog(`${transferStudent.name} transferred to ${branch}.`, 'Transferred!')
     setTransferStudent(null)
   }
@@ -254,47 +242,43 @@ export default function StudentsPage() {
 
   const confirmArchive = () => {
     if (!archiveTarget) return
-    archiveStudent(archiveTarget.id)
+    setStateM.mutate({ id: archiveTarget.id, state: 'archived' })
     setSelected((prev) => {
       const next = new Set(prev)
       next.delete(archiveTarget.id)
       return next
     })
-    bump()
     showSuccessDialog(`${archiveTarget.name} archived successfully`, 'Archived!')
     setArchiveTarget(null)
   }
 
   const confirmPurge = () => {
     if (!purgeTarget) return
-    purgeStudents([purgeTarget.id])
+    purgeM.mutate([purgeTarget.id])
     setSelected((prev) => {
       const next = new Set(prev)
       next.delete(purgeTarget.id)
       return next
     })
-    bump()
     showSuccessDialog(`${purgeTarget.name} deleted permanently`, 'Deleted!')
     setPurgeTarget(null)
   }
 
   const saveAssignee = (member: string) => {
     if (!assignStudent) return
-    setStudentAssignee(assignStudent.id, member)
-    bump()
+    setAssigneeM.mutate({ id: assignStudent.id, assignedTo: member })
     showToast(`${assignStudent.name} assigned to ${member}`)
     setAssignStudent(null)
   }
 
   const confirmDelete = () => {
     if (!deleteTarget) return
-    deleteStudent(deleteTarget.id)
+    setStateM.mutate({ id: deleteTarget.id, state: 'deleted' })
     setSelected((prev) => {
       const next = new Set(prev)
       next.delete(deleteTarget.id)
       return next
     })
-    bump()
     showSuccessDialog(`${deleteTarget.name} deleted successfully`)
     setDeleteTarget(null)
   }
@@ -333,7 +317,7 @@ export default function StudentsPage() {
     university,
     source,
     view,
-    rev,
+    students,
   ])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))

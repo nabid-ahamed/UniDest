@@ -6,9 +6,6 @@ import { Field } from '../../components/DataTableUI'
 import { AvatarUpload } from '../../components/AvatarUpload'
 import { Avatar } from '../../components/Avatar'
 import {
-  getStudent,
-  addStudent,
-  updateStudent,
   studentStatuses,
   studentStaff,
   studentBranches,
@@ -20,17 +17,38 @@ import {
   studyLevels,
   intakes,
 } from '../../mock/students'
+import { useStudent, useCreateStudent, useUpdateStudent, type Student } from '../../lib/api'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 /** Real branches (the shared list leads with the "All Branch" filter option). */
 const branchOptions = studentBranches.filter((b) => b !== 'All Branch')
 
+/**
+ * Route entry: resolves the student being edited (if any) and guards the fetch.
+ * The body is a separate component so its many `useState(editing?.…)` calls
+ * never run before the data has arrived — and the `key` remounts it per id, so
+ * switching students resets the form instead of showing the previous one.
+ */
 export default function StudentFormPage() {
-  const navigate = useNavigate()
   const { id } = useParams()
-  const editing = id ? getStudent(Number(id)) : undefined
-  const isEdit = Boolean(id)
+  const { data: editing, isPending } = useStudent(id ? Number(id) : undefined)
+
+  if (id && isPending) {
+    return (
+      <div className="rounded-xl border border-slate-200 bg-white p-12 text-center shadow-sm">
+        <p className="text-slate-500">Loading student…</p>
+      </div>
+    )
+  }
+
+  return <StudentForm key={id ?? 'new'} editing={editing ?? undefined} isEdit={Boolean(id)} />
+}
+
+function StudentForm({ editing, isEdit }: { editing?: Student; isEdit: boolean }) {
+  const navigate = useNavigate()
+  const createStudent = useCreateStudent()
+  const updateStudentM = useUpdateStudent()
 
   const [name, setName] = useState(editing?.name ?? '')
   const [email, setEmail] = useState(editing?.email ?? '')
@@ -88,11 +106,14 @@ export default function StudentFormPage() {
     }
 
     if (isEdit && editing) {
-      updateStudent(editing.id, payload)
-      navigate(`/students/${editing.id}`)
+      updateStudentM.mutate(
+        { id: editing.id, patch: payload },
+        { onSuccess: () => navigate(`/students/${editing.id}`) },
+      )
     } else {
-      const created = addStudent(payload)
-      navigate(`/students/${created.id}`)
+      createStudent.mutate(payload, {
+        onSuccess: (created) => navigate(`/students/${created.id}`),
+      })
     }
   }
 

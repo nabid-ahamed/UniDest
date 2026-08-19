@@ -38,7 +38,8 @@ import { StudentApplicationsTab } from './components/StudentApplicationsTab'
 import { StudentChatTab } from './components/StudentChatTab'
 import { NewFollowupDialog, type FollowupInput } from './components/NewFollowupDialog'
 import { addFollowup, loadFollowups, nextFollowupFor } from '../../mock/student/followups'
-import { students, studentStatuses, setStudentStatus, deleteStudent, studentAsLead, type Student } from '../../mock/students'
+import { studentStatuses, studentAsLead, type Student } from '../../mock/students'
+import { useStudent, useSetStudentStatus, useSetStudentState } from '../../lib/api'
 import { addLead } from '../../mock/leads'
 
 const TABS = [
@@ -54,7 +55,15 @@ const TABS = [
 /** Student detail page (route /students/:id), matching the reference "View" page. */
 export default function StudentViewPage() {
   const { id } = useParams()
-  const student = students.find((s) => s.id === Number(id))
+  const { data: student, isPending } = useStudent(id ? Number(id) : undefined)
+
+  if (isPending) {
+    return (
+      <div className="rounded-xl border border-slate-200 bg-white p-12 text-center shadow-sm">
+        <p className="text-slate-500">Loading student…</p>
+      </div>
+    )
+  }
 
   if (!student) {
     return (
@@ -70,10 +79,12 @@ export default function StudentViewPage() {
     )
   }
 
-  return <StudentView student={student} />
+  return <StudentView key={student.id} student={student} />
 }
 
 function StudentView({ student }: { student: Student }) {
+  const setStatusM = useSetStudentStatus()
+  const setStateM = useSetStudentState()
   const navigate = useNavigate()
   const [tab, setTab] = useState<(typeof TABS)[number]>('Overview')
   const [toast, setToast] = useState('')
@@ -98,7 +109,7 @@ function StudentView({ student }: { student: Student }) {
   const changeStatus = (next: string) => {
     if (next === status) return
     setStatus(next)
-    setStudentStatus(student.id, next)
+    setStatusM.mutate({ id: student.id, status: next })
     showToast(`Status changed to ${next}`)
   }
 
@@ -130,7 +141,7 @@ function StudentView({ student }: { student: Student }) {
     // A follow-up can also move the status forward.
     if (input.status !== status) {
       setStatus(input.status)
-      setStudentStatus(student.id, input.status)
+      setStatusM.mutate({ id: student.id, status: input.status })
     }
     setFollowupOpen(false)
     showSuccessDialog('Follow-up record added successfully.', 'Follow-up Added')
@@ -152,7 +163,7 @@ function StudentView({ student }: { student: Student }) {
       source: 'Student Convert',
       nextFollowup: null,
     })
-    deleteStudent(student.id)
+    setStateM.mutate({ id: student.id, state: 'deleted' })
     setConverting(false)
     showSuccessDialog(`${student.name} has been converted back to a lead.`, 'Converted To Lead')
     navigate(`/leads/${lead.id}`)
@@ -482,7 +493,7 @@ function StudentView({ student }: { student: Student }) {
             }
             confirmLabel="Delete"
             onConfirm={() => {
-              deleteStudent(student.id)
+              setStateM.mutate({ id: student.id, state: 'deleted' })
               setDeleting(false)
               showSuccessDialog(`${student.name} deleted successfully`)
               navigate('/students')
