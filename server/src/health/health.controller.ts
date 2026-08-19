@@ -1,4 +1,5 @@
 import { Controller, Get, Inject } from '@nestjs/common'
+import { Public } from '../auth/guards/jwt-auth.guard'
 import { PrismaService } from '../prisma/prisma.service'
 
 /**
@@ -10,6 +11,8 @@ import { PrismaService } from '../prisma/prisma.service'
 export class HealthController {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
+  /** Public: monitoring must reach this without credentials. */
+  @Public()
   @Get()
   async check() {
     try {
