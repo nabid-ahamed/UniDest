@@ -24,6 +24,14 @@ export const qk = {
     list: () => [...qk.applications.all, 'list'] as const,
     detail: (id: number) => [...qk.applications.all, 'detail', id] as const,
   },
+  staff: {
+    all: ['staff'] as const,
+    list: () => [...qk.staff.all, 'list'] as const,
+    detail: (id: number) => [...qk.staff.all, 'detail', id] as const,
+    assignable: () => [...qk.staff.all, 'assignable'] as const,
+    roles: () => [...qk.staff.all, 'roles'] as const,
+    branches: () => [...qk.staff.all, 'branches'] as const,
+  },
   /** Read-only reference data: countries, universities, courses, categories. */
   catalog: {
     all: ['catalog'] as const,

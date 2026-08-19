@@ -26,6 +26,23 @@ export {
   useConvertLead,
 } from './hooks/useStudents'
 export type {
+  ApiStaff,
+  ApiRole,
+  ApiBranch,
+  AssignableUser,
+  StaffWorkload,
+} from './resources/staff'
+export {
+  useStaff,
+  useStaffMember,
+  useAssignableStaff,
+  useRoles,
+  useBranches,
+  useCreateStaff,
+  useUpdateStaff,
+  useDeleteStaff,
+} from './hooks/useStaff'
+export type {
   ApiCountry,
   ApiUniversity,
   ApiCourseCategory,
