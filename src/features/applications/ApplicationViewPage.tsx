@@ -22,13 +22,13 @@ import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { ConfidentialNotes, Detail, DetailGrid, RecordsSection } from '../../components/DetailSections'
 import { AssignStaffDialog } from '../leads/components/AssignStaffDialog'
 import {
-  getApplication,
   applicationStatuses,
   applicationStaff,
-  setApplicationStatus,
   setApplicationAssignee,
   deleteApplication,
 } from '../../mock/applications'
+import type { Application } from '../../mock/applications'
+import { useApplication, useSetApplicationStatus } from '../../lib/api'
 import {
   loadAppDocuments,
   addAppDocument,
@@ -50,7 +50,15 @@ import { students } from '../../mock/students'
 /** Application detail page (route /applications/:id), matching the reference "View" page. */
 export default function ApplicationViewPage() {
   const { id } = useParams()
-  const app = getApplication(Number(id))
+  const { data: app, isPending } = useApplication(id ? Number(id) : undefined)
+
+  if (isPending) {
+    return (
+      <div className="rounded-xl border border-slate-200 bg-white p-12 text-center shadow-sm">
+        <p className="text-slate-500">Loading application…</p>
+      </div>
+    )
+  }
 
   if (!app) {
     return (
@@ -69,7 +77,8 @@ export default function ApplicationViewPage() {
   return <ApplicationView key={app.id} app={app} />
 }
 
-function ApplicationView({ app }: { app: NonNullable<ReturnType<typeof getApplication>> }) {
+function ApplicationView({ app }: { app: Application }) {
+  const setStatusM = useSetApplicationStatus()
   const navigate = useNavigate()
   const [toast, setToast] = useState('')
   const [status, setStatus] = useState(app.status)
@@ -130,7 +139,7 @@ function ApplicationView({ app }: { app: NonNullable<ReturnType<typeof getApplic
   const changeStatus = (next: string) => {
     if (next === status) return
     setStatus(next)
-    setApplicationStatus(app.id, next)
+    setStatusM.mutate({ id: app.id, status: next })
     showToast(`Status changed to ${next}`)
   }
 

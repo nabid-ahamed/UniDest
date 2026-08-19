@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { showSuccessDialog } from '../../store/successDialog'
 import { createPortal } from 'react-dom'
 import {
@@ -17,7 +17,6 @@ import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { AssignStaffDialog } from '../leads/components/AssignStaffDialog'
 import type { Application } from '../../mock/applications'
 import {
-  applications,
   applicationStatuses,
   applicationChannels,
   applicationBulkActions,
@@ -25,11 +24,13 @@ import {
   applicationStaff,
   allCountries,
   intakes,
-  setApplicationStatus,
-  setApplicationAssignee,
-  deleteApplication,
-  deleteApplications,
 } from '../../mock/applications'
+import {
+  useApplications,
+  useSetApplicationStatus,
+  useSetApplicationAssignee,
+  useDeleteApplication,
+} from '../../lib/api'
 import { ApplicationRow } from './components/ApplicationRow'
 
 const PAGE_SIZES = [
@@ -53,22 +54,21 @@ export default function ApplicationsPage() {
   const [page, setPage] = useState(1)
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [refreshing, setRefreshing] = useState(false)
-  const [loading, setLoading] = useState(true)
   const [bulkAction, setBulkAction] = useState('')
   const [bulkValue, setBulkValue] = useState('')
   const [bulkConfirm, setBulkConfirm] = useState(false)
   const [toast, setToast] = useState('')
   const [assignApp, setAssignApp] = useState<Application | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Application | null>(null)
-  // Re-render tick — bumped after any mutation to the shared `applications` array.
-  const [rev, setRev] = useState(0)
-  const bump = () => setRev((n) => n + 1)
+  // Server state. Mutations invalidate the query, so the table refreshes itself
+  // — that replaces the manual `rev` tick, which existed only because the mock
+  // array could not notify React of a change.
+  const { data: applications = [], isPending, refetch } = useApplications()
+  const setStatusM = useSetApplicationStatus()
+  const setAssigneeM = useSetApplicationAssignee()
+  const deleteM = useDeleteApplication()
+  const loading = isPending
 
-  // Initial "fetch" preloader on mount.
-  useEffect(() => {
-    const t = window.setTimeout(() => setLoading(false), 700)
-    return () => window.clearTimeout(t)
-  }, [])
 
   const showToast = (msg: string) => {
     setToast(msg)
@@ -89,11 +89,7 @@ export default function ApplicationsPage() {
 
   const handleRefresh = () => {
     setRefreshing(true)
-    setLoading(true)
-    window.setTimeout(() => {
-      setRefreshing(false)
-      setLoading(false)
-    }, 700)
+    refetch().finally(() => setRefreshing(false))
     showToast('List refreshed')
   }
 
@@ -110,13 +106,11 @@ export default function ApplicationsPage() {
 
     if (bulkAction === 'Change status') {
       if (!bulkValue) return showToast('Choose a status to apply')
-      ids.forEach((id) => setApplicationStatus(id, bulkValue))
-      bump()
+      ids.forEach((id) => setStatusM.mutate({ id, status: bulkValue }))
       showToast(`Status set to ${bulkValue} — ${ids.length} application(s)`)
     } else if (bulkAction === 'Assign to staff') {
       if (!bulkValue) return showToast('Choose a staff member')
-      ids.forEach((id) => setApplicationAssignee(id, bulkValue))
-      bump()
+      ids.forEach((id) => setAssigneeM.mutate({ id, assignedTo: bulkValue }))
       showToast(`Assigned to ${bulkValue} — ${ids.length} application(s)`)
     } else {
       // Send email — dispatch is a Phase-2 backend job.
@@ -128,11 +122,10 @@ export default function ApplicationsPage() {
 
   const confirmBulkDelete = () => {
     const ids = [...selected]
-    deleteApplications(ids)
+    ids.forEach((id) => deleteM.mutate(id))
     setSelected(new Set())
     setBulkConfirm(false)
     setBulkAction('')
-    bump()
     showSuccessDialog(`${ids.length} application(s) deleted successfully`)
   }
 
@@ -141,8 +134,7 @@ export default function ApplicationsPage() {
     if (type === 'View') return window.location.assign(`/applications/${app.id}`)
     if (type === 'Delete') return setDeleteTarget(app)
     if (type === 'SetStatus' && payload) {
-      setApplicationStatus(app.id, payload)
-      bump()
+      setStatusM.mutate({ id: app.id, status: payload })
       return showToast(`${app.student} → ${payload}`)
     }
     showToast(`${type}: ${app.student} (#${app.id})`)
@@ -150,21 +142,19 @@ export default function ApplicationsPage() {
 
   const saveAssignee = (member: string) => {
     if (!assignApp) return
-    setApplicationAssignee(assignApp.id, member)
-    bump()
+    setAssigneeM.mutate({ id: assignApp.id, assignedTo: member })
     showToast(`Application #${assignApp.id} assigned to ${member}`)
     setAssignApp(null)
   }
 
   const confirmDelete = () => {
     if (!deleteTarget) return
-    deleteApplication(deleteTarget.id)
+    deleteM.mutate(deleteTarget.id)
     setSelected((prev) => {
       const next = new Set(prev)
       next.delete(deleteTarget.id)
       return next
     })
-    bump()
     showSuccessDialog(`Application #${deleteTarget.id} deleted successfully`)
     setDeleteTarget(null)
   }
@@ -184,7 +174,7 @@ export default function ApplicationsPage() {
       }
       return true
     })
-  }, [search, countries, intake, statuses, staff, branch, channel, rev])
+  }, [search, countries, intake, statuses, staff, branch, channel, applications])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
   const currentPage = Math.min(page, totalPages)
