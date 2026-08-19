@@ -23,7 +23,6 @@ import { DotsLoader, Field, PageBtn, SingleSelect } from '../../components/DataT
 import { leads, intakes } from '../../mock/leads'
 import { students } from '../../mock/students'
 import {
-  finderCourses,
   finderCountries,
   finderStudyLevels,
   studyAreas,
@@ -36,6 +35,7 @@ import {
   inDurationBucket,
   type FinderCourse,
 } from '../../mock/courseFinder'
+import { useCourses } from '../../lib/api'
 
 /* ---------- persistence ---------- */
 
@@ -83,6 +83,11 @@ const YEARS = ['2026', '2027', '2028']
 /* ---------- page ---------- */
 
 export default function CourseFinderPage() {
+  // The whole catalog, then filtered client-side below. Fine at this scale —
+  // the API also accepts the same filters as query params if the catalog grows
+  // past what is sensible to ship in one response.
+  const { data: finderCourses = [] } = useCourses()
+
   // Top search bar (applied on Search, like the reference).
   const [studyLevel, setStudyLevel] = useState('Undergraduate')
   const [countries, setCountries] = useState<string[]>([])
@@ -179,7 +184,7 @@ export default function CourseFinderPage() {
     else if (sortBy === 'Course Fee High to Low')
       list = [...list].sort((a, b) => (feeAmount(b) ?? -1) - (feeAmount(a) ?? -1))
     return list
-  }, [applied, studyArea, discipline, intakeSel, duration, sortBy, scores])
+  }, [finderCourses, applied, studyArea, discipline, intakeSel, duration, sortBy, scores])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
   const currentPage = Math.min(page, totalPages)
