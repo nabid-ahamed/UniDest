@@ -20,7 +20,25 @@ export {
   useUpdateStudent,
   useSetStudentStatus,
   useDeleteStudent,
+  useSetStudentState,
+  usePurgeStudents,
+  useSetStudentAssignee,
+  useConvertLead,
 } from './hooks/useStudents'
+export type {
+  ApiCountry,
+  ApiUniversity,
+  ApiCourseCategory,
+  CourseQuery,
+  FinderCourse,
+} from './resources/catalog'
+export {
+  useCountries,
+  useUniversities,
+  useCourseCategories,
+  useCourses,
+  useCourse,
+} from './hooks/useCatalog'
 export {
   useApplications,
   useApplication,

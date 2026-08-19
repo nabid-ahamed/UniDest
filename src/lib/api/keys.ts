@@ -24,4 +24,14 @@ export const qk = {
     list: () => [...qk.applications.all, 'list'] as const,
     detail: (id: number) => [...qk.applications.all, 'detail', id] as const,
   },
+  /** Read-only reference data: countries, universities, courses, categories. */
+  catalog: {
+    all: ['catalog'] as const,
+    countries: () => [...qk.catalog.all, 'countries'] as const,
+    universities: (country?: string) => [...qk.catalog.all, 'universities', country ?? 'all'] as const,
+    categories: () => [...qk.catalog.all, 'categories'] as const,
+    // The filter object is part of the key, so each combination caches separately.
+    courses: (query: object) => [...qk.catalog.all, 'courses', query] as const,
+    course: (id: number) => [...qk.catalog.all, 'course', id] as const,
+  },
 } as const

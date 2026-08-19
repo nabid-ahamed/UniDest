@@ -50,10 +50,62 @@ export function useSetStudentStatus() {
   })
 }
 
+/** Archive / trash / restore. */
+export function useSetStudentState() {
+  const invalidate = useInvalidateStudents()
+  return useMutation({
+    mutationFn: ({ id, state }: { id: number; state: 'active' | 'archived' | 'deleted' }) =>
+      studentsApi.setState(id, state),
+    onSuccess: invalidate,
+  })
+}
+
+/** Permanent removal — only for rows already in the trash. */
+export function usePurgeStudents() {
+  const invalidate = useInvalidateStudents()
+  return useMutation({
+    mutationFn: (ids: number[]) => studentsApi.purge(ids),
+    onSuccess: invalidate,
+  })
+}
+
+export function useSetStudentAssignee() {
+  const invalidate = useInvalidateStudents()
+  return useMutation({
+    mutationFn: ({ id, assignedTo }: { id: number; assignedTo: string | null }) =>
+      studentsApi.setAssignee(id, assignedTo),
+    onSuccess: invalidate,
+  })
+}
+
 export function useDeleteStudent() {
   const invalidate = useInvalidateStudents()
   return useMutation({
     mutationFn: (id: number) => studentsApi.remove(id),
     onSuccess: invalidate,
+  })
+}
+
+/**
+ * Convert a lead into a student. Invalidates BOTH caches: a new student appears
+ * and the source lead changes (it gains a link and moves to the won status), so
+ * a stale leads list would show it unconverted.
+ */
+export function useConvertLead() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({
+      leadId,
+      ...data
+    }: {
+      leadId: number
+      course?: string
+      intake?: string
+      university?: string
+    }) => studentsApi.convertLead(leadId, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.students.all })
+      qc.invalidateQueries({ queryKey: qk.leads.all })
+    },
   })
 }
