@@ -16,12 +16,28 @@ interface AuthState {
   user: AuthUser | null
   isAuthenticated: boolean
   /**
+   * JWT from POST /auth/login. This store is the single source of truth for it —
+   * `src/lib/api/client.ts` reads it from here via `getAccessToken()` rather
+   * than keeping a second copy in its own localStorage key, which would drift.
+   */
+  accessToken: string | null
+  refreshToken: string | null
+  /** Permission ids from the user's role (see server/prisma/seed.ts). */
+  permissions: string[]
+  /**
    * Set while an admin is "logged in as" a student. Holds the original admin so
    * a one-click "Return to admin" can restore them. null when not impersonating.
    */
   impersonator: AuthUser | null
-  /** Mock sign-in. Replaced by a real API call in Phase 2. */
+  /** Mock sign-in — kept for impersonation and any screen not yet on the API. */
   login: (email: string, role?: string) => void
+  /** Real sign-in: store the API's user and tokens. */
+  signIn: (payload: {
+    user: AuthUser
+    accessToken: string
+    refreshToken: string
+    permissions: string[]
+  }) => void
   logout: () => void
   /** Update the signed-in user's own profile (Basic Info page). */
   updateUser: (patch: Partial<AuthUser>) => void
@@ -40,6 +56,9 @@ export const useAuth = create<AuthState>()(
     (set) => ({
       user: null,
       isAuthenticated: false,
+      accessToken: null,
+      refreshToken: null,
+      permissions: [],
       impersonator: null,
       login: (email, role = 'Administrator') =>
         set({
@@ -51,7 +70,17 @@ export const useAuth = create<AuthState>()(
           isAuthenticated: true,
           impersonator: null,
         }),
-      logout: () => set({ user: null, isAuthenticated: false, impersonator: null }),
+      signIn: ({ user, accessToken, refreshToken, permissions }) =>
+        set({ user, accessToken, refreshToken, permissions, isAuthenticated: true, impersonator: null }),
+      logout: () =>
+        set({
+          user: null,
+          isAuthenticated: false,
+          accessToken: null,
+          refreshToken: null,
+          permissions: [],
+          impersonator: null,
+        }),
       updateUser: (patch) =>
         set((s) => (s.user ? { user: { ...s.user, ...patch } } : s)),
       loginAs: (student) =>
@@ -77,3 +106,16 @@ export const useAuth = create<AuthState>()(
     { name: 'unidest-auth' },
   ),
 )
+
+/**
+ * Read the access token outside React.
+ *
+ * `src/lib/api/client.ts` attaches the Authorization header from plain
+ * functions, where hooks are unavailable. Going through the store (rather than
+ * a separate localStorage key) keeps one source of truth, so signing out
+ * cannot leave a stale token behind.
+ */
+export const getAccessToken = () => useAuth.getState().accessToken
+
+/** Clear the session from non-React code — used by the client's 401 handler. */
+export const clearSession = () => useAuth.getState().logout()

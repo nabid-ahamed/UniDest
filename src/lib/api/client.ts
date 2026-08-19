@@ -13,11 +13,24 @@
  *    swap does not change a single call signature.
  */
 
-/** Base URL of the real API. Unused while mock-backed; read in Phase 2. */
+import { clearSession, getAccessToken } from '../../store/auth'
+
+/**
+ * Base URL of the real API. Defaults to '/api', which the Vite dev proxy
+ * (vite.config.ts) forwards to the NestJS server on port 4000 — so the browser
+ * sees same-origin requests and no CORS is involved in development.
+ */
 export const API_BASE_URL = import.meta.env.VITE_API_URL ?? '/api'
 
-/** True once the app talks to a real backend instead of the mock modules. */
-export const USING_REAL_API = false
+/**
+ * Kill switch for the mock → API migration.
+ *
+ * Resources that have been migrated check this: true routes them at the NestJS
+ * server, false falls back to `src/mock/`. Set `VITE_USE_REAL_API=false` in a
+ * `.env.local` to run entirely on mock data without editing code — useful if
+ * the backend is down or a migration bug appears.
+ */
+export const USING_REAL_API = import.meta.env.VITE_USE_REAL_API !== 'false'
 
 /**
  * Resolve a value the way the network eventually will: asynchronously.
@@ -36,7 +49,7 @@ export function mocked<T>(produce: () => T): Promise<T> {
  * handling — is settled before the backend exists.
  */
 export async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const token = localStorage.getItem('unidest-token')
+  const token = getAccessToken()
   const res = await fetch(`${API_BASE_URL}${path}`, {
     ...init,
     headers: {
@@ -49,6 +62,19 @@ export async function request<T>(path: string, init: RequestInit = {}): Promise<
   if (!res.ok) {
     // The API returns `{ message }` on failure; fall back to the status text.
     const body = await res.json().catch(() => null)
+
+    // 401 means the token is missing, expired, or invalid. Drop the dead
+    // session and send the user to sign in again — without this the app sits
+    // on a blank screen retrying a request that can never succeed.
+    // The login call itself is exempt: a 401 there is "wrong password", which
+    // the form shows inline rather than treating as an expired session.
+    if (res.status === 401 && !path.startsWith('/auth/login')) {
+      clearSession()
+      if (window.location.pathname !== '/login') {
+        window.location.assign('/login')
+      }
+    }
+
     throw new ApiError(body?.message ?? res.statusText, res.status)
   }
 

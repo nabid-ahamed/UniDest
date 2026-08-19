@@ -7,6 +7,8 @@ import { Mail, Lock, Eye, EyeOff, Globe2, Users, FileCheck2 } from 'lucide-react
 import { Input } from '../../components/ui/Input'
 import { Button } from '../../components/ui/Button'
 import { useAuth } from '../../store/auth'
+import { authApi } from '../../lib/api/resources/auth'
+import { ApiError } from '../../lib/api'
 import logo from '../../assets/globaled-logo.png'
 import logoWhite from '../../assets/globaled-logo-white.png'
 
@@ -61,7 +63,7 @@ const highlights = [
 
 export default function LoginPage() {
   const navigate = useNavigate()
-  const login = useAuth((s) => s.login)
+  const signIn = useAuth((s) => s.signIn)
   const [showPassword, setShowPassword] = useState(false)
 
   // Holds the email of the row whose "Copy" was just clicked (for the "Filled ✓" flash).
@@ -79,17 +81,38 @@ export default function LoginPage() {
   })
 
   const onSubmit = async (values: FormValues) => {
-    // Mock sign-in — only the demo credentials are accepted.
-    await new Promise((r) => setTimeout(r, 600))
-    const email = values.email.trim().toLowerCase()
-    const account = DEMO_ACCOUNTS.find((a) => a.email === email && a.password === values.password)
-    if (!account) {
-      setAuthError('Invalid credentials. Use the demo login below.')
-      return
-    }
     setAuthError('')
-    login(account.email, account.role)
-    navigate(account.redirect)
+    try {
+      const { user, accessToken, refreshToken } = await authApi.login(
+        values.email.trim().toLowerCase(),
+        values.password,
+      )
+
+      signIn({
+        user: {
+          name: user.name,
+          email: user.email,
+          // Already the vocabulary router.tsx gates on ('Administrator' |
+          // 'Staff' | 'Student'), mapped server-side in auth.types.ts.
+          role: user.role,
+          phone: user.phone ?? undefined,
+          avatar: user.avatar ?? undefined,
+        },
+        accessToken,
+        refreshToken,
+        permissions: user.permissions,
+      })
+
+      navigate(user.role === 'Student' ? '/portal' : '/dashboard')
+    } catch (err) {
+      // 401 is a wrong email/password; anything else means the API is
+      // unreachable, which deserves a different message than "bad password".
+      setAuthError(
+        err instanceof ApiError && err.status === 401
+          ? 'Invalid email or password.'
+          : 'Could not reach the server. Please try again.',
+      )
+    }
   }
 
   /** Auto-fill the email + password fields with a demo account's credentials. */
