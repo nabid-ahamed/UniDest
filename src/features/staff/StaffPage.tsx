@@ -20,19 +20,23 @@ import { PageBtn } from '../../components/DataTableUI'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { Avatar } from '../../components/Avatar'
 import {
-  staff,
   staffRoles,
   staffBranches,
-  toggleStaffStatus,
-  deleteStaff,
-  workload,
-  type StaffMember,
 } from '../../mock/staff'
+import { useStaff, useUpdateStaff, useDeleteStaff, type ApiStaff } from '../../lib/api'
+
+/** Row shape from the API — carries its own workload counts. */
+type StaffMember = ApiStaff
 
 const PAGE_SIZES = [10, 25, 50, 100]
 
 export default function StaffPage() {
-  const [rev, setRev] = useState(0)
+  // Server state. Workload arrives with each row, counted through foreign keys
+  // — the mock recomputed it by matching `assignedTo === name`, which broke as
+  // soon as anyone was renamed.
+  const { data: staff = [] } = useStaff()
+  const updateStaffM = useUpdateStaff()
+  const deleteStaffM = useDeleteStaff()
   const [search, setSearch] = useState('')
   const [roleFilter, setRoleFilter] = useState('')
   const [branchFilter, setBranchFilter] = useState('')
@@ -56,7 +60,7 @@ export default function StaffPage() {
       .filter((s) => !statusFilter || s.status === statusFilter)
       .filter((s) => !q || `${s.name} ${s.email} ${s.phone} ${s.role} ${s.branch}`.toLowerCase().includes(q))
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, roleFilter, branchFilter, statusFilter, rev])
+  }, [staff, search, roleFilter, branchFilter, statusFilter])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
   const currentPage = Math.min(page, totalPages)
@@ -66,7 +70,7 @@ export default function StaffPage() {
 
   const exportHeader = ['Name', 'Email', 'Phone', 'Role', 'Branch', 'Status', 'Leads', 'Students', 'Applications']
   const exportRows = filtered.map((s) => {
-    const w = workload(s.name)
+    const w = s.workload
     return [s.name, s.email, s.phone, s.role, s.branch, s.status, w.leads, w.students, w.applications]
   })
 
@@ -183,7 +187,7 @@ export default function StaffPage() {
           </thead>
           <tbody>
             {pageRows.map((s) => {
-              const w = workload(s.name)
+              const w = s.workload
               return (
                 <tr key={s.id} className="border-b border-slate-100 align-top text-sm">
                   <td className="px-4 py-4">
@@ -233,9 +237,8 @@ export default function StaffPage() {
                       staffId={s.id}
                       status={s.status}
                       onToggle={() => {
-                        toggleStaffStatus(s.id)
+                        updateStaffM.mutate({ id: s.id, patch: { status: s.status === 'Active' ? 'Inactive' : 'Active' } })
                         showToast(`${s.name} ${s.status === 'Active' ? 'deactivated' : 'activated'}`)
-                        setRev((n) => n + 1)
                       }}
                       onDelete={() => setConfirm(s)}
                     />
@@ -289,10 +292,9 @@ export default function StaffPage() {
         onCancel={() => setConfirm(null)}
         onConfirm={() => {
           if (confirm) {
-            deleteStaff(confirm.id)
+            deleteStaffM.mutate(confirm.id)
             showSuccessDialog('Staff member deleted successfully')
             setConfirm(null)
-            setRev((n) => n + 1)
           }
         }}
       />

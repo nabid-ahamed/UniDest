@@ -3,16 +3,28 @@ import { ArrowLeft, Mail, Phone, Pencil, Users, Contact, ClipboardList, Calendar
 import { cn } from '../../lib/cn'
 import { Avatar } from '../../components/Avatar'
 import {
-  getStaff,
-  workload,
-  assignedLeads,
-  assignedStudents,
-  assignedApplications,
-} from '../../mock/staff'
+  useStaffMember,
+  useLeads,
+  useStudents,
+  useApplications,
+} from '../../lib/api'
 
 export default function StaffViewPage() {
   const { id } = useParams()
-  const member = getStaff(Number(id))
+  const { data: member, isPending } = useStaffMember(id ? Number(id) : undefined)
+  // Assigned records, filtered by name for display. The counts shown come from
+  // `member.workload`, which the API derives from foreign keys.
+  const { data: allLeads = [] } = useLeads()
+  const { data: allStudents = [] } = useStudents()
+  const { data: allApplications = [] } = useApplications()
+
+  if (isPending) {
+    return (
+      <div className="rounded-xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+        <p className="text-slate-500">Loading staff member…</p>
+      </div>
+    )
+  }
 
   if (!member) {
     return (
@@ -25,10 +37,10 @@ export default function StaffViewPage() {
     )
   }
 
-  const w = workload(member.name)
-  const leads = assignedLeads(member.name)
-  const students = assignedStudents(member.name)
-  const applications = assignedApplications(member.name)
+  const w = member.workload
+  const leads = allLeads.filter((l) => l.assignedTo === member.name)
+  const students = allStudents.filter((x) => x.assignedTo === member.name)
+  const applications = allApplications.filter((a) => a.assignedTo === member.name)
 
   const cards = [
     { label: 'Assigned Leads', value: w.leads, icon: Users, color: 'text-sky-600 bg-sky-50' },

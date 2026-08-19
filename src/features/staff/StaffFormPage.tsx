@@ -8,27 +8,45 @@ import { Avatar } from '../../components/Avatar'
 import {
   staffRoles,
   staffBranches,
-  getStaff,
-  addStaff,
-  updateStaff,
   type StaffRole,
   type StaffStatus,
 } from '../../mock/staff'
+import { useStaffMember, useCreateStaff, useUpdateStaff, type ApiStaff } from '../../lib/api'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
+/**
+ * Route entry: resolves the staff member being edited (if any) and guards the
+ * fetch. The body is a separate component so its many `useState(editing?.…)`
+ * calls never run before the data has arrived — and the `key` remounts it per
+ * id, so switching members resets the form.
+ */
 export default function StaffFormPage() {
-  const navigate = useNavigate()
   const { id } = useParams()
-  const editing = id ? getStaff(Number(id)) : undefined
-  const isEdit = Boolean(id)
+  const { data: editing, isPending } = useStaffMember(id ? Number(id) : undefined)
+
+  if (id && isPending) {
+    return (
+      <div className="rounded-xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+        <p className="text-slate-500">Loading staff member…</p>
+      </div>
+    )
+  }
+
+  return <StaffForm key={id ?? 'new'} editing={editing ?? undefined} isEdit={Boolean(id)} />
+}
+
+function StaffForm({ editing, isEdit }: { editing?: ApiStaff; isEdit: boolean }) {
+  const navigate = useNavigate()
+  const createStaff = useCreateStaff()
+  const updateStaffM = useUpdateStaff()
 
   const [name, setName] = useState(editing?.name ?? '')
   const [email, setEmail] = useState(editing?.email ?? '')
   const [phone, setPhone] = useState(editing?.phone ?? '')
-  const [role, setRole] = useState<StaffRole | ''>(editing?.role ?? '')
+  const [role, setRole] = useState<StaffRole | ''>((editing?.role as StaffRole) ?? '')
   const [branch, setBranch] = useState(editing?.branch ?? '')
-  const [status, setStatus] = useState<StaffStatus>(editing?.status ?? 'Active')
+  const [status, setStatus] = useState<StaffStatus>((editing?.status as StaffStatus) ?? 'Active')
   const [avatar, setAvatar] = useState<string | null>(editing?.avatar ?? null)
   const [password, setPassword] = useState('')
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -65,11 +83,14 @@ export default function StaffFormPage() {
       avatar: avatar ?? undefined,
     }
     if (isEdit && editing) {
-      updateStaff(editing.id, payload)
-      navigate(`/staff/${editing.id}`)
+      updateStaffM.mutate(
+        { id: editing.id, patch: payload },
+        { onSuccess: () => navigate(`/staff/${editing.id}`) },
+      )
     } else {
-      const created = addStaff({ ...payload, joined: 'Just now' })
-      navigate(`/staff/${created.id}`)
+      createStaff.mutate(payload, {
+        onSuccess: (created) => navigate(`/staff/${created.id}`),
+      })
     }
   }
 
