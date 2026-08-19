@@ -33,6 +33,7 @@ type StudentWithRelations = {
   assignedTo: { name: string } | null
   residenceCountry: { name: string } | null
   interestCountry: { name: string } | null
+  _count?: { applications: number }
 }
 
 @Injectable()
@@ -268,6 +269,9 @@ export class StudentsService {
     assignedTo: true,
     residenceCountry: true,
     interestCountry: true,
+    // Counted rather than stored: the mock kept a denormalised `applications`
+    // integer that drifted out of sync with the actual rows.
+    _count: { select: { applications: { where: { deletedAt: null } } } },
   } as const
 
   private async resolveLinks(dto: CreateStudentDto | UpdateStudentDto) {
@@ -326,8 +330,7 @@ export class StudentsService {
       course: st.course ?? '',
       intake: st.intake ?? '',
       university: st.university,
-      // Real count once applications land in Stage 7; 0 until then.
-      applications: 0,
+      applications: st._count?.applications ?? 0,
       source: st.source ?? '',
       avatar: st.avatarUrl ?? undefined,
       state: st.deletedAt ? 'deleted' : st.archivedAt ? 'archived' : 'active',
