@@ -8,6 +8,11 @@ import { getApplication } from '../../mock/applications'
 import { currentStudent, documentRequests, documentStatusColor } from '../../mock/student/portal'
 import { loadMessages, sendMessage, type AppMessage } from '../../mock/student/applicationMessages'
 
+/**
+ * Route entry: resolves the application and guards access. Rendering the body as
+ * a separate component keeps hooks out of this conditional path — and the `key`
+ * remounts it per id, so message/draft state resets between applications.
+ */
 export default function StudentApplicationDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -28,6 +33,12 @@ export default function StudentApplicationDetailPage() {
       </div>
     )
   }
+
+  return <ApplicationDetail key={app.id} app={app} />
+}
+
+function ApplicationDetail({ app }: { app: NonNullable<ReturnType<typeof getApplication>> }) {
+  const navigate = useNavigate()
 
   const docs = documentRequests.filter((d) => d.applicationRef === `University Application #${app.id}`)
 

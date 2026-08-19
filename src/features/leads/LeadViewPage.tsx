@@ -12,7 +12,7 @@ import { LeadProfileTab } from './components/LeadProfileTab'
 import { LeadCourseSuggestionTab } from './components/LeadCourseSuggestionTab'
 import { LeadCoursePreferencesTab } from './components/LeadCoursePreferencesTab'
 import { LeadActions } from './components/LeadActions'
-import { leads, type Lead } from '../../mock/leads'
+import { useLead, type Lead } from '../../lib/api'
 import { ticketsFor } from '../../mock/supportTickets'
 
 const TABS = ['Overview', 'Profile', 'Course Suggestion', 'Course Preferences'] as const
@@ -20,7 +20,15 @@ const TABS = ['Overview', 'Profile', 'Course Suggestion', 'Course Preferences'] 
 /** Lead detail page (route /leads/:id), matching the reference "View" page. */
 export default function LeadViewPage() {
   const { id } = useParams()
-  const lead = leads.find((l) => l.id === Number(id))
+  const { data: lead, isPending } = useLead(id ? Number(id) : undefined)
+
+  if (isPending) {
+    return (
+      <div className="rounded-xl border border-slate-200 bg-white p-12 text-center shadow-sm">
+        <p className="text-slate-500">Loading lead…</p>
+      </div>
+    )
+  }
 
   if (!lead) {
     return (

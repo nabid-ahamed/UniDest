@@ -5,8 +5,13 @@ import { cn } from '../../lib/cn'
 import { StatusPill } from './components/StatusPill'
 import { SectionHead } from './components/SectionHead'
 import { currentStudent, serviceStatusColor } from '../../mock/student/portal'
-import { serviceRequests, updateService, nowStamp, type ServiceMessage } from '../../mock/services'
+import { serviceRequests, updateService, nowStamp, type ServiceMessage, type ServiceRequest } from '../../mock/services'
 
+/**
+ * Route entry: resolves the service request and guards access. Rendering the
+ * body as a separate component keeps hooks out of this conditional path — and
+ * the `key` remounts it per id, so message/draft state resets between requests.
+ */
 export default function StudentServiceDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -29,6 +34,12 @@ export default function StudentServiceDetailPage() {
     )
   }
 
+  return <ServiceDetail key={service.id} service={service} />
+}
+
+function ServiceDetail({ service }: { service: ServiceRequest }) {
+  const navigate = useNavigate()
+  const me = currentStudent()
   const [messages, setMessages] = useState<ServiceMessage[]>(service.messages)
   const [draft, setDraft] = useState('')
 

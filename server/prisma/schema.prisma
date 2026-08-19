@@ -1,0 +1,267 @@
+// UniDest CRM — Phase 2 schema (single-tenant, SaaS-ready).
+//
+// Conventions applied to every model, per design spec §5.1:
+//   id        BigInt   auto-increment, internal only
+//   publicId  UUID     external-facing, so sequential ids never leak
+//   tenantId  BigInt   always 1 in this phase; kept so the eventual SaaS
+//                      switch needs no migration (spec §3)
+//   createdAt / updatedAt / deletedAt   (deletedAt = soft delete)
+//
+// Scope note: this file covers only what Stages 2-5 need — tenancy, people,
+// the status lookups, countries, and leads. Students, applications, and the
+// course catalog land in their own stages rather than all at once.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Prisma 7 moved the connection URL out of this file — it now lives in
+// `prisma.config.ts` at the server root.
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Tenancy
+// ---------------------------------------------------------------------------
+
+/// One row (id = 1) in this phase. Exists so multi-tenancy is a feature flip,
+/// not a data migration.
+model Tenant {
+  id        BigInt    @id @default(autoincrement())
+  publicId  String    @unique @default(uuid()) @db.Uuid
+  name      String
+  slug      String    @unique
+  status    String    @default("active") // active | suspended | trial
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@map("tenants")
+}
+
+model Branch {
+  id        BigInt    @id @default(autoincrement())
+  publicId  String    @unique @default(uuid()) @db.Uuid
+  tenantId  BigInt    @default(1)
+  name      String
+  address   String?
+  phone     String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  users User[]
+  leads Lead[]
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+  @@map("branches")
+}
+
+// ---------------------------------------------------------------------------
+// People & access
+// ---------------------------------------------------------------------------
+
+/// Permissions are JSON keyed by the permission ids already used in the
+/// frontend (`src/mock/roles.ts`) — e.g. ["view-leads", "lead-create-update"].
+/// Reusing those exact ids means the existing Roles screen keeps working.
+model Role {
+  id          BigInt    @id @default(autoincrement())
+  publicId    String    @unique @default(uuid()) @db.Uuid
+  tenantId    BigInt    @default(1)
+  name        String
+  permissions Json      @default("[]")
+  isSystem    Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  users User[]
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+  @@map("roles")
+}
+
+model User {
+  id           BigInt    @id @default(autoincrement())
+  publicId     String    @unique @default(uuid()) @db.Uuid
+  tenantId     BigInt    @default(1)
+  branchId     BigInt?
+  roleId       BigInt
+  name         String
+  email        String
+  passwordHash String
+  phone        String?
+  avatarUrl    String?
+  status       String    @default("active") // active | invited | disabled
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime?
+
+  branch        Branch? @relation(fields: [branchId], references: [id])
+  role          Role    @relation(fields: [roleId], references: [id])
+  assignedLeads Lead[]  @relation("LeadAssignee")
+
+  @@unique([tenantId, email])
+  @@index([tenantId, roleId])
+  @@index([tenantId, branchId])
+  @@map("users")
+}
+
+// ---------------------------------------------------------------------------
+// Configurable status lookups (spec §5.3)
+//
+// These are tables, not Postgres ENUMs, so a consultancy can rename or add
+// pipeline stages without an ALTER TYPE migration. Reports must read the
+// isWon / isLost / isTerminal FLAGS — never the labels, which tenants edit.
+// ---------------------------------------------------------------------------
+
+model LeadStatus {
+  id        BigInt    @id @default(autoincrement())
+  publicId  String    @unique @default(uuid()) @db.Uuid
+  tenantId  BigInt    @default(1)
+  key       String
+  label     String
+  color     String
+  sortOrder Int       @default(0)
+  isWon     Boolean   @default(false)
+  isLost    Boolean   @default(false)
+  isSystem  Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  leads Lead[]
+
+  @@unique([tenantId, key])
+  @@index([tenantId, sortOrder])
+  @@map("lead_statuses")
+}
+
+/// Deviation from spec §5.4, which specified `status ENUM(active|inactive)`.
+/// The frontend has 8 pipeline statuses (Active, Docs Pending, Applied, Offer
+/// Received, Visa Applied, Enrolled, Inactive, Withdrawn), so a binary enum
+/// would break 8 UI states on day one. Mirrors LeadStatus instead.
+model StudentStatus {
+  id         BigInt    @id @default(autoincrement())
+  publicId   String    @unique @default(uuid()) @db.Uuid
+  tenantId   BigInt    @default(1)
+  key        String
+  label      String
+  color      String
+  sortOrder  Int       @default(0)
+  isWon      Boolean   @default(false)
+  isTerminal Boolean   @default(false)
+  isSystem   Boolean   @default(false)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  deletedAt  DateTime?
+
+  @@unique([tenantId, key])
+  @@index([tenantId, sortOrder])
+  @@map("student_statuses")
+}
+
+model ApplicationStatus {
+  id         BigInt    @id @default(autoincrement())
+  publicId   String    @unique @default(uuid()) @db.Uuid
+  tenantId   BigInt    @default(1)
+  key        String
+  label      String
+  color      String
+  sortOrder  Int       @default(0)
+  isWon      Boolean   @default(false)
+  isTerminal Boolean   @default(false)
+  isSystem   Boolean   @default(false)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  deletedAt  DateTime?
+
+  @@unique([tenantId, key])
+  @@index([tenantId, sortOrder])
+  @@map("application_statuses")
+}
+
+// ---------------------------------------------------------------------------
+// Catalog (countries only for now; universities/courses/intakes land in Stage 6)
+// ---------------------------------------------------------------------------
+
+/// tenantId is nullable here: NULL means a globally shared catalog row. Not
+/// used in this phase (everything is tenant 1), but the column shape means the
+/// SaaS switch can express global / per-tenant / mixed catalogs with no
+/// migration (spec §3).
+model Country {
+  id        BigInt    @id @default(autoincrement())
+  publicId  String    @unique @default(uuid()) @db.Uuid
+  tenantId  BigInt?
+  name      String    @unique
+  code      String?
+  flagUrl   String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  interestedLeads Lead[] @relation("LeadPrimaryInterest")
+
+  @@index([tenantId])
+  @@map("countries")
+}
+
+// ---------------------------------------------------------------------------
+// Leads
+// ---------------------------------------------------------------------------
+
+/// Fields deliberately NOT stored, because they are derived (the API computes
+/// them in its response mapper so the existing UI renders unchanged):
+///   leadAgeDays  -> from createdAt
+///   statusColor  -> from LeadStatus.color
+///   status       -> from LeadStatus.label
+///   assignedTo   -> from User.name
+///   branch       -> from Branch.name
+model Lead {
+  id       BigInt @id @default(autoincrement())
+  publicId String @unique @default(uuid()) @db.Uuid
+  tenantId BigInt @default(1)
+
+  name      String
+  email     String?
+  phone     String?
+  phoneNote String?
+  whatsapp  Boolean @default(false)
+  gender    String?
+  source    String?
+
+  branchId                 BigInt?
+  assignedToId             BigInt?
+  statusId                 BigInt
+  primaryInterestCountryId BigInt?
+
+  studyLevel    String?
+  qualification String?
+  tags          String[] @default([])
+
+  nextFollowUpAt DateTime?
+
+  /// Set when this lead is converted. The lead row is NOT deleted on convert —
+  /// keeping both rows preserves funnel lineage for conversion reporting.
+  /// (The mock frontend deleted it; see plan decision D2.)
+  convertedStudentId BigInt?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  branch                 Branch?    @relation(fields: [branchId], references: [id])
+  assignedTo             User?      @relation("LeadAssignee", fields: [assignedToId], references: [id])
+  status                 LeadStatus @relation(fields: [statusId], references: [id])
+  primaryInterestCountry Country?   @relation("LeadPrimaryInterest", fields: [primaryInterestCountryId], references: [id])
+
+  @@index([tenantId, statusId])
+  @@index([tenantId, assignedToId])
+  @@index([tenantId, nextFollowUpAt])
+  @@index([tenantId, deletedAt])
+  @@map("leads")
+}

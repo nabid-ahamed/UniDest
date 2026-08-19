@@ -1,0 +1,28 @@
+{
+  "compilerOptions": {
+    "target": "ES2023",
+    "lib": ["ES2023"],
+    // TypeScript 6 removed "node" (node10); "node16" is the CommonJS-compatible
+    // successor and matches this package's "type": "commonjs".
+    "moduleResolution": "node16",
+    "module": "node16",
+    "outDir": "./dist",
+    "rootDir": "./src",
+
+    // NestJS relies on decorator metadata for dependency injection — both of
+    // these must stay on or providers fail to resolve at runtime.
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+
+    "strict": true,
+    "strictNullChecks": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "declaration": false,
+    "sourceMap": true,
+    "incremental": true
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "prisma/seed.ts"]
+}
