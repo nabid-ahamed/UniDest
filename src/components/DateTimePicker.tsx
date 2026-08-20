@@ -8,6 +8,7 @@ import {
   CalendarClock,
 } from 'lucide-react'
 import { cn } from '../lib/cn'
+import { formatDateTime } from '../lib/formatDateTime'
 
 const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -26,16 +27,6 @@ const TIME_SLOTS: TimeSlot[] = Array.from({ length: 15 }, (_, i) => {
   const h12 = hour % 12 === 0 ? 12 : hour % 12
   return { label: `${h12}:00 ${hour < 12 ? 'AM' : 'PM'}`, hour }
 })
-
-export function formatDateTime(d: Date): string {
-  const date = new Intl.DateTimeFormat('en-GB', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  }).format(d)
-  const time = new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit' }).format(d)
-  return `${date}, ${time}`
-}
 
 /**
  * Date & time field with a custom popover: calendar (month/year dropdowns,

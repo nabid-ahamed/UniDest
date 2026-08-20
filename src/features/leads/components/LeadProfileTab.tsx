@@ -1,6 +1,4 @@
 import { Download, SquarePen } from 'lucide-react'
-import { jsPDF } from 'jspdf'
-import autoTable from 'jspdf-autotable'
 import type { Lead } from '../../../mock/leads'
 
 type Row = [label: string, value?: string]
@@ -135,7 +133,12 @@ export function LeadProfileTab({
 }) {
   const sections = buildSections(lead)
 
-  const downloadProfile = () => {
+  const downloadProfile = async () => {
+    // Loaded on demand — jsPDF is ~630 kB and only this export needs it.
+    const [{ jsPDF }, { default: autoTable }] = await Promise.all([
+      import('jspdf'),
+      import('jspdf-autotable'),
+    ])
     const doc = new jsPDF()
     doc.setFontSize(16)
     doc.text(`${lead.name} — Student Profile`, 14, 16)

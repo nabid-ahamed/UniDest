@@ -191,6 +191,7 @@ export default function SupportTicketsPage() {
       }
       return true
     })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search, statuses, priority, category, staff, branch, kind, rev])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))

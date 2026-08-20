@@ -10,18 +10,12 @@ import {
   audienceCount,
   formatDateTime,
   type Announcement,
-  type AnnouncementArea,
 } from '../../mock/announcements'
+
+import { AREA_BADGE } from './areaBadge'
 
 const PAGE_SIZES = [10, 25, 50, 100]
 
-/** Area badge tint per audience segment. */
-export const AREA_BADGE: Record<AnnouncementArea, string> = {
-  All: 'bg-brand-50 text-brand-600',
-  Students: 'bg-violet-50 text-violet-700',
-  Leads: 'bg-sky-50 text-sky-700',
-  Staff: 'bg-amber-50 text-amber-700',
-}
 
 export default function AnnouncementsPage() {
   const [rev, setRev] = useState(0)
@@ -29,13 +23,7 @@ export default function AnnouncementsPage() {
   const [pageSize, setPageSize] = useState(10)
   const [page, setPage] = useState(1)
   const [confirm, setConfirm] = useState<Announcement | null>(null)
-  const [toast, setToast] = useState('')
 
-  const showToast = (msg: string) => {
-    setToast(msg)
-    window.clearTimeout((showToast as unknown as { t?: number }).t)
-    ;(showToast as unknown as { t?: number }).t = window.setTimeout(() => setToast(''), 2600)
-  }
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -191,11 +179,6 @@ export default function AnnouncementsPage() {
         }}
       />
 
-      {toast && (
-        <div className="animate-toast-in fixed right-4 top-20 z-[120] rounded-lg bg-slate-800 px-4 py-3 text-sm font-medium text-white shadow-lg">
-          {toast}
-        </div>
-      )}
     </div>
   )
 }

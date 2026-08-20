@@ -1,18 +1,7 @@
-import { UserPlus, GraduationCap, FileText, Megaphone, CalendarClock } from 'lucide-react'
-import { cn } from '../../lib/cn'
-import { relativeTime, type AppNotification, type NotificationCategory } from '../../mock/notifications'
 
-/** Icon + colour per category — shared by the bell dropdown and the full page. */
-export const CATEGORY_META: Record<
-  NotificationCategory,
-  { label: string; icon: typeof UserPlus; iconBg: string; iconColor: string }
-> = {
-  lead: { label: 'Lead', icon: UserPlus, iconBg: 'bg-brand-50', iconColor: 'text-brand-600' },
-  student: { label: 'Student', icon: GraduationCap, iconBg: 'bg-emerald-50', iconColor: 'text-emerald-600' },
-  application: { label: 'Application', icon: FileText, iconBg: 'bg-blue-50', iconColor: 'text-blue-600' },
-  announcement: { label: 'Announcement', icon: Megaphone, iconBg: 'bg-amber-50', iconColor: 'text-amber-600' },
-  webinar: { label: 'Webinar', icon: CalendarClock, iconBg: 'bg-violet-50', iconColor: 'text-violet-600' },
-}
+import { cn } from '../../lib/cn'
+import { relativeTime, type AppNotification } from '../../mock/notifications'
+import { CATEGORY_META } from './categoryMeta'
 
 /**
  * One notification row. Renders as an anchor so it works in both the dropdown

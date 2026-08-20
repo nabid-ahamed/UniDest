@@ -3,7 +3,8 @@ import { createPortal } from 'react-dom'
 import { PlusCircle, Eye, SquarePen, Users, Trash2, X } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { DotsLoader } from '../../components/DataTableUI'
-import { DateTimePicker, formatDateTime } from '../../components/DateTimePicker'
+import { DateTimePicker } from '../../components/DateTimePicker'
+import { formatDateTime } from '../../lib/formatDateTime'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { SuccessDialog } from '../../components/ui/SuccessDialog'
 import {
@@ -19,7 +20,6 @@ export default function WebinarsPage() {
   const [createOpen, setCreateOpen] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<Webinar | null>(null)
   const [successMsg, setSuccessMsg] = useState('')
-  const [toast, setToast] = useState('')
 
   // Initial "fetch" preloader on mount.
   useEffect(() => {
@@ -27,11 +27,6 @@ export default function WebinarsPage() {
     return () => window.clearTimeout(t)
   }, [])
 
-  const showToast = (msg: string) => {
-    setToast(msg)
-    window.clearTimeout((showToast as unknown as { t?: number }).t)
-    ;(showToast as unknown as { t?: number }).t = window.setTimeout(() => setToast(''), 2500)
-  }
 
   const addWebinar = (w: Omit<Webinar, 'id' | 'enrolledUsers'>) => {
     setRows((prev) => {
@@ -180,11 +175,6 @@ export default function WebinarsPage() {
         )}
 
       {/* Toast */}
-      {toast && (
-        <div className="animate-toast-in fixed right-4 top-20 z-[60] rounded-lg bg-slate-800 px-4 py-3 text-sm font-medium text-white shadow-lg">
-          {toast}
-        </div>
-      )}
     </div>
   )
 }

@@ -130,7 +130,8 @@ export function SidebarMessenger() {
   const toggleMin = (key: string) =>
     setMinimized((prev) => {
       const n = new Set(prev)
-      n.has(key) ? n.delete(key) : n.add(key)
+      if (n.has(key)) n.delete(key)
+      else n.add(key)
       return n
     })
   const sendTo = (key: string) => {
@@ -147,7 +148,8 @@ export function SidebarMessenger() {
   const togglePick = (key: string) =>
     setGroupPick((prev) => {
       const next = new Set(prev)
-      next.has(key) ? next.delete(key) : next.add(key)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
       return next
     })
 

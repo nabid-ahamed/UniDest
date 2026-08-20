@@ -36,7 +36,10 @@ export function AddTagDialog({
   useEffect(() => {
     inputRef.current?.focus()
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') (open ? setOpen(false) : onClose())
+      if (e.key === 'Escape') {
+        if (open) setOpen(false)
+        else onClose()
+      }
     }
     const onClick = (e: MouseEvent) => {
       if (boxRef.current && !boxRef.current.contains(e.target as Node)) setOpen(false)

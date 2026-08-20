@@ -13,6 +13,7 @@ import StudentFormPage from '../features/students/StudentFormPage'
 import StudentViewPage from '../features/students/StudentViewPage'
 import ApplicationsPage from '../features/applications/ApplicationsPage'
 import ApplicationViewPage from '../features/applications/ApplicationViewPage'
+import AddApplicationPage from '../features/applications/AddApplicationPage'
 import CourseFinderPage from '../features/courseFinder/CourseFinderPage'
 import SupportTicketsPage from '../features/supportTickets/SupportTicketsPage'
 import SupportTicketViewPage from '../features/supportTickets/SupportTicketViewPage'
@@ -187,6 +188,7 @@ export const router = createBrowserRouter([
           { path: '/students/:id', element: <StudentViewPage /> },
           { path: '/students/:id/edit', element: <StudentFormPage /> },
           { path: '/applications', element: <ApplicationsPage /> },
+          { path: '/applications/new', element: <AddApplicationPage /> },
           { path: '/applications/:id', element: <ApplicationViewPage /> },
           { path: '/applications/:id/email', element: <SendEmailPage /> },
           { path: '/applications/:id/sms', element: <SendSmsPage /> },

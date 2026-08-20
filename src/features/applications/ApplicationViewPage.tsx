@@ -134,6 +134,7 @@ function ApplicationView({ app }: { app: Application }) {
   // reminderRev bumps when the editor saves).
   const reminderMsg = useMemo(
     () => reminderMessageFor(status),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [status, reminderRev],
   )
 

@@ -14,7 +14,7 @@ import { cn } from '../../lib/cn'
 import { MultiSelect } from '../../components/MultiSelect'
 import { ExportButtons } from '../../components/ExportButtons'
 import { DotsLoader, Field, PageBtn, SingleSelect } from '../../components/DataTableUI'
-import { formatDateTime } from '../../components/DateTimePicker'
+import { formatDateTime } from '../../lib/formatDateTime'
 import type { Lead } from '../../mock/leads'
 import { useLeads, useUpdateLead, useDeleteLead } from '../../lib/api'
 import {

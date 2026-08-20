@@ -1,6 +1,4 @@
 import { Printer, Copy, Table } from 'lucide-react'
-import { jsPDF } from 'jspdf'
-import autoTable from 'jspdf-autotable'
 import { cn } from '../lib/cn'
 import logoUrl from '../assets/globaled-logo.png'
 
@@ -166,6 +164,12 @@ export function ExportButtons({
       downloadFile(`${filename}.xls`, html, 'application/vnd.ms-excel')
       onDone('Excel downloaded')
     } else if (label === 'PDF') {
+      // Loaded on demand: jsPDF and its autotable plugin are ~630 kB, and
+      // only this branch needs them.
+      const [{ jsPDF }, { default: autoTable }] = await Promise.all([
+        import('jspdf'),
+        import('jspdf-autotable'),
+      ])
       const logo = await loadLogo()
       const doc = new jsPDF()
       let cursorY = 15

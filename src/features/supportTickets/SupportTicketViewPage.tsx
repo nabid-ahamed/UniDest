@@ -50,6 +50,9 @@ export default function SupportTicketViewPage() {
   }
 
   // Read the (possibly mutated) thread whenever we bump.
+  // `rev` is deliberate — replies mutate the ticket object in place, so only
+  // the bump tells React the message list changed.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const messages = useMemo(() => ticket?.messages ?? [], [ticket, rev])
 
   if (!ticket) {

@@ -2,7 +2,7 @@ import { useParams } from 'react-router-dom'
 import { ArrowLeft, Pencil, Users, User, CalendarClock } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { getAnnouncement, audienceCount, formatDateTime } from '../../mock/announcements'
-import { AREA_BADGE } from './AnnouncementsPage'
+import { AREA_BADGE } from './areaBadge'
 
 export default function AnnouncementViewPage() {
   const { id } = useParams()

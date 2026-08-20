@@ -1,8 +1,6 @@
 import { useMemo, useState } from 'react'
 import { showSuccessDialog } from '../../store/successDialog'
 import { createPortal } from 'react-dom'
-import { jsPDF } from 'jspdf'
-import autoTable from 'jspdf-autotable'
 import {
   Search,
   X,
@@ -1048,7 +1046,13 @@ function CreateInvoiceModal({
 }
 
 /** Generate a printable one-page PDF for an invoice (reuses jsPDF like the profile export). */
-function downloadInvoicePdf(inv: UniversityInvoice) {
+async function downloadInvoicePdf(inv: UniversityInvoice) {
+  // Loaded on demand — jsPDF is ~630 kB and only PDF export needs it.
+  const [{ jsPDF }, { default: autoTable }] = await Promise.all([
+    import('jspdf'),
+    import('jspdf-autotable'),
+  ])
+
   const doc = new jsPDF()
   doc.setFontSize(18)
   doc.text('GlobalEd — University Invoice', 14, 20)

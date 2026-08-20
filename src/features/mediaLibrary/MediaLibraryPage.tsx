@@ -76,6 +76,10 @@ export default function MediaLibraryPage() {
   }
 
 
+  // `rev` is the dependency on purpose: mediaCounts() reads a mutable mock
+  // module, which React cannot observe, so bumping rev is what forces the
+  // recount after an upload or delete.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const counts = useMemo(() => mediaCounts(), [rev])
 
   const filtered = useMemo(() => {

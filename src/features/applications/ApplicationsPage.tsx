@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { showSuccessDialog } from '../../store/successDialog'
 import { createPortal } from 'react-dom'
 import {
+  Plus,
   RefreshCw,
   Filter,
   Search,
@@ -243,6 +244,12 @@ export default function ApplicationsPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold text-slate-900">University Applications</h1>
         <div className="flex items-center gap-2">
+          <a
+            href="/applications/new"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-3.5 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-700"
+          >
+            <Plus className="h-4 w-4" /> New Application
+          </a>
           <button
             onClick={() => setFilterOpen(true)}
             className={cn(

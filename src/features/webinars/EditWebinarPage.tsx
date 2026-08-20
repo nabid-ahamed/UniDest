@@ -11,7 +11,8 @@ import {
   Redo,
 } from 'lucide-react'
 import { cn } from '../../lib/cn'
-import { DateTimePicker, formatDateTime } from '../../components/DateTimePicker'
+import { DateTimePicker } from '../../components/DateTimePicker'
+import { formatDateTime } from '../../lib/formatDateTime'
 import { SuccessDialog } from '../../components/ui/SuccessDialog'
 import { useParams } from 'react-router-dom'
 import {

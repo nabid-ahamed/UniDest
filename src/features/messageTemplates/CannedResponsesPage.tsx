@@ -8,13 +8,7 @@ import { cannedResponses, deleteCanned, toggleCanned, type CannedResponse } from
 export default function CannedResponsesPage() {
   const [rev, setRev] = useState(0)
   const [confirm, setConfirm] = useState<CannedResponse | null>(null)
-  const [toast, setToast] = useState('')
 
-  const showToast = (msg: string) => {
-    setToast(msg)
-    window.clearTimeout((showToast as unknown as { t?: number }).t)
-    ;(showToast as unknown as { t?: number }).t = window.setTimeout(() => setToast(''), 2600)
-  }
 
   // read `rev` to recompute after mutations
   void rev
@@ -117,11 +111,6 @@ export default function CannedResponsesPage() {
         }}
       />
 
-      {toast && (
-        <div className="animate-toast-in fixed right-4 top-20 z-[120] rounded-lg bg-slate-800 px-4 py-3 text-sm font-medium text-white shadow-lg">
-          {toast}
-        </div>
-      )}
     </div>
   )
 }

@@ -3,7 +3,8 @@ import { Bell, CheckCheck } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { buildNotifications, type NotificationCategory } from '../../mock/notifications'
 import { useNotifications } from '../../store/notifications'
-import { CATEGORY_META, NotificationItem } from './NotificationItem'
+import { NotificationItem } from './NotificationItem'
+import { CATEGORY_META } from './categoryMeta'
 
 const TABS = ['All', 'Unread'] as const
 type Tab = (typeof TABS)[number]
