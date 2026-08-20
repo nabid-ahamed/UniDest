@@ -1,19 +1,7 @@
 import { useState } from 'react'
 import { Save, X } from 'lucide-react'
 import { MultiSelect } from '../../components/MultiSelect'
-import {
-  studyLevels,
-  coursesInterested,
-  intakes,
-  services,
-  leadCountries,
-  leadBranches,
-  allCountries,
-  qualifications,
-  phoneCountryCodes,
-  englishTests,
-  leadStatuses,
-} from '../../mock/leads'
+import { studyLevels, coursesInterested, intakes, services, leadCountries, leadBranches, allCountries, qualifications, phoneCountryCodes, englishTests, leadStatuses } from '../../lib/constants'
 import { useCreateLead } from '../../lib/api'
 
 // Assignable branches — the dashboard's "All Branch" is a filter, not a real

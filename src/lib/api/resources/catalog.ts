@@ -8,7 +8,7 @@
 import { mocked, request, USING_REAL_API } from '../client'
 import { finderCourses, type FinderCourse } from '../../../mock/courseFinder'
 import { universities as mockUniversities, courseCategories } from '../../../mock/courseManagement'
-import { allCountries } from '../../../mock/leads'
+import { allCountries } from '../../../lib/constants'
 
 export type { FinderCourse }
 

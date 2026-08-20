@@ -5,15 +5,8 @@ import { ArrowLeft, Save } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { SuccessDialog } from '../../components/ui/SuccessDialog'
 import { LeadIdentityHeader } from './components/LeadIdentityHeader'
-import {
-  allCountries,
-  leadCountries,
-  leadSources,
-
-  qualifications,
-  studyLevels,
-  type Lead,
-} from '../../mock/leads'
+import { type Lead } from '../../mock/leads'
+import { allCountries, leadCountries, leadSources, qualifications, studyLevels } from '../../lib/constants'
 import { useLead, useUpdateLead } from '../../lib/api'
 
 /** Keeps the current value selectable even when it's not in the option list. */

@@ -17,7 +17,8 @@ import {
 } from 'lucide-react'
 import { cn } from '../../../lib/cn'
 import { pickTextColor } from '../../../lib/contrast'
-import { leadStatuses, type Lead } from '../../../mock/leads'
+import { type Lead } from '../../../mock/leads'
+import { leadStatuses } from '../../../lib/constants'
 
 export function LeadRow({
   lead,

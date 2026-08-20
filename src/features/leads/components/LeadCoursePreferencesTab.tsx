@@ -3,7 +3,8 @@ import { showSuccessDialog } from '../../../store/successDialog'
 import { ChevronDown, ChevronUp, PlusCircle, Trash2 } from 'lucide-react'
 import { cn } from '../../../lib/cn'
 import { SingleSelect } from '../../../components/DataTableUI'
-import { intakes, type Lead } from '../../../mock/leads'
+import { type Lead } from '../../../mock/leads'
+import { intakes } from '../../../lib/constants'
 
 interface Program {
   priority: string

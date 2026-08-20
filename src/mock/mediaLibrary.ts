@@ -12,8 +12,8 @@ import { staff } from './staff'
 /* File helpers                                                        */
 /* ------------------------------------------------------------------ */
 
-export const allowedMediaExtensions = ['jpeg', 'jpg', 'png', 'gif', 'webp', 'mp4', 'mov', 'wmv', 'webm']
-export const maxMediaMb = 16
+
+
 /** Only persist a preview for images below this size (keeps localStorage sane). */
 export const maxPreviewBytes = 1_200_000
 
@@ -162,3 +162,7 @@ export const mediaCounts = () => ({
   image: media.filter((m) => m.type === 'image').length,
   video: media.filter((m) => m.type === 'video').length,
 })
+
+// Dropdown options live in src/lib/constants.ts — re-exported so existing
+// imports keep working. New code should import from there directly.
+export { allowedMediaExtensions, maxMediaMb } from '../lib/constants'

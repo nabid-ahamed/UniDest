@@ -35,18 +35,22 @@ export interface UniversityInvoice {
 export const invoiceStatuses = ['Due', 'Paid'] as const
 
 /** Instalment labels used when raising / recording a payment. */
-export const paymentLabels = ['1st Payment', '2nd Payment', '3rd Payment', 'Final Payment']
 
-export const invoiceCurrencies = ['USD', 'GBP', 'EUR', 'AUD', 'CAD', 'INR']
+
+
 
 /** Applications eligible to be invoiced (the "complete" end of the pipeline). */
-export const invoiceableStatuses = ['Offer Letter Received', 'Payment Received']
+
 
 export function isInvoiceable(app: Application): boolean {
   return invoiceableStatuses.includes(app.status)
 }
 
-/** Universities that appear across invoices + applications, for the filters. */
+/**
+ * Universities appearing across invoices + applications, for the filters.
+ * Derived from live application rows, so it stays here rather than moving to
+ * lib/constants.ts with the fixed option lists.
+ */
 export const invoiceUniversities = [
   ...new Set(applications.map((a) => a.university)),
 ].sort()
@@ -111,3 +115,9 @@ export function deleteInvoice(id: number) {
 export function invoiceCountForApplication(appId: number): number {
   return universityInvoices.filter((i) => i.applicationId === appId).length
 }
+
+// Dropdown options live in src/lib/constants.ts — re-exported so existing
+// imports keep working. New code should import from there directly.
+export { paymentLabels, invoiceCurrencies, invoiceableStatuses } from '../lib/constants'
+// Imported too: isInvoiceable() above reads the list.
+import { invoiceableStatuses } from '../lib/constants'

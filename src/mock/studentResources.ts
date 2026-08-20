@@ -15,8 +15,8 @@ import { courses } from './courseManagement'
 /* File helpers                                                        */
 /* ------------------------------------------------------------------ */
 
-export const allowedExtensions = ['pdf', 'doc', 'docx', 'txt', 'jpg', 'jpeg', 'png', 'zip', 'mp4']
-export const maxFileMb = 49
+
+
 
 export type ResourceFileType = 'pdf' | 'doc' | 'image' | 'video' | 'zip' | 'other'
 
@@ -189,3 +189,7 @@ export const resourceCountForCategory = (id: number) => resourcesForCategory(id)
 export function relatedCourse(id: number | null) {
   return id == null ? undefined : courses.find((c) => c.id === id)
 }
+
+// Dropdown options live in src/lib/constants.ts — re-exported so existing
+// imports keep working. New code should import from there directly.
+export { allowedExtensions, maxFileMb } from '../lib/constants'

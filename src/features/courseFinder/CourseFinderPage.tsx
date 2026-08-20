@@ -20,7 +20,7 @@ import { cn } from '../../lib/cn'
 import { MultiSelect } from '../../components/MultiSelect'
 import { ExportButtons } from '../../components/ExportButtons'
 import { DotsLoader, Field, PageBtn, SingleSelect } from '../../components/DataTableUI'
-import { intakes } from '../../mock/leads'
+import { intakes } from '../../lib/constants'
 import {
   finderCountries,
   finderStudyLevels,

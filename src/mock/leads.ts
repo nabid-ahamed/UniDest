@@ -27,133 +27,31 @@ export interface Lead {
   countryOfResidence?: string
 }
 
-// Badge colours are the darker 700/800 shades so white text clears WCAG AA
-// (all verified >= 4.5:1). LeadRow still runs pickTextColor() as a safety net.
-export const leadStatuses = [
-  { label: 'New Lead', color: '#0e7490' },
-  { label: 'Contacted', color: '#1d4ed8' },
-  { label: 'Counseling', color: '#6d28d9' },
-  { label: 'Warm', color: '#c2410c' },
-  { label: 'Cold', color: '#a16207' },
-  { label: 'Registered', color: '#15803d' },
-  { label: 'Rejected', color: '#b91c1c' },
-]
+// Imported for the seed rows below, which colour each lead by its status.
+import { leadStatuses } from '../lib/constants'
 
-// Assignable staff — derived live from the Staff module (active members), so a
-// newly-added staff member becomes assignable across Leads / Students /
-// Applications / Tickets immediately. Re-exported from staffStore (which has no
-// leads dependency, so there's no import cycle). Call `leadStaff()` for a fresh
-// list. Kept as a function (not a const array) precisely so it always reflects
-// the current staff, not a snapshot taken at module-load time.
+// Dropdown options moved to src/lib/constants.ts — they are UI choices, not
+// mock records. Re-exported here so any screen still importing them from this
+// module keeps working; new code should import from '../lib/constants'.
+export {
+  leadStatuses,
+  leadCountries,
+  leadBranches,
+  allCountries,
+  studyLevels,
+  coursesInterested,
+  intakes,
+  followupDateOptions,
+  leadSources,
+  services,
+  qualifications,
+  phoneCountryCodes,
+  englishTests,
+  recentTags,
+} from '../lib/constants'
+
+// Assignable staff stays here: it reads the live staff list, so it is data.
 export { staffNames as leadStaff } from './staffStore'
-export const leadCountries = ['Bangladesh', 'India', 'Nepal', 'Pakistan', 'Sri Lanka']
-export const leadBranches = ['All Branch', 'Dhaka', 'Chattogram', 'Sylhet', 'Khulna']
-
-// Full list of countries for "Country Interested In" (study destination) filter.
-export const allCountries = [
-  'Afghanistan', 'Albania', 'Algeria', 'Andorra', 'Angola', 'Argentina', 'Armenia',
-  'Australia', 'Austria', 'Azerbaijan', 'Bahamas', 'Bahrain', 'Bangladesh', 'Barbados',
-  'Belarus', 'Belgium', 'Belize', 'Benin', 'Bhutan', 'Bolivia', 'Bosnia and Herzegovina',
-  'Botswana', 'Brazil', 'Brunei', 'Bulgaria', 'Burkina Faso', 'Burundi', 'Cambodia',
-  'Cameroon', 'Canada', 'Cape Verde', 'Central African Republic', 'Chad', 'Chile', 'China',
-  'Colombia', 'Comoros', 'Congo', 'Costa Rica', 'Croatia', 'Cuba', 'Cyprus', 'Czechia',
-  'Denmark', 'Djibouti', 'Dominica', 'Dominican Republic', 'Ecuador', 'Egypt', 'El Salvador',
-  'Estonia', 'Eswatini', 'Ethiopia', 'Fiji', 'Finland', 'France', 'Gabon', 'Gambia',
-  'Georgia', 'Germany', 'Ghana', 'Greece', 'Grenada', 'Guatemala', 'Guinea', 'Guyana',
-  'Haiti', 'Honduras', 'Hungary', 'Iceland', 'India', 'Indonesia', 'Iran', 'Iraq', 'Ireland',
-  'Israel', 'Italy', 'Jamaica', 'Japan', 'Jordan', 'Kazakhstan', 'Kenya', 'Kuwait',
-  'Kyrgyzstan', 'Laos', 'Latvia', 'Lebanon', 'Lesotho', 'Liberia', 'Libya', 'Liechtenstein',
-  'Lithuania', 'Luxembourg', 'Madagascar', 'Malawi', 'Malaysia', 'Maldives', 'Mali', 'Malta',
-  'Mauritania', 'Mauritius', 'Mexico', 'Moldova', 'Monaco', 'Mongolia', 'Montenegro',
-  'Morocco', 'Mozambique', 'Myanmar', 'Namibia', 'Nepal', 'Netherlands', 'New Zealand',
-  'Nicaragua', 'Niger', 'Nigeria', 'North Macedonia', 'Norway', 'Oman', 'Pakistan', 'Panama',
-  'Papua New Guinea', 'Paraguay', 'Peru', 'Philippines', 'Poland', 'Portugal', 'Qatar',
-  'Romania', 'Russia', 'Rwanda', 'Saudi Arabia', 'Senegal', 'Serbia', 'Seychelles',
-  'Sierra Leone', 'Singapore', 'Slovakia', 'Slovenia', 'Somalia', 'South Africa',
-  'South Korea', 'Spain', 'Sri Lanka', 'Sudan', 'Sweden', 'Switzerland', 'Syria', 'Taiwan',
-  'Tajikistan', 'Tanzania', 'Thailand', 'Togo', 'Trinidad and Tobago', 'Tunisia', 'Turkey',
-  'Turkmenistan', 'Uganda', 'Ukraine', 'United Arab Emirates', 'United Kingdom',
-  'United States', 'Uruguay', 'Uzbekistan', 'Venezuela', 'Vietnam', 'Yemen', 'Zambia',
-  'Zimbabwe',
-]
-
-// Advanced ("More") filter option lists
-export const studyLevels = ['Bachelors', 'Masters', 'PhD', 'Diploma', 'Foundation']
-export const coursesInterested = [
-  'Business & Management',
-  'Computer Science',
-  'Engineering',
-  'Health Sciences',
-  'Law',
-  'Arts & Humanities',
-]
-/**
- * Intake options generated at runtime: starts from the current month and lists
- * the next 2 years (24 months), each formatted as "September 2026".
- */
-function generateIntakes(months = 24): string[] {
-  const fmt = new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' })
-  const now = new Date()
-  return Array.from({ length: months }, (_, i) =>
-    fmt.format(new Date(now.getFullYear(), now.getMonth() + i, 1)),
-  )
-}
-export const intakes = generateIntakes()
-export const followupDateOptions = ['Today', 'Tomorrow', 'This Week', 'This Month', 'Overdue']
-export const leadSources = ['Facebook', 'Website', 'Walk-in', 'Referral', 'Agent', 'Other']
-export const services = [
-  'Study Visa',
-  'Work Visa',
-  'Visitor Visa',
-  'Tourist Visa',
-  'Business Visa',
-  'Dependent Visa',
-  'Student Dependent Visa',
-  'Permanent Residency (PR)',
-  'Citizenship',
-  'Immigration Consultation',
-  'Visa Extension',
-  'Other',
-]
-
-// Used by the "Add New Lead" form.
-export const qualifications = [
-  'SSC / O-Level',
-  'HSC / A-Level',
-  'Diploma',
-  'Bachelors',
-  'Masters',
-  'PhD',
-  'Other',
-]
-export const phoneCountryCodes = [
-  { code: '+880', label: 'BD +880' },
-  { code: '+91', label: 'IN +91' },
-  { code: '+92', label: 'PK +92' },
-  { code: '+977', label: 'NP +977' },
-  { code: '+94', label: 'LK +94' },
-  { code: '+44', label: 'UK +44' },
-  { code: '+1', label: 'US +1' },
-]
-export const englishTests = ['IELTS', 'TOEFL', 'PTE', 'GRE', 'DUOLINGO']
-
-/**
- * Most-recently-used tags, newest first. The Add-Tag dialog shows the last 10
- * and moves a tag back to the front each time it is applied.
- */
-export const recentTags = [
-  'Hot Lead',
-  'Follow Up',
-  'Scholarship Seeker',
-  'IELTS Pending',
-  'Document Pending',
-  'High Budget',
-  'Referral',
-  'Walk-in',
-  'Visa Query',
-  'Not Reachable',
-]
-
 /** Total leads in the system (the list below is one filtered page). */
 export const totalLeadCount = 190
 

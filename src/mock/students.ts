@@ -33,39 +33,17 @@ export interface Student {
   state?: 'active' | 'archived' | 'deleted'
 }
 
-// Badge colours are the 700/800 shades so white text clears WCAG AA (>= 4.5:1).
-// StudentRow still runs pickTextColor() as a safety net.
-export const studentStatuses = [
-  { label: 'Active', color: '#0e7490' },
-  { label: 'Docs Pending', color: '#a16207' },
-  { label: 'Applied', color: '#1d4ed8' },
-  { label: 'Offer Received', color: '#6d28d9' },
-  { label: 'Visa Applied', color: '#c2410c' },
-  { label: 'Enrolled', color: '#15803d' },
-  { label: 'Inactive', color: '#475569' },
-  { label: 'Withdrawn', color: '#b91c1c' },
-]
+// Dropdown options moved to src/lib/constants.ts — see the note there.
+export {
+  studentStatuses,
+  residenceCountries,
+  universities,
+  studentSources,
+  studentBulkActions,
+} from '../lib/constants'
 
-/** Where the student currently lives (drives the "Country Of Residence" filter). */
-export const residenceCountries = ['Bangladesh', 'India', 'Nepal', 'Pakistan', 'Sri Lanka']
-
-export const universities = [
-  'University of Toronto',
-  'University of Melbourne',
-  'University of Manchester',
-  'Technical University of Munich',
-  'Arizona State University',
-  'University of Auckland',
-]
-
-export const studentSources = ['Walk-in', 'Website', 'Facebook', 'Referral', 'Agent', 'Lead Convert']
-
-export const studentBulkActions = [
-  'Assign Students to Staff',
-  'Archive Students',
-  'Delete Students',
-]
-
+// Imported for the seed rows below, which colour each student by status.
+import { studentStatuses } from '../lib/constants'
 // Filter option lists shared with the Leads page — same lookup tables in the
 // real schema, so they stay in one place.
 export {

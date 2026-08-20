@@ -26,19 +26,8 @@ import { AssignStaffDialog } from '../leads/components/AssignStaffDialog'
 import { TransferBranchDialog } from '../leads/components/TransferBranchDialog'
 import { ChangePasswordDialog } from '../leads/components/ChangePasswordDialog'
 import type { Student } from '../../mock/students'
-import {
-  studentStatuses,
-  studentStaff,
-  studentBranches,
-  studentSources,
-  studentBulkActions,
-  residenceCountries,
-  universities,
-  allCountries,
-  studyLevels,
-  intakes,
-  studentState,
-} from '../../mock/students'
+import { studentStaff, studentBranches, allCountries, studyLevels, intakes, studentState } from '../../mock/students'
+import { studentStatuses, studentSources, studentBulkActions, residenceCountries, universities } from '../../lib/constants'
 import {
   useStudents,
   useUpdateStudent,

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
 import { cn } from '../../../lib/cn'
-import { studentStatuses } from '../../../mock/students'
+import { studentStatuses } from '../../../lib/constants'
 import { followupModes } from '../../../mock/student/followups'
 
 export interface FollowupInput {

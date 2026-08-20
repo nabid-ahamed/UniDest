@@ -33,14 +33,9 @@ export const applicationStatuses: { label: string; color: string }[] = [
 ]
 
 /** Channels an application can be submitted through. */
-export const applicationChannels = ['DIRECT', 'Applyboard', 'Adventus', 'INTO Global']
 
-export const applicationBulkActions = [
-  'Assign to staff',
-  'Change status',
-  'Send email',
-  'Delete selected',
-]
+
+
 
 // Shared lookups (same tables as Leads/Students in the real schema).
 export { allCountries, leadBranches as applicationBranches, leadStaff as applicationStaff, intakes }
@@ -129,3 +124,7 @@ export function deleteApplications(ids: number[]) {
   }
   persistApplications()
 }
+
+// Dropdown options live in src/lib/constants.ts — re-exported so existing
+// imports keep working. New code should import from there directly.
+export { applicationChannels, applicationBulkActions } from '../lib/constants'

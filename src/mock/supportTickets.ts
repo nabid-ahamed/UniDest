@@ -35,22 +35,9 @@ export interface Ticket {
 
 export const ticketStatuses: TicketStatus[] = ['Open', 'Pending', 'Resolved', 'Closed']
 export const ticketPriorities: TicketPriority[] = ['High', 'Medium', 'Low']
-export const ticketCategories = [
-  'Application',
-  'Payment',
-  'Documents',
-  'Visa',
-  'Course Selection',
-  'Account',
-  'Other',
-]
 
-export const ticketBulkActions = [
-  'Assign to staff',
-  'Change status',
-  'Change priority',
-  'Delete selected',
-]
+
+
 
 // Shared lookups (same tables as the other modules).
 export { leadStaff as ticketStaff, leadBranches as ticketBranches }
@@ -310,3 +297,7 @@ export function ticketStatusCounts(): Record<TicketStatus, number> {
   tickets.forEach((t) => (counts[t.status] += 1))
   return counts
 }
+
+// Dropdown options live in src/lib/constants.ts — re-exported so existing
+// imports keep working. New code should import from there directly.
+export { ticketCategories, ticketBulkActions } from '../lib/constants'

@@ -3,7 +3,8 @@ import { createPortal } from 'react-dom'
 import { Mail, Phone, Globe, QrCode, MessageCircle, User, X } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import { pickTextColor } from '../../../lib/contrast'
-import { leadStatuses, type Lead } from '../../../mock/leads'
+import { type Lead } from '../../../mock/leads'
+import { leadStatuses } from '../../../lib/constants'
 
 /**
  * Identity header shared by the lead detail and edit-profile pages: initials

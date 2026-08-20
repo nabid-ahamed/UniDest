@@ -17,20 +17,8 @@ import { DotsLoader, Field, PageBtn, SingleSelect } from '../../components/DataT
 import { formatDateTime } from '../../lib/formatDateTime'
 import type { Lead } from '../../mock/leads'
 import { useLeads, useUpdateLead, useDeleteLead } from '../../lib/api'
-import {
-  leadStatuses,
-  leadStaff,
-  leadCountries,
-  leadBranches,
-  allCountries,
-  studyLevels,
-  coursesInterested,
-  intakes,
-  followupDateOptions,
-  leadSources,
-  services,
-  recentTags as initialRecentTags,
-} from '../../mock/leads'
+import { leadStaff } from '../../mock/leads'
+import { leadStatuses, leadCountries, leadBranches, allCountries, studyLevels, coursesInterested, intakes, followupDateOptions, leadSources, services, recentTags as initialRecentTags } from '../../lib/constants'
 import { LeadRow } from './components/LeadRow'
 import { AddTagDialog } from './components/AddTagDialog'
 import { AssignStaffDialog } from './components/AssignStaffDialog'

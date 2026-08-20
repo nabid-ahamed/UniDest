@@ -21,7 +21,8 @@ import {
 import { cn } from '../../../lib/cn'
 import { pickTextColor } from '../../../lib/contrast'
 import { Avatar } from '../../../components/Avatar'
-import { studentStatuses, type Student } from '../../../mock/students'
+import { type Student } from '../../../mock/students'
+import { studentStatuses } from '../../../lib/constants'
 
 export function StudentRow({
   student,

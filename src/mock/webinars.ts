@@ -23,7 +23,7 @@ export const webinarShareLink = (w: Webinar) =>
     .replace(/^-|-$/g, '')
     .slice(0, 40)}`
 
-export const webinarAudienceTypes = ['Student', 'Agent', 'Student / Agent'] as const
+
 
 const seedWebinars: Webinar[] = [
   { id: 22, topic: 'IELTS One-Day Bootcamp', date: '05-02-2027 10:00 AM', venue: 'Dhaka HQ Seminar Hall', audienceType: 'Student', enrolledUsers: null, description: 'An intensive one-day IELTS bootcamp covering all four modules with mock tests and feedback.' },
@@ -171,3 +171,7 @@ export function webinarEnrollments(w: Webinar): WebinarEnrollment[] {
     return { id: i + 1, name, email, phone, userType, enrolledOn: fmt.format(when) }
   })
 }
+
+// Dropdown options live in src/lib/constants.ts — re-exported so existing
+// imports keep working. New code should import from there directly.
+export { webinarAudienceTypes } from '../lib/constants'

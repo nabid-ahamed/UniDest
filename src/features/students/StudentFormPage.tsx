@@ -5,18 +5,8 @@ import { cn } from '../../lib/cn'
 import { Field } from '../../components/DataTableUI'
 import { AvatarUpload } from '../../components/AvatarUpload'
 import { Avatar } from '../../components/Avatar'
-import {
-  studentStatuses,
-  studentStaff,
-  studentBranches,
-  studentSources,
-  studentCourses,
-  residenceCountries,
-  universities,
-  allCountries,
-  studyLevels,
-  intakes,
-} from '../../mock/students'
+import { studentStaff, studentBranches, studentCourses, allCountries, studyLevels, intakes } from '../../mock/students'
+import { studentStatuses, studentSources, residenceCountries, universities } from '../../lib/constants'
 import { useStudent, useCreateStudent, useUpdateStudent, type Student } from '../../lib/api'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
