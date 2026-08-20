@@ -116,6 +116,7 @@ model User {
   activityLog         ActivityLog[]              @relation("ActivityActor")
   assignedTickets     Ticket[]                   @relation("TicketAssignee")
   ticketMessages      TicketMessage[]            @relation("TicketMessageAuthor")
+  recordedPayments    Payment[]                  @relation("PaymentRecordedBy")
 
   @@unique([tenantId, email])
   @@index([tenantId, roleId])
@@ -405,6 +406,7 @@ model Application {
 
   statusHistory ApplicationStatusHistory[]
   documents     ApplicationDocument[]
+  invoices      Invoice[]
 
   @@index([tenantId, statusId])
   @@index([tenantId, studentId])
@@ -597,6 +599,7 @@ model Student {
   convertedFromLeads Lead[]        @relation("LeadConversion")
   applications       Application[]
   tickets            Ticket[]      @relation("TicketStudent")
+  invoices           Invoice[]
 
   @@index([tenantId, statusId])
   @@index([tenantId, assignedToId])
@@ -739,4 +742,160 @@ model TicketMessage {
 
   @@index([tenantId, ticketId])
   @@map("ticket_messages")
+}
+
+// ---------------------------------------------------------------------------
+// Invoices & payments (spec §5.8)
+// ---------------------------------------------------------------------------
+
+/// The billing entity that issues an invoice (branch or company).
+model Business {
+  id       BigInt @id @default(autoincrement())
+  publicId String @unique @default(uuid()) @db.Uuid
+  tenantId BigInt @default(1)
+
+  name     String
+  address  String?
+  phone    String?
+  email    String?
+  taxId    String?
+  currency String  @default("USD")
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  invoices Invoice[]
+
+  @@unique([tenantId, name])
+  @@map("businesses")
+}
+
+/// One invoice, billed to a student.
+///
+/// A single table covers both invoice kinds the UI shows. A university invoice
+/// simply carries `applicationId` (and the agent/instalment fields alongside);
+/// a student invoice leaves it null. Splitting them into two tables would
+/// duplicate the payment logic and the balance arithmetic for no gain.
+///
+/// **Money is stored in minor units** (cents/paisa) as integers. Floating point
+/// cannot represent 0.1 exactly, so summing payments in `Float` drifts — and an
+/// invoice that is a hundredth short of paid is a support ticket. Every amount
+/// here is `Int` and divided by 100 at the edge.
+model Invoice {
+  id       BigInt @id @default(autoincrement())
+  publicId String @unique @default(uuid()) @db.Uuid
+  tenantId BigInt @default(1)
+
+  /// Human-facing number shown on the document, e.g. "387499".
+  invoiceNo String
+
+  studentId  BigInt
+  businessId BigInt?
+  /// Set for university invoices, null for student invoices.
+  applicationId BigInt?
+
+  currency String @default("USD")
+  /// Sum of the line items, in minor units.
+  subtotalMinor Int @default(0)
+  /// Discount applied to the subtotal, in minor units.
+  discountMinor Int @default(0)
+
+  /// Which instalment this covers ("1st Payment"), university invoices only.
+  paymentLabel String?
+  /// Free text until the agents table lands in Stage 4.
+  agentName    String?
+
+  dueDate DateTime?
+  terms   String?
+  notes   String?
+
+  statusId BigInt
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  student     Student       @relation(fields: [studentId], references: [id])
+  business    Business?     @relation(fields: [businessId], references: [id])
+  application Application?  @relation(fields: [applicationId], references: [id])
+  status      InvoiceStatus @relation(fields: [statusId], references: [id])
+
+  items    InvoiceItem[]
+  payments Payment[]
+
+  @@unique([tenantId, invoiceNo])
+  @@index([tenantId, studentId])
+  @@index([tenantId, statusId])
+  @@index([tenantId, deletedAt])
+  @@map("invoices")
+}
+
+/// Lookup, not an ENUM — spec §5.8 says ENUM(unpaid|partial|paid), but §5.3's
+/// reasoning applies just as well here: tenants rename these, and ALTER TYPE in
+/// production is a migration nobody wants. Reports read isPaid, never the label.
+model InvoiceStatus {
+  id        BigInt    @id @default(autoincrement())
+  publicId  String    @unique @default(uuid()) @db.Uuid
+  tenantId  BigInt    @default(1)
+  key       String
+  label     String
+  color     String
+  sortOrder Int       @default(0)
+  /// Settled in full — nothing further is owed.
+  isPaid    Boolean   @default(false)
+  isSystem  Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  invoices Invoice[]
+
+  @@unique([tenantId, key])
+  @@index([tenantId, sortOrder])
+  @@map("invoice_statuses")
+}
+
+model InvoiceItem {
+  id       BigInt @id @default(autoincrement())
+  publicId String @unique @default(uuid()) @db.Uuid
+  tenantId BigInt @default(1)
+
+  invoiceId   BigInt
+  description String
+  /// Minor units, as everywhere else.
+  amountMinor Int
+  sortOrder   Int @default(0)
+
+  createdAt DateTime @default(now())
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, invoiceId])
+  @@map("invoice_items")
+}
+
+/// A payment received against an invoice. Payments are append-only: a mistaken
+/// one is corrected with a negative-amount entry rather than by editing history,
+/// which is what makes the ledger auditable.
+model Payment {
+  id       BigInt @id @default(autoincrement())
+  publicId String @unique @default(uuid()) @db.Uuid
+  tenantId BigInt @default(1)
+
+  invoiceId   BigInt
+  amountMinor Int
+  method      String  @default("Cash") // Cash | Card | Bank Transfer | Online
+  note        String?
+  paidAt      DateTime @default(now())
+
+  recordedById BigInt?
+
+  createdAt DateTime @default(now())
+
+  invoice    Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  recordedBy User?   @relation("PaymentRecordedBy", fields: [recordedById], references: [id])
+
+  @@index([tenantId, invoiceId])
+  @@map("payments")
 }

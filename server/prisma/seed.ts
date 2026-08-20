@@ -706,6 +706,37 @@ async function main() {
   }
   console.log(`  tickets: ${ticketsCreated}`)
 
+  // ---- Invoices ------------------------------------------------------------
+  // Statuses are a lookup, not an ENUM. isPaid is the flag reports read; the
+  // label is free to be renamed.
+  const INVOICE_STATUSES = [
+    { key: 'unpaid', label: 'Due', color: '#b91c1c', isPaid: false },
+    { key: 'partial', label: 'Partially Paid', color: '#a16207', isPaid: false },
+    { key: 'paid', label: 'Paid', color: '#15803d', isPaid: true },
+  ]
+  for (const [i, st] of INVOICE_STATUSES.entries()) {
+    await prisma.invoiceStatus.upsert({
+      where: { tenantId_key: { tenantId: TENANT_ID, key: st.key } },
+      update: { label: st.label, color: st.color, isPaid: st.isPaid, sortOrder: i },
+      create: { tenantId: TENANT_ID, ...st, sortOrder: i, isSystem: true },
+    })
+  }
+
+  // Billing entities, from `businesses` in src/mock/studentInvoices.ts.
+  const BUSINESSES = [
+    { name: 'GlobalEd HQ', address: 'House 29, Road 1, Banani, Dhaka', phone: '+880 1700 000000', email: 'billing@globaled.com', taxId: 'GE-100234', currency: 'USD' },
+    { name: 'GlobalEd Chattogram', address: 'GEC Circle, Chattogram', phone: '+880 1811 223344', email: 'ctg@globaled.com', taxId: 'GE-100567', currency: 'USD' },
+  ]
+  for (const b of BUSINESSES) {
+    await prisma.business.upsert({
+      where: { tenantId_name: { tenantId: TENANT_ID, name: b.name } },
+      update: b,
+      create: { tenantId: TENANT_ID, ...b },
+    })
+  }
+  console.log(`  invoice statuses: ${INVOICE_STATUSES.length}, businesses: ${BUSINESSES.length}`)
+
+
 
   console.log('Seed complete.')
 }
