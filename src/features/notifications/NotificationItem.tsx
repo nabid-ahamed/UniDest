@@ -1,6 +1,6 @@
 
 import { cn } from '../../lib/cn'
-import { relativeTime, type AppNotification } from '../../mock/notifications'
+import { relativeTime, type ApiNotification } from '../../lib/api'
 import { CATEGORY_META } from './categoryMeta'
 
 /**
@@ -13,7 +13,7 @@ export function NotificationItem({
   onOpen,
   compact = false,
 }: {
-  n: AppNotification
+  n: ApiNotification
   read: boolean
   onOpen: () => void
   compact?: boolean

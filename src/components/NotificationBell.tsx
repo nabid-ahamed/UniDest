@@ -1,8 +1,11 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Bell, CheckCheck } from 'lucide-react'
 import { cn } from '../lib/cn'
-import { buildNotifications } from '../mock/notifications'
-import { useNotifications } from '../store/notifications'
+import {
+  useNotificationFeed,
+  useMarkNotificationRead,
+  useMarkAllNotificationsRead,
+} from '../lib/api'
 import { NotificationItem } from '../features/notifications/NotificationItem'
 
 /** Bell + unread badge in the header, with a dropdown preview of the feed. */
@@ -10,14 +13,13 @@ export function NotificationBell() {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
-  const readIds = useNotifications((s) => s.readIds)
-  const markRead = useNotifications((s) => s.markRead)
-  const markAllRead = useNotifications((s) => s.markAllRead)
+  // Read-state now lives on the server and arrives on each item, so the badge
+  // matches on every device rather than only the browser that opened it.
+  const { data: notifications = [] } = useNotificationFeed()
+  const markRead = useMarkNotificationRead()
+  const markAllRead = useMarkAllNotificationsRead()
 
-  // Rebuilt from the live modules; recompute when read-state changes.
-  const notifications = useMemo(() => buildNotifications(), [])
-  const readSet = useMemo(() => new Set(readIds), [readIds])
-  const unread = notifications.filter((n) => !readSet.has(n.id)).length
+  const unread = notifications.filter((n) => !n.read).length
 
   useEffect(() => {
     if (!open) return
@@ -62,7 +64,7 @@ export function NotificationBell() {
             {unread > 0 && (
               <button
                 type="button"
-                onClick={() => markAllRead(notifications.map((n) => n.id))}
+                onClick={() => markAllRead.mutate()}
                 className="inline-flex items-center gap-1 text-xs font-semibold text-brand-600 hover:text-brand-700"
               >
                 <CheckCheck className="h-3.5 w-3.5" /> Mark all read
@@ -82,8 +84,8 @@ export function NotificationBell() {
                 <NotificationItem
                   key={n.id}
                   n={n}
-                  read={readSet.has(n.id)}
-                  onOpen={() => markRead(n.id)}
+                  read={n.read}
+                  onOpen={() => markRead.mutate(n.id)}
                   compact
                 />
               ))

@@ -1,8 +1,12 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { Bell, CheckCheck } from 'lucide-react'
 import { cn } from '../../lib/cn'
-import { buildNotifications, type NotificationCategory } from '../../mock/notifications'
-import { useNotifications } from '../../store/notifications'
+import {
+  useNotificationFeed,
+  useMarkNotificationRead,
+  useMarkAllNotificationsRead,
+  type NotificationCategory,
+} from '../../lib/api'
 import { NotificationItem } from './NotificationItem'
 import { CATEGORY_META } from './categoryMeta'
 
@@ -19,19 +23,18 @@ const CATEGORY_FILTERS: { value: NotificationCategory | ''; label: string }[] = 
 ]
 
 export default function NotificationsPage() {
-  const readIds = useNotifications((s) => s.readIds)
-  const markRead = useNotifications((s) => s.markRead)
-  const markAllRead = useNotifications((s) => s.markAllRead)
+  const { data: all = [], isPending } = useNotificationFeed(60)
+  const markRead = useMarkNotificationRead()
+  const markAllRead = useMarkAllNotificationsRead()
 
   const [tab, setTab] = useState<Tab>('All')
   const [category, setCategory] = useState<NotificationCategory | ''>('')
 
-  const all = useMemo(() => buildNotifications(60), [])
-  const readSet = useMemo(() => new Set(readIds), [readIds])
-  const unreadCount = all.filter((n) => !readSet.has(n.id)).length
+  // `read` arrives per item from the server, so no local read-set is needed.
+  const unreadCount = all.filter((n) => !n.read).length
 
   const filtered = all.filter((n) => {
-    if (tab === 'Unread' && readSet.has(n.id)) return false
+    if (tab === 'Unread' && n.read) return false
     if (category && n.category !== category) return false
     return true
   })
@@ -48,7 +51,7 @@ export default function NotificationsPage() {
         </div>
         <button
           type="button"
-          onClick={() => markAllRead(all.map((n) => n.id))}
+          onClick={() => markAllRead.mutate()}
           disabled={unreadCount === 0}
           className="inline-flex items-center gap-1.5 rounded-lg border border-brand-300 bg-white px-4 py-2 text-sm font-semibold text-brand-600 transition-colors hover:bg-brand-50 disabled:cursor-not-allowed disabled:opacity-40"
         >
@@ -107,7 +110,11 @@ export default function NotificationsPage() {
           <div className="px-4 py-16 text-center">
             <Bell className="mx-auto h-10 w-10 text-slate-300" />
             <p className="mt-3 text-sm font-medium text-slate-600">
-              {tab === 'Unread' ? 'No unread notifications.' : 'No notifications yet.'}
+              {isPending
+                ? 'Loading notifications…'
+                : tab === 'Unread'
+                  ? 'No unread notifications.'
+                  : 'No notifications yet.'}
             </p>
             <p className="mt-1 text-sm text-slate-400">New activity will appear here.</p>
           </div>
@@ -116,8 +123,8 @@ export default function NotificationsPage() {
             <NotificationItem
               key={n.id}
               n={n}
-              read={readSet.has(n.id)}
-              onOpen={() => markRead(n.id)}
+              read={n.read}
+              onOpen={() => markRead.mutate(n.id)}
               compact
             />
           ))

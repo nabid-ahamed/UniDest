@@ -44,6 +44,16 @@ export const qk = {
     detail: (id: number) => [...qk.invoices.all, 'detail', id] as const,
     businesses: () => [...qk.invoices.all, 'businesses'] as const,
   },
+  notifications: {
+    all: ['notifications'] as const,
+    feed: (limit: number) => [...qk.notifications.all, 'feed', limit] as const,
+    unread: () => [...qk.notifications.all, 'unread'] as const,
+  },
+  announcements: {
+    all: ['announcements'] as const,
+    list: () => [...qk.announcements.all, 'list'] as const,
+    detail: (id: number) => [...qk.announcements.all, 'detail', id] as const,
+  },
   /** Files attached to an application, keyed by that application. */
   documents: {
     all: ['documents'] as const,

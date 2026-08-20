@@ -18,7 +18,7 @@ import { pickTextColor } from '../lib/contrast'
 import { useAuth } from '../store/auth'
 import { avatarColor, initials } from '../mock/staff'
 import { contactsFor, type Contact, type ContactKind } from '../mock/messenger'
-import { relativeTime } from '../mock/notifications'
+import { relativeTime } from '../lib/api'
 import { useMessenger } from '../store/messenger'
 
 /** Clock time like "09:10 PM" for message bubbles. */

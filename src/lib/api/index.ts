@@ -96,6 +96,23 @@ export {
   useRecordPayment,
   useDeleteInvoice,
 } from './hooks/useInvoices'
+export type {
+  ApiNotification,
+  ApiAnnouncement,
+  NotificationCategory,
+} from './resources/notifications'
+export { relativeTime } from './resources/notifications'
+export {
+  useNotificationFeed,
+  useUnreadCount,
+  useMarkNotificationRead,
+  useMarkAllNotificationsRead,
+  useAnnouncements,
+  useAnnouncement,
+  useCreateAnnouncement,
+  useUpdateAnnouncement,
+  useDeleteAnnouncement,
+} from './hooks/useNotifications'
 export type { ApplicationDocument } from './resources/documents'
 export { documentsApi, ACCEPTED_FILE_TYPES, MAX_FILE_BYTES } from './resources/documents'
 export { useApplicationDocuments, useUploadDocument, useDeleteDocument } from './hooks/useDocuments'

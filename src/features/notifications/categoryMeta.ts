@@ -1,5 +1,5 @@
-import { UserPlus, GraduationCap, FileText, Megaphone, CalendarClock } from 'lucide-react'
-import type { NotificationCategory } from '../../mock/notifications'
+import { UserPlus, GraduationCap, FileText, Megaphone, CalendarClock, Headset } from 'lucide-react'
+import type { NotificationCategory } from '../../lib/api'
 
 /** Icon + colour per category — shared by the bell dropdown and the full page. */
 export const CATEGORY_META: Record<
@@ -11,4 +11,6 @@ export const CATEGORY_META: Record<
   application: { label: 'Application', icon: FileText, iconBg: 'bg-blue-50', iconColor: 'text-blue-600' },
   announcement: { label: 'Announcement', icon: Megaphone, iconBg: 'bg-amber-50', iconColor: 'text-amber-600' },
   webinar: { label: 'Webinar', icon: CalendarClock, iconBg: 'bg-violet-50', iconColor: 'text-violet-600' },
+  // The API notifies on support tickets too; the mock feed never did.
+  ticket: { label: 'Ticket', icon: Headset, iconBg: 'bg-rose-50', iconColor: 'text-rose-600' },
 }
