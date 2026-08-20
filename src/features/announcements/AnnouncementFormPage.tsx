@@ -3,18 +3,18 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, Users } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { Field } from '../../components/DataTableUI'
-import { staff } from '../../mock/staff'
 import {
-  getAnnouncement,
-  addAnnouncement,
-  updateAnnouncement,
   announcementAreas,
   audienceCount,
   toInputValue,
   type AnnouncementArea,
 } from '../../mock/announcements'
-
-const currentUser = staff.find((s) => s.role === 'Super Admin')?.name ?? staff[0]?.name ?? 'Admin'
+import {
+  useAnnouncement,
+  useCreateAnnouncement,
+  useUpdateAnnouncement,
+  type ApiAnnouncement,
+} from '../../lib/api'
 
 /** Local "now" as a datetime-local default value. */
 function nowInput(): string {
@@ -23,13 +23,36 @@ function nowInput(): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
+/**
+ * Route entry: resolves the announcement being edited before the form mounts.
+ *
+ * The form seeds its fields from `editing` once, so it must not mount until
+ * that value has arrived — and the `key` remounts it per id, so switching
+ * records resets the fields instead of keeping the previous one's text.
+ */
 export default function AnnouncementFormPage() {
-  const navigate = useNavigate()
   const { id } = useParams()
-  const editing = id ? getAnnouncement(Number(id)) : undefined
-  const isEdit = Boolean(id)
+  const { data: editing, isPending } = useAnnouncement(id ? Number(id) : undefined)
 
-  const [area, setArea] = useState<AnnouncementArea | ''>(editing?.area ?? '')
+  if (id && isPending) {
+    return (
+      <div className="rounded-xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+        <p className="text-slate-500">Loading announcement…</p>
+      </div>
+    )
+  }
+
+  return <AnnouncementForm key={id ?? 'new'} editing={editing ?? undefined} isEdit={Boolean(id)} />
+}
+
+function AnnouncementForm({ editing, isEdit }: { editing?: ApiAnnouncement; isEdit: boolean }) {
+  const navigate = useNavigate()
+  const createAnnouncement = useCreateAnnouncement()
+  const updateAnnouncementM = useUpdateAnnouncement()
+
+  const [area, setArea] = useState<AnnouncementArea | ''>(
+    (editing?.area as AnnouncementArea) ?? '',
+  )
   const [title, setTitle] = useState(editing?.title ?? '')
   const [message, setMessage] = useState(editing?.message ?? '')
   const [publishedAt, setPublishedAt] = useState(editing ? toInputValue(editing.publishedAt) : nowInput())
@@ -62,11 +85,16 @@ export default function AnnouncementFormPage() {
       publishedAt,
     }
     if (isEdit && editing) {
-      updateAnnouncement(editing.id, payload)
-      navigate(`/announcements/${editing.id}`)
+      updateAnnouncementM.mutate(
+        { id: editing.id, ...payload },
+        { onSuccess: () => navigate(`/announcements/${editing.id}`) },
+      )
     } else {
-      const created = addAnnouncement({ ...payload, createdBy: currentUser })
-      navigate(`/announcements/${created.id}`)
+      // The server records the author from the token, so no createdBy is sent —
+      // a client-supplied name would only be a less trustworthy second copy.
+      createAnnouncement.mutate(payload, {
+        onSuccess: (created) => navigate(`/announcements/${created.id}`),
+      })
     }
   }
 

@@ -1,12 +1,21 @@
 import { useParams } from 'react-router-dom'
 import { ArrowLeft, Pencil, Users, User, CalendarClock } from 'lucide-react'
 import { cn } from '../../lib/cn'
-import { getAnnouncement, audienceCount, formatDateTime } from '../../mock/announcements'
+import { audienceCount, type AnnouncementArea } from '../../mock/announcements'
+import { useAnnouncement } from '../../lib/api'
 import { AREA_BADGE } from './areaBadge'
 
 export default function AnnouncementViewPage() {
   const { id } = useParams()
-  const item = getAnnouncement(Number(id))
+  const { data: item, isPending } = useAnnouncement(id ? Number(id) : undefined)
+
+  if (isPending) {
+    return (
+      <div className="rounded-xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+        <p className="text-slate-500">Loading announcement…</p>
+      </div>
+    )
+  }
 
   if (!item) {
     return (
@@ -23,10 +32,10 @@ export default function AnnouncementViewPage() {
     <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
-          <span className={cn('inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-semibold', AREA_BADGE[item.area])}>
+          <span className={cn('inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-semibold', AREA_BADGE[item.area as AnnouncementArea])}>
             {item.area}
             <span className="inline-flex items-center gap-0.5 opacity-70">
-              <Users className="h-3 w-3" /> {audienceCount(item.area)}
+              <Users className="h-3 w-3" /> {audienceCount(item.area as AnnouncementArea)}
             </span>
           </span>
           <h1 className="mt-2 text-xl font-bold text-slate-900 [overflow-wrap:anywhere]">{item.title}</h1>
@@ -35,7 +44,7 @@ export default function AnnouncementViewPage() {
               <User className="h-4 w-4 text-slate-400" /> {item.createdBy}
             </span>
             <span className="inline-flex items-center gap-1.5">
-              <CalendarClock className="h-4 w-4 text-slate-400" /> {formatDateTime(item.publishedAt)}
+              <CalendarClock className="h-4 w-4 text-slate-400" /> {item.publishedAtLabel}
             </span>
           </div>
         </div>

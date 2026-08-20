@@ -4,13 +4,12 @@ import { Search, Plus, Pencil, Trash2, ChevronLeft, ChevronRight, Users } from '
 import { cn } from '../../lib/cn'
 import { PageBtn } from '../../components/DataTableUI'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
+import { audienceCount, type AnnouncementArea } from '../../mock/announcements'
 import {
-  sortedAnnouncements,
-  deleteAnnouncement,
-  audienceCount,
-  formatDateTime,
-  type Announcement,
-} from '../../mock/announcements'
+  useAnnouncements,
+  useDeleteAnnouncement,
+  type ApiAnnouncement,
+} from '../../lib/api'
 
 import { AREA_BADGE } from './areaBadge'
 
@@ -18,20 +17,23 @@ const PAGE_SIZES = [10, 25, 50, 100]
 
 
 export default function AnnouncementsPage() {
-  const [rev, setRev] = useState(0)
+  // React Query owns the data now, so the `rev` counter that forced a re-read
+  // of the mutable mock array is gone.
+  const { data: announcements = [], isPending } = useAnnouncements()
+  const removeAnnouncement = useDeleteAnnouncement()
   const [search, setSearch] = useState('')
   const [pageSize, setPageSize] = useState(10)
   const [page, setPage] = useState(1)
-  const [confirm, setConfirm] = useState<Announcement | null>(null)
+  const [confirm, setConfirm] = useState<ApiAnnouncement | null>(null)
 
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
-    return sortedAnnouncements().filter(
+    // The API already returns them newest-first.
+    return announcements.filter(
       (a) => !q || `${a.title} ${a.area} ${a.createdBy}`.toLowerCase().includes(q),
     )
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, rev])
+  }, [announcements, search])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
   const currentPage = Math.min(page, totalPages)
@@ -98,15 +100,15 @@ export default function AnnouncementsPage() {
                   </a>
                 </td>
                 <td className="px-4 py-4">
-                  <span className={cn('inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-semibold', AREA_BADGE[a.area])}>
+                  <span className={cn('inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-semibold', AREA_BADGE[a.area as AnnouncementArea])}>
                     {a.area}
                     <span className="inline-flex items-center gap-0.5 opacity-70">
-                      <Users className="h-3 w-3" /> {audienceCount(a.area)}
+                      <Users className="h-3 w-3" /> {audienceCount(a.area as AnnouncementArea)}
                     </span>
                   </span>
                 </td>
                 <td className="whitespace-nowrap px-4 py-4 text-slate-600">{a.createdBy}</td>
-                <td className="whitespace-nowrap px-4 py-4 text-slate-600">{formatDateTime(a.publishedAt)}</td>
+                <td className="whitespace-nowrap px-4 py-4 text-slate-600">{a.publishedAtLabel}</td>
                 <td className="px-4 py-4">
                   <div className="flex items-center gap-1.5">
                     <a
@@ -128,7 +130,7 @@ export default function AnnouncementsPage() {
             {pageRows.length === 0 && (
               <tr>
                 <td colSpan={5} className="px-4 py-12 text-center text-sm text-slate-500">
-                  No announcements found.
+                  {isPending ? 'Loading announcements…' : 'No announcements found.'}
                 </td>
               </tr>
             )}
@@ -171,10 +173,9 @@ export default function AnnouncementsPage() {
         onCancel={() => setConfirm(null)}
         onConfirm={() => {
           if (confirm) {
-            deleteAnnouncement(confirm.id)
+            removeAnnouncement.mutate(confirm.id)
             showSuccessDialog('Announcement deleted successfully')
             setConfirm(null)
-            setRev((n) => n + 1)
           }
         }}
       />
