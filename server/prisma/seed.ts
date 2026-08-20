@@ -64,20 +64,43 @@ const APPLICATION_STATUSES = [
  */
 const BRANCHES = ['Dhaka', 'Chattogram', 'Sylhet', 'Khulna']
 
-/** src/mock/staffStore.ts `staffRoles`. Super Admin is the undeletable system role. */
+/**
+ * Roles and their permissions, copied verbatim from PRESETS in
+ * `src/mock/roles.ts` — that file is the definition the Roles admin screen
+ * edits, so the seed must not paraphrase it. An earlier version invented ids
+ * ('view-reports', 'view-invoices') that exist nowhere in the frontend, which
+ * silently 403'd every route gated on the real ones.
+ */
 const ROLES = [
   { name: 'Super Admin', isSystem: true, permissions: ['*'] },
   // Not a staff role — the portal login for students. Kept in the same table so
   // one auth path serves everyone; `toUiRole` maps this name to 'Student',
   // which is what src/app/router.tsx gates the /portal routes on.
+  // Deliberately empty: portal access is ownership-scoped, not permission-based
+  // (see StudentScopeService and the @AllowStudent() decorator).
   { name: 'Student', isSystem: true, permissions: [] },
-  { name: 'Branch Manager', permissions: ['view-leads', 'lead-create-update', 'lead-assignment', 'view-students', 'view-applications', 'view-reports'] },
-  { name: 'Counsellor', permissions: ['view-leads', 'lead-create-update', 'view-students', 'view-applications'] },
-  { name: 'Admission Officer', permissions: ['view-applications', 'application-create-update', 'view-students'] },
-  { name: 'Front Desk', permissions: ['view-leads', 'lead-create-update'] },
-  { name: 'Accountant', permissions: ['view-invoices', 'view-reports'] },
+  { name: 'Branch Manager', permissions: [
+    'view-backend', 'view-leads', 'lead-create-update', 'lead-assignment', 'view-students', 'manage-students',
+    'student-assignment', 'view-applications', 'manage-applications', 'application-assignment', 'view-staff',
+    'staff-attendance', 'staff-leaves', 'approve-leaves', 'course-finder', 'invoice', 'edit-invoice',
+    'university-invoice', 'support-tickets', 'ticket-assignment', 'file-uploads', 'analytics', 'import',
+    'export-data', 'branch-mgmt', 'transfer-branch', 'broadcast-leads-students', 'broadcast-staff',
+  ] },
+  { name: 'Counsellor', permissions: [
+    'view-backend', 'view-leads', 'lead-create-update', 'view-students', 'manage-students', 'view-applications',
+    'course-finder', 'support-tickets', 'canned-responses', 'file-uploads', 'view-assigned-only',
+  ] },
+  { name: 'Admission Officer', permissions: [
+    'view-backend', 'view-students', 'view-applications', 'manage-applications', 'application-apply-through',
+    'application-assignment', 'invoice', 'edit-invoice', 'university-invoice', 'file-uploads',
+  ] },
+  { name: 'Front Desk', permissions: [
+    'view-backend', 'view-leads', 'lead-create-update', 'view-students', 'support-tickets', 'file-uploads',
+  ] },
+  { name: 'Accountant', permissions: [
+    'view-backend', 'invoice', 'edit-invoice', 'university-invoice', 'commission', 'analytics', 'export-data',
+  ] },
 ]
-
 /** src/mock/staffStore.ts `seedStaff`. */
 const STAFF = [
   { name: 'Sarah Ali', email: 'sarah.ali@globaled.com', phone: '+880 1710 111222', role: 'Counsellor', branch: 'Dhaka' },
@@ -584,6 +607,105 @@ async function main() {
     appsCreated++
   }
   console.log(`  applications: ${appsCreated}`)
+
+  // ---- Support tickets -----------------------------------------------------
+  // Statuses first: a lookup table, not an enum (see the model comment).
+  // isOpen drives the dashboard's "Open Support Tickets" card — reports read
+  // that flag, never the label, which tenants are free to rename.
+  const TICKET_STATUSES = [
+    { key: 'open', label: 'Open', color: '#1d4ed8', isOpen: true },
+    { key: 'pending', label: 'Pending', color: '#a16207', isOpen: true },
+    { key: 'resolved', label: 'Resolved', color: '#15803d', isOpen: false },
+    { key: 'closed', label: 'Closed', color: '#475569', isOpen: false },
+  ]
+  for (const [i, st] of TICKET_STATUSES.entries()) {
+    await prisma.ticketStatus.upsert({
+      where: { tenantId_key: { tenantId: TENANT_ID, key: st.key } },
+      update: { label: st.label, color: st.color, isOpen: st.isOpen, sortOrder: i },
+      create: { tenantId: TENANT_ID, ...st, sortOrder: i, isSystem: true },
+    })
+  }
+  const ticketStatusByKey = new Map(
+    (await prisma.ticketStatus.findMany({ where: { tenantId: TENANT_ID } })).map((s) => [s.key, s.id]),
+  )
+
+  const ticketStudents = await prisma.student.findMany({
+    where: { tenantId: TENANT_ID, deletedAt: null },
+    select: { id: true, name: true, branchId: true },
+    orderBy: { id: 'asc' },
+  })
+  const ticketLeads = await prisma.lead.findMany({
+    where: { tenantId: TENANT_ID, deletedAt: null },
+    select: { id: true, name: true, branchId: true },
+    orderBy: { id: 'asc' },
+  })
+
+  const SEED_TICKETS = [
+    { subject: 'Offer letter not received yet', category: 'Application', status: 'open', priority: 'High', student: 0, assignedTo: 'Sarah Ali',
+      messages: [
+        { body: 'I submitted everything two weeks ago but have not received my offer letter.', fromStaff: false },
+        { body: 'Thanks for flagging this — the university has it in review. I will chase them today.', fromStaff: true, author: 'Sarah Ali' },
+      ] },
+    { subject: 'Tuition instalment failed', category: 'Payment', status: 'pending', priority: 'High', student: 1, assignedTo: 'Mohammed Saleh',
+      messages: [{ body: 'My card was declined for the second instalment. How do I retry?', fromStaff: false }] },
+    { subject: 'Which documents do I need for the visa?', category: 'Visa', status: 'open', priority: 'Medium', lead: 0,
+      messages: [{ body: 'Could you send the visa document checklist for Australia?', fromStaff: false }] },
+    { subject: 'Transcript upload keeps failing', category: 'Documents', status: 'resolved', priority: 'Low', student: 2, assignedTo: 'Sarah Ali',
+      messages: [
+        { body: 'The upload fails every time I try my transcript PDF.', fromStaff: false },
+        { body: 'That file was over the size limit. I have raised it — please try again.', fromStaff: true, author: 'Sarah Ali' },
+        { body: 'Worked, thank you!', fromStaff: false },
+      ] },
+    { subject: 'Change of preferred intake', category: 'Course Selection', status: 'closed', priority: 'Medium', student: 3,
+      messages: [{ body: 'I would like to move from September to January intake.', fromStaff: false }] },
+  ] as Array<{
+    subject: string; category: string; status: string; priority: string
+    student?: number; lead?: number; assignedTo?: string
+    messages: Array<{ body: string; fromStaff?: boolean; author?: string }>
+  }>
+
+  let ticketsCreated = 0
+  for (const t of SEED_TICKETS) {
+    const existing = await prisma.ticket.findFirst({
+      where: { tenantId: TENANT_ID, subject: t.subject, deletedAt: null },
+    })
+    if (existing) continue
+
+    const student = t.student !== undefined ? ticketStudents[t.student] : undefined
+    const lead = t.lead !== undefined ? ticketLeads[t.lead] : undefined
+    if (!student && !lead) continue
+
+    const ticket = await prisma.ticket.create({
+      data: {
+        tenantId: TENANT_ID,
+        subject: t.subject,
+        category: t.category,
+        studentId: student?.id ?? null,
+        leadId: lead?.id ?? null,
+        branchId: student?.branchId ?? lead?.branchId ?? null,
+        assignedToId: t.assignedTo ? (userByName.get(t.assignedTo) ?? null) : null,
+        statusId: ticketStatusByKey.get(t.status)!,
+        priority: t.priority,
+      },
+    })
+
+    const requesterName = student?.name ?? lead?.name ?? 'Requester'
+    for (const m of t.messages) {
+      await prisma.ticketMessage.create({
+        data: {
+          tenantId: TENANT_ID,
+          ticketId: ticket.id,
+          authorId: m.fromStaff && m.author ? (userByName.get(m.author) ?? null) : null,
+          authorName: m.fromStaff ? (m.author ?? 'Support') : requesterName,
+          fromStaff: m.fromStaff ?? false,
+          body: m.body,
+        },
+      })
+    }
+    ticketsCreated++
+  }
+  console.log(`  tickets: ${ticketsCreated}`)
+
 
   console.log('Seed complete.')
 }

@@ -4,7 +4,7 @@ import { PrismaService } from '../prisma/prisma.service'
 const TENANT_ID = 1n
 
 /** The entities the log can describe. Kept narrow so `entityType` stays queryable. */
-export type ActivityEntity = 'lead' | 'student' | 'application' | 'staff' | 'document'
+export type ActivityEntity = 'lead' | 'student' | 'application' | 'staff' | 'document' | 'ticket'
 
 /**
  * Minimal surface of a Prisma client that can write the log — satisfied both by

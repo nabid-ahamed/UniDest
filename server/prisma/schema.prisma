@@ -55,6 +55,7 @@ model Branch {
   leads        Lead[]
   students     Student[]
   applications Application[]
+  tickets      Ticket[]
 
   @@unique([tenantId, name])
   @@index([tenantId])
@@ -113,6 +114,8 @@ model User {
   /// The student record this login belongs to, when the user is a student.
   studentProfile      Student?                   @relation("StudentPortalAccount")
   activityLog         ActivityLog[]              @relation("ActivityActor")
+  assignedTickets     Ticket[]                   @relation("TicketAssignee")
+  ticketMessages      TicketMessage[]            @relation("TicketMessageAuthor")
 
   @@unique([tenantId, email])
   @@index([tenantId, roleId])
@@ -509,6 +512,7 @@ model Lead {
   convertedStudent Student? @relation("LeadConversion", fields: [convertedStudentId], references: [id])
   /// Back-reference for Student.lead.
   studentFromLead  Student? @relation("StudentFromLead")
+  tickets          Ticket[] @relation("TicketLead")
 
   @@index([tenantId, statusId])
   @@index([tenantId, assignedToId])
@@ -592,6 +596,7 @@ model Student {
   /// Back-reference for Lead.convertedStudent.
   convertedFromLeads Lead[]        @relation("LeadConversion")
   applications       Application[]
+  tickets            Ticket[]      @relation("TicketStudent")
 
   @@index([tenantId, statusId])
   @@index([tenantId, assignedToId])
@@ -639,4 +644,99 @@ model ActivityLog {
   @@index([tenantId, entityType, entityId])
   @@index([tenantId, createdAt])
   @@map("activity_log")
+}
+
+// ---------------------------------------------------------------------------
+// Support tickets
+// ---------------------------------------------------------------------------
+
+/// Help-desk requests raised by students and leads.
+///
+/// The requester is two nullable foreign keys rather than the mock's
+/// (requesterKind, requesterNo) string pair: a real FK can be joined, cannot
+/// dangle when the person is renamed, and lets the requester's current name be
+/// read rather than frozen at creation time. Exactly one of the two is set.
+model Ticket {
+  id       BigInt @id @default(autoincrement())
+  publicId String @unique @default(uuid()) @db.Uuid
+  tenantId BigInt @default(1)
+
+  subject  String
+  category String @default("Other")
+
+  /// Exactly one of these is set — enforced in the service, since Postgres
+  /// cannot express "exactly one of" without a CHECK constraint Prisma would
+  /// not manage.
+  studentId BigInt?
+  leadId    BigInt?
+
+  branchId     BigInt?
+  assignedToId BigInt?
+  statusId     BigInt
+  priority     String  @default("Medium") // High | Medium | Low
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  student    Student?     @relation("TicketStudent", fields: [studentId], references: [id])
+  lead       Lead?        @relation("TicketLead", fields: [leadId], references: [id])
+  branch     Branch?      @relation(fields: [branchId], references: [id])
+  assignedTo User?        @relation("TicketAssignee", fields: [assignedToId], references: [id])
+  status     TicketStatus @relation(fields: [statusId], references: [id])
+
+  messages TicketMessage[]
+
+  @@index([tenantId, statusId])
+  @@index([tenantId, assignedToId])
+  @@index([tenantId, deletedAt])
+  @@map("tickets")
+}
+
+/// Status lookup, not a Postgres ENUM — same reasoning as spec §5.3: a
+/// consultancy renames these, and ALTER TYPE in production is a migration
+/// nobody wants. `isOpen` is the flag reports read, never the label.
+model TicketStatus {
+  id        BigInt    @id @default(autoincrement())
+  publicId  String    @unique @default(uuid()) @db.Uuid
+  tenantId  BigInt    @default(1)
+  key       String
+  label     String
+  color     String
+  sortOrder Int       @default(0)
+  /// Still needs attention — drives the dashboard's "Open Support Tickets".
+  isOpen    Boolean   @default(true)
+  isSystem  Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  tickets Ticket[]
+
+  @@unique([tenantId, key])
+  @@index([tenantId, sortOrder])
+  @@map("ticket_statuses")
+}
+
+/// One message in a ticket thread.
+model TicketMessage {
+  id       BigInt @id @default(autoincrement())
+  publicId String @unique @default(uuid()) @db.Uuid
+  tenantId BigInt @default(1)
+
+  ticketId BigInt
+  /// NULL when the requester wrote it — they are not a staff user.
+  authorId BigInt?
+  /// Kept alongside authorId so a requester's message still shows a name.
+  authorName String
+  fromStaff  Boolean @default(false)
+  body       String
+
+  createdAt DateTime @default(now())
+
+  ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  author User?  @relation("TicketMessageAuthor", fields: [authorId], references: [id])
+
+  @@index([tenantId, ticketId])
+  @@map("ticket_messages")
 }

@@ -9,21 +9,20 @@ export class DashboardController {
   /**
    * GET /dashboard?branch=Dhaka
    *
-   * Gated on `view-leads` rather than `view-backend`. The dashboard is the
-   * landing page for every staff role, so gating it on a permission the seeded
-   * Counsellor does not hold would 403 them straight after login — and the page
-   * only ever aggregates leads, students and applications, all of which a
-   * counsellor can already read individually.
+   * `view-backend` — the permission every staff role holds for admin access,
+   * which is what this landing page is. (An earlier version gated on
+   * `view-leads` because the seed's Counsellor was missing `view-backend`
+   * entirely; the seed now matches src/mock/roles.ts.)
    */
   @Get()
-  @RequirePermission('view-leads')
+  @RequirePermission('view-backend')
   overview(@Query('branch') branch?: string) {
     return this.dashboard.overview(branch)
   }
 
   /** Branch names for the dashboard filter, "All Branch" first. */
   @Get('branches')
-  @RequirePermission('view-leads')
+  @RequirePermission('view-backend')
   branches() {
     return this.dashboard.branches()
   }

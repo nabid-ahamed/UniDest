@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
+import { TicketsService } from '../tickets/tickets.service'
 
 const TENANT_ID = 1n
 
@@ -69,7 +70,10 @@ function daysBetween(from: Date, to: Date): number {
 
 @Injectable()
 export class DashboardService {
-  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
+  constructor(
+    @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Inject(TicketsService) private readonly tickets: TicketsService,
+  ) {}
 
   private get db() {
     return this.prisma.client
@@ -99,6 +103,8 @@ export class DashboardService {
       applicationsDaily,
       leadFollowups,
       reminders,
+      ticketSummary,
+      ticketsByPriority,
     ] = await Promise.all([
       this.countOpenLeads(scope),
       this.db.student.count({ where: { tenantId: TENANT_ID, deletedAt: null, archivedAt: null, ...scope } }),
@@ -111,6 +117,8 @@ export class DashboardService {
       this.applicationsDaily(scope),
       this.leadFollowUps(scope),
       this.reminders(scope),
+      this.tickets.statusCounts(branchId),
+      this.tickets.priorityCounts(branchId),
     ])
 
     const stats: StatCard[] = [
@@ -123,9 +131,15 @@ export class DashboardService {
         value: openApplications,
         color: 'orange',
       },
-      // Support tickets have no table yet (Phase 3 defers the module), so this
-      // card reports 0 rather than inventing a number.
-      { key: 'support', label: 'Support Tickets', sublabel: 'Open Support Tickets', value: 0, color: 'purple' },
+      {
+        key: 'support',
+        label: 'Support Tickets',
+        sublabel: 'Open Support Tickets',
+        // Sums the statuses flagged isOpen, so renaming "Pending" does not
+        // change what the card counts.
+        value: ticketSummary.filter((t) => t.isOpen).reduce((n, t) => n + t.value, 0),
+        color: 'purple',
+      },
       { key: 'staff', label: 'Staff', sublabel: 'Total Staff', value: staffCount, color: 'rose' },
     ]
 
@@ -137,10 +151,9 @@ export class DashboardService {
       applicationStatusStats,
       studentStatusStats,
       leadStatusStats,
-      // Ticket cards stay empty until the module lands; the UI renders an empty
-      // state, which is honest, where fabricated counts would not be.
-      ticketSummary: [],
-      ticketsByPriority: [],
+      // Real counts now that the tickets module exists.
+      ticketSummary: ticketSummary.map(({ label, value }) => ({ label, value })),
+      ticketsByPriority,
       yourStats: [],
       leadFollowups,
       // Students carry no follow-up date yet — see leadFollowUps().
