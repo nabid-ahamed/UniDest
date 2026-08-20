@@ -108,6 +108,34 @@ export const resourcesApi = {
   categories: (): Promise<ApiResourceCategory[]> =>
     USING_REAL_API ? request<ApiResourceCategory[]>('/resources/categories') : mocked(() => []),
 
+  /** POST /resources/categories */
+  createCategory: (name: string, description?: string): Promise<ApiResourceCategory> =>
+    request<ApiResourceCategory>('/resources/categories', {
+      method: 'POST',
+      body: JSON.stringify({ name, description }),
+    }),
+
+  /** PATCH /resources/categories/:id */
+  updateCategory: (
+    id: number,
+    patch: { name?: string; description?: string },
+  ): Promise<ApiResourceCategory> =>
+    request<ApiResourceCategory>(`/resources/categories/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(patch),
+    }),
+
+  /**
+   * DELETE /resources/categories/:id.
+   *
+   * Refused by the server while the category still holds files — silently
+   * orphaning someone's uploads is worse than asking the caller to move them.
+   */
+  removeCategory: (id: number): Promise<void> =>
+    request<{ ok: boolean }>(`/resources/categories/${id}`, { method: 'DELETE' }).then(
+      () => undefined,
+    ),
+
   /** GET /resources */
   list: (categoryId?: number): Promise<ApiStudentResource[]> =>
     USING_REAL_API

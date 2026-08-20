@@ -183,6 +183,27 @@ export class ResourcesController {
     return this.content.listResourceCategories()
   }
 
+  @Post('categories')
+  @RequirePermission('file-uploads')
+  createCategory(@Body() body: { name: string; description?: string }) {
+    return this.content.createResourceCategory(body.name, body.description)
+  }
+
+  @Patch('categories/:id')
+  @RequirePermission('file-uploads')
+  updateCategory(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: { name?: string; description?: string },
+  ) {
+    return this.content.updateResourceCategory(id, body.name, body.description)
+  }
+
+  @Delete('categories/:id')
+  @RequirePermission('file-uploads')
+  removeCategory(@Param('id', ParseIntPipe) id: number) {
+    return this.content.removeResourceCategory(id)
+  }
+
   @Get()
   @AllowStudent()
   list(@Query('categoryId') categoryId?: string) {

@@ -6,22 +6,22 @@ import { Plus, Pencil, Trash2, X, ArrowLeft } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import {
-  resourceCategories,
-  resourceCountForCategory,
-  addResourceCategory,
-  updateResourceCategory,
-  deleteResourceCategory,
-  type ResourceCategory,
-} from '../../mock/studentResources'
+  useResourceCategories,
+  useCreateResourceCategory,
+  useUpdateResourceCategory,
+  useDeleteResourceCategory,
+  type ApiResourceCategory,
+} from '../../lib/api'
 
 export default function ResourceCategoriesPage() {
   const [params, setParams] = useSearchParams()
-  const [rev, setRev] = useState(0)
+  const { data: resourceCategories = [], isPending } = useResourceCategories()
+  const removeCategory = useDeleteResourceCategory()
   // Open the create modal straight away when arrived via "Create Category".
-  const [editor, setEditor] = useState<{ cat: ResourceCategory | null } | null>(
+  const [editor, setEditor] = useState<{ cat: ApiResourceCategory | null } | null>(
     params.get('create') === '1' ? { cat: null } : null,
   )
-  const [confirm, setConfirm] = useState<ResourceCategory | null>(null)
+  const [confirm, setConfirm] = useState<ApiResourceCategory | null>(null)
   const [toast, setToast] = useState('')
 
   const showToast = (msg: string) => {
@@ -70,9 +70,10 @@ export default function ResourceCategoriesPage() {
               <th className="px-4 py-3">Actions</th>
             </tr>
           </thead>
-          <tbody key={rev}>
+          <tbody>
             {resourceCategories.map((c) => {
-              const count = resourceCountForCategory(c.id)
+              // The count comes with the category, computed from the file rows.
+              const count = c.resources
               return (
                 <tr key={c.id} className="border-b border-slate-100 text-sm">
                   <td className="px-4 py-3">
@@ -104,7 +105,7 @@ export default function ResourceCategoriesPage() {
             {resourceCategories.length === 0 && (
               <tr>
                 <td colSpan={3} className="px-4 py-12 text-center text-sm text-slate-500">
-                  No categories yet. Click Create Category to add one.
+                  {isPending ? 'Loading categories…' : 'No categories yet. Click Create Category to add one.'}
                 </td>
               </tr>
             )}
@@ -119,7 +120,6 @@ export default function ResourceCategoriesPage() {
             onClose={closeEditor}
             onSaved={(msg) => {
               closeEditor()
-              setRev((n) => n + 1)
               showToast(msg)
             }}
           />,
@@ -134,13 +134,12 @@ export default function ResourceCategoriesPage() {
         onCancel={() => setConfirm(null)}
         onConfirm={() => {
           if (!confirm) return
-          const ok = deleteResourceCategory(confirm.id)
-          if (ok) {
-            showSuccessDialog('Category deleted successfully')
-            setRev((n) => n + 1)
-          } else {
-            showToast(`"${confirm.name}" is in use by ${resourceCountForCategory(confirm.id)} resource(s)`)
-          }
+          // The server refuses a category that still holds files rather than
+          // orphaning them, so its message is what the user should see.
+          removeCategory.mutate(confirm.id, {
+            onSuccess: () => showSuccessDialog('Category deleted successfully'),
+            onError: (e) => showToast(e instanceof Error ? e.message : 'Could not delete category'),
+          })
           setConfirm(null)
         }}
       />
@@ -159,10 +158,12 @@ function CategoryEditor({
   onClose,
   onSaved,
 }: {
-  cat: ResourceCategory | null
+  cat: ApiResourceCategory | null
   onClose: () => void
   onSaved: (msg: string) => void
 }) {
+  const createCategory = useCreateResourceCategory()
+  const updateCategory = useUpdateResourceCategory()
   const isEdit = cat !== null
   const [name, setName] = useState(cat?.name ?? '')
   const [description, setDescription] = useState(cat?.description ?? '')
@@ -174,11 +175,21 @@ function CategoryEditor({
       return
     }
     if (isEdit && cat) {
-      updateResourceCategory(cat.id, { name: name.trim(), description: description.trim() })
-      onSaved('Category updated')
+      updateCategory.mutate(
+        { id: cat.id, name: name.trim(), description: description.trim() },
+        {
+          onSuccess: () => onSaved('Category updated'),
+          onError: (e) => setError(e instanceof Error ? e.message : 'Could not save'),
+        },
+      )
     } else {
-      addResourceCategory({ name: name.trim(), description: description.trim() })
-      onSaved('Category created')
+      createCategory.mutate(
+        { name: name.trim(), description: description.trim() },
+        {
+          onSuccess: () => onSaved('Category created'),
+          onError: (e) => setError(e instanceof Error ? e.message : 'Could not save'),
+        },
+      )
     }
   }
 

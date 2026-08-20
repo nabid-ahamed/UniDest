@@ -429,6 +429,71 @@ export class ContentService {
     }))
   }
 
+  async createResourceCategory(name: string, description?: string) {
+    const trimmed = name.trim()
+    if (!trimmed) throw new BadRequestException('A category needs a name.')
+    const clash = await this.db.resourceCategory.findFirst({
+      where: { tenantId: TENANT_ID, name: trimmed, deletedAt: null },
+    })
+    if (clash) throw new BadRequestException(`A category named "${trimmed}" already exists.`)
+
+    const created = await this.db.resourceCategory.create({
+      data: { tenantId: TENANT_ID, name: trimmed, description: description?.trim() || null },
+    })
+    return { id: Number(created.id), name: created.name, description: created.description ?? '', resources: 0 }
+  }
+
+  async updateResourceCategory(id: number, name?: string, description?: string) {
+    const current = await this.db.resourceCategory.findFirst({
+      where: { id: BigInt(id), tenantId: TENANT_ID, deletedAt: null },
+    })
+    if (!current) throw new NotFoundException(`Category ${id} not found.`)
+
+    if (name?.trim() && name.trim() !== current.name) {
+      const clash = await this.db.resourceCategory.findFirst({
+        where: { tenantId: TENANT_ID, name: name.trim(), deletedAt: null },
+      })
+      if (clash) throw new BadRequestException(`A category named "${name.trim()}" already exists.`)
+    }
+
+    const updated = await this.db.resourceCategory.update({
+      where: { id: BigInt(id) },
+      data: { name: name?.trim() || undefined, description: description?.trim() ?? undefined },
+      include: { _count: { select: { resources: { where: { deletedAt: null } } } } },
+    })
+    return {
+      id: Number(updated.id),
+      name: updated.name,
+      description: updated.description ?? '',
+      resources: updated._count.resources,
+    }
+  }
+
+  /**
+   * Delete a category.
+   *
+   * Refused while it still holds resources: the files would otherwise be left
+   * pointing at nothing, and silently reassigning someone else's uploads is a
+   * worse outcome than making the caller move them first.
+   */
+  async removeResourceCategory(id: number) {
+    const category = await this.db.resourceCategory.findFirst({
+      where: { id: BigInt(id), tenantId: TENANT_ID, deletedAt: null },
+      include: { _count: { select: { resources: { where: { deletedAt: null } } } } },
+    })
+    if (!category) throw new NotFoundException(`Category ${id} not found.`)
+    if (category._count.resources > 0) {
+      throw new BadRequestException(
+        `"${category.name}" still holds ${category._count.resources} file(s). Move or delete them first.`,
+      )
+    }
+    await this.db.resourceCategory.update({
+      where: { id: BigInt(id) },
+      data: { deletedAt: new Date() },
+    })
+    return { ok: true }
+  }
+
   async listResources(categoryId?: number) {
     const rows = await this.db.studentResource.findMany({
       where: {

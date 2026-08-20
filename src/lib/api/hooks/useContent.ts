@@ -41,6 +41,32 @@ function useInvalidateResources() {
   return () => qc.invalidateQueries({ queryKey: qk.resources.all })
 }
 
+export function useCreateResourceCategory() {
+  const invalidate = useInvalidateResources()
+  return useMutation({
+    mutationFn: ({ name, description }: { name: string; description?: string }) =>
+      resourcesApi.createCategory(name, description),
+    onSuccess: invalidate,
+  })
+}
+
+export function useUpdateResourceCategory() {
+  const invalidate = useInvalidateResources()
+  return useMutation({
+    mutationFn: ({ id, ...patch }: { id: number; name?: string; description?: string }) =>
+      resourcesApi.updateCategory(id, patch),
+    onSuccess: invalidate,
+  })
+}
+
+export function useDeleteResourceCategory() {
+  const invalidate = useInvalidateResources()
+  return useMutation({
+    mutationFn: (id: number) => resourcesApi.removeCategory(id),
+    onSuccess: invalidate,
+  })
+}
+
 export function useUploadResource() {
   const invalidate = useInvalidateResources()
   return useMutation({
