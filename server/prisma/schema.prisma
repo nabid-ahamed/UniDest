@@ -117,6 +117,8 @@ model User {
   assignedTickets     Ticket[]                   @relation("TicketAssignee")
   ticketMessages      TicketMessage[]            @relation("TicketMessageAuthor")
   recordedPayments    Payment[]                  @relation("PaymentRecordedBy")
+  announcements       Announcement[]             @relation("AnnouncementAuthor")
+  notificationReads   NotificationRead[]         @relation("NotificationReader")
 
   @@unique([tenantId, email])
   @@index([tenantId, roleId])
@@ -998,4 +1000,57 @@ model CommissionStatus {
   @@unique([tenantId, key])
   @@index([tenantId, sortOrder])
   @@map("commission_statuses")
+}
+
+// ---------------------------------------------------------------------------
+// Announcements & notification read-state
+// ---------------------------------------------------------------------------
+
+/// An announcement broadcast to an audience segment.
+model Announcement {
+  id       BigInt @id @default(autoincrement())
+  publicId String @unique @default(uuid()) @db.Uuid
+  tenantId BigInt @default(1)
+
+  title   String
+  message String
+  /// All | Students | Leads | Staff
+  area    String @default("All")
+
+  createdById BigInt?
+  publishedAt DateTime @default(now())
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  createdBy User? @relation("AnnouncementAuthor", fields: [createdById], references: [id])
+
+  @@index([tenantId, publishedAt])
+  @@index([tenantId, deletedAt])
+  @@map("announcements")
+}
+
+/// Which notifications a user has read.
+///
+/// Only the read-state is stored. The notifications themselves are derived from
+/// the activity log and announcements at request time, because they already
+/// describe exactly the events worth notifying about — writing a second row per
+/// event would be a copy that can drift from the thing it mirrors.
+///
+/// `notificationKey` is the derived id ("lead-142", "ann-3"), stable across
+/// requests because it is built from the source record.
+model NotificationRead {
+  id       BigInt @id @default(autoincrement())
+  tenantId BigInt @default(1)
+
+  userId          BigInt
+  notificationKey String
+  readAt          DateTime @default(now())
+
+  user User @relation("NotificationReader", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, notificationKey])
+  @@index([tenantId, userId])
+  @@map("notification_reads")
 }

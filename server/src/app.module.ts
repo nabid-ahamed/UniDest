@@ -12,6 +12,7 @@ import { ActivityModule } from './activity/activity.module'
 import { TicketsModule } from './tickets/tickets.module'
 import { InvoicesModule } from './invoices/invoices.module'
 import { AgentsModule } from './agents/agents.module'
+import { NotificationsModule } from './notifications/notifications.module'
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard'
 import { PermissionsGuard } from './auth/guards/permissions.guard'
 import { HealthController } from './health/health.controller'
@@ -26,7 +27,7 @@ import { PrismaModule } from './prisma/prisma.module'
  * first to populate `request.user`, which PermissionsGuard then reads.
  */
 @Module({
-  imports: [PrismaModule, AuthModule, LeadsModule, StudentsModule, CatalogModule, ApplicationsModule, StaffModule, DashboardModule, DocumentsModule, ActivityModule, TicketsModule, InvoicesModule, AgentsModule],
+  imports: [PrismaModule, AuthModule, LeadsModule, StudentsModule, CatalogModule, ApplicationsModule, StaffModule, DashboardModule, DocumentsModule, ActivityModule, TicketsModule, InvoicesModule, AgentsModule, NotificationsModule],
   controllers: [HealthController],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },
