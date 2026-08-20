@@ -19,23 +19,36 @@ import { cn } from '../../lib/cn'
 import { ExportButtons } from '../../components/ExportButtons'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import {
-  studentResources,
-  resourceCategories,
-  categoryName,
-  addResource,
-  deleteResource,
-  relatedCourse,
   allowedExtensions,
   maxFileMb,
   fileExtension,
-  fileTypeOf,
-  formatFileSize,
-  mockFileUrl,
-  type StudentResource,
+  relatedCourse,
   type ResourceFileType,
 } from '../../mock/studentResources'
+
+/**
+ * Extension → icon bucket. The API stores the MIME type and original filename
+ * rather than this UI-facing category, so it is derived here instead of living
+ * as a column that could disagree with the file itself.
+ */
+function fileTypeOf(name: string): ResourceFileType {
+  const ext = name.slice(name.lastIndexOf('.') + 1).toLowerCase()
+  if (ext === 'pdf') return 'pdf'
+  if (['doc', 'docx', 'txt', 'rtf'].includes(ext)) return 'doc'
+  if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'heic'].includes(ext)) return 'image'
+  if (['mp4', 'mov', 'avi', 'mkv'].includes(ext)) return 'video'
+  return 'other'
+}
+import type { ApiStudentResource } from '../../lib/api'
+import {
+  useResourceCategories,
+  useResources,
+  useUploadResource,
+  useDeleteResource,
+  resourcesApi,
+  formatFileSize,
+} from '../../lib/api'
 import { courses } from '../../mock/courseManagement'
-import { staff } from '../../mock/staff'
 
 const FILE_ICON: Record<ResourceFileType, { icon: typeof FileText; className: string }> = {
   pdf: { icon: FileText, className: 'bg-rose-50 text-rose-600' },
@@ -47,13 +60,15 @@ const FILE_ICON: Record<ResourceFileType, { icon: typeof FileText; className: st
 }
 
 // A logged-in admin would be the uploader; use the first Super Admin as "me".
-const currentUser = staff.find((s) => s.role === 'Super Admin')?.name ?? staff[0]?.name ?? 'Admin'
 
 export default function StudentResourcesPage() {
-  const [rev, setRev] = useState(0)
+  const { data: resourceCategories = [] } = useResourceCategories()
+  const { data: studentResources = [], isPending } = useResources()
+  const uploadResource = useUploadResource()
+  const removeResource = useDeleteResource()
   const [search, setSearch] = useState('')
   const [catFilter, setCatFilter] = useState('')
-  const [confirm, setConfirm] = useState<StudentResource | null>(null)
+  const [confirm, setConfirm] = useState<ApiStudentResource | null>(null)
   const [toast, setToast] = useState('')
 
   // Add-resource form state.
@@ -75,10 +90,10 @@ export default function StudentResourcesPage() {
     return studentResources
       .filter((r) => !catFilter || String(r.categoryId) === catFilter)
       .filter(
-        (r) => !q || `${r.title} ${categoryName(r.categoryId)} ${r.fileName} ${r.uploadedBy}`.toLowerCase().includes(q),
+        (r) => !q || `${r.title} ${r.category} ${r.fileName} ${r.uploadedBy}`.toLowerCase().includes(q),
       )
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, catFilter, rev])
+  }, [studentResources, search, catFilter])
 
   const onFile = (f: File | null) => {
     setErrors((p) => ({ ...p, file: '' }))
@@ -116,31 +131,25 @@ export default function StudentResourcesPage() {
     setErrors(next)
     if (Object.keys(next).length || !file) return
 
-    addResource({
-      title: title.trim(),
-      categoryId: Number(categoryId),
-      fileName: file.name,
-      fileType: fileTypeOf(file.name),
-      fileSize: file.size,
-      fileUrl: mockFileUrl(file.name),
-      relatedCourseId: relatedCourseId ? Number(relatedCourseId) : null,
-      uploadedBy: currentUser,
-      uploadedAt: today(),
-    })
+    // The file itself goes to the storage layer; the server records the
+    // uploader from the token and derives the size and type from the upload.
+    uploadResource.mutate(
+      {
+        file,
+        title: title.trim(),
+        categoryId: Number(categoryId),
+        relatedCourseId: relatedCourseId ? Number(relatedCourseId) : undefined,
+      },
+      { onError: (e) => showToast(e instanceof Error ? e.message : 'Upload failed') },
+    )
     resetForm()
-    setRev((n) => n + 1)
     showToast('Resource uploaded')
-  }
-
-  const copyLink = (url: string) => {
-    navigator.clipboard?.writeText(url)
-    showToast('Link copied')
   }
 
   const exportHeader = ['Title', 'Category', 'Related Course', 'File', 'Size', 'Uploaded By', 'Date', 'URL']
   const exportRows = filtered.map((r) => [
     r.title,
-    categoryName(r.categoryId),
+    r.category,
     relatedCourse(r.relatedCourseId)?.title ?? '—',
     r.fileName,
     formatFileSize(r.fileSize),
@@ -304,7 +313,7 @@ export default function StudentResourcesPage() {
             </thead>
             <tbody>
               {filtered.map((r) => {
-                const meta = FILE_ICON[r.fileType]
+                const meta = FILE_ICON[fileTypeOf(r.fileName)]
                 const course = relatedCourse(r.relatedCourseId)
                 return (
                   <tr key={r.id} className="border-b border-slate-100 align-top text-sm">
@@ -323,7 +332,7 @@ export default function StudentResourcesPage() {
                     </td>
                     <td className="px-4 py-4">
                       <span className="whitespace-nowrap rounded-md bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">
-                        {categoryName(r.categoryId)}
+                        {r.category}
                       </span>
                     </td>
                     <td className="px-4 py-4">
@@ -346,7 +355,7 @@ export default function StudentResourcesPage() {
                           <span className="truncate">{r.fileUrl}</span>
                         </span>
                         <button
-                          onClick={() => copyLink(r.fileUrl)}
+                          onClick={() => void resourcesApi.download(r)}
                           className="inline-flex shrink-0 items-center gap-1 rounded-md border border-slate-300 px-2 py-1.5 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50"
                         >
                           <Copy className="h-3.5 w-3.5" /> Copy
@@ -378,7 +387,7 @@ export default function StudentResourcesPage() {
               {filtered.length === 0 && (
                 <tr>
                   <td colSpan={6} className="px-4 py-12 text-center text-sm text-slate-500">
-                    No resources found.
+                    {isPending ? 'Loading resources…' : 'No resources found.'}
                   </td>
                 </tr>
               )}
@@ -395,10 +404,9 @@ export default function StudentResourcesPage() {
         onCancel={() => setConfirm(null)}
         onConfirm={() => {
           if (confirm) {
-            deleteResource(confirm.id)
+            removeResource.mutate(confirm.id)
             showSuccessDialog('Resource deleted successfully')
             setConfirm(null)
-            setRev((n) => n + 1)
           }
         }}
       />
@@ -412,9 +420,3 @@ export default function StudentResourcesPage() {
   )
 }
 
-/** Today formatted like the seed dates, e.g. "23 Jul 2026". */
-function today(): string {
-  const d = new Date()
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-  return `${String(d.getDate()).padStart(2, '0')} ${months[d.getMonth()]} ${d.getFullYear()}`
-}

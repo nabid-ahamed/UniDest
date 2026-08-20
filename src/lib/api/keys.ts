@@ -60,6 +60,15 @@ export const qk = {
     detail: (id: number) => [...qk.webinars.all, 'detail', id] as const,
     enrollments: (id: number) => [...qk.webinars.all, 'enrollments', id] as const,
   },
+  media: {
+    all: ['media'] as const,
+    list: (type: string) => [...qk.media.all, 'list', type] as const,
+  },
+  resources: {
+    all: ['resources'] as const,
+    categories: () => [...qk.resources.all, 'categories'] as const,
+    list: (categoryId: number) => [...qk.resources.all, 'list', categoryId] as const,
+  },
   /** Files attached to an application, keyed by that application. */
   documents: {
     all: ['documents'] as const,

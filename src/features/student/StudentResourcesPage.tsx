@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import { Layers } from 'lucide-react'
-import { resourceCategories, resourceCountForCategory } from '../../mock/studentResources'
+import { useResourceCategories } from '../../lib/api'
 
 /**
  * "Resources" — a grid of resource-collection cards. Collections come live from
@@ -9,6 +9,9 @@ import { resourceCategories, resourceCountForCategory } from '../../mock/student
  */
 export default function StudentResourcesPage() {
   const navigate = useNavigate()
+  // The count comes with each category, computed from the resource rows — no
+  // second lookup that could disagree with the list.
+  const { data: resourceCategories = [] } = useResourceCategories()
 
   return (
     <div className="space-y-6">
@@ -16,7 +19,7 @@ export default function StudentResourcesPage() {
 
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {resourceCategories.map((cat) => {
-          const count = resourceCountForCategory(cat.id)
+          const count = cat.resources
           return (
             <button
               key={cat.id}

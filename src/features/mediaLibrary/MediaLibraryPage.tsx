@@ -2,67 +2,36 @@ import { useMemo, useRef, useState } from 'react'
 import { Search, UploadCloud, Image as ImageIcon, Film, Play } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import {
-  media,
-  mediaCounts,
-  addMedia,
   allowedMediaExtensions,
   maxMediaMb,
-  maxPreviewBytes,
   mediaExtension,
-  mediaTypeOf,
-  formatFileSize,
-  mockMediaUrl,
-  type MediaItem,
   type MediaType,
 } from '../../mock/mediaLibrary'
-import { staff } from '../../mock/staff'
+import {
+  useMedia,
+  useUploadMedia,
+  formatFileSize,
+  API_BASE_URL,
+  type ApiMediaItem,
+} from '../../lib/api'
 
-const GRADIENTS = [
-  'from-blue-900 to-blue-700',
-  'from-rose-900 to-rose-700',
-  'from-emerald-900 to-emerald-700',
-  'from-amber-700 to-amber-500',
-  'from-violet-900 to-violet-700',
-  'from-teal-900 to-teal-700',
+/** Fallback tile colours for non-image files, picked by id so they stay stable. */
+const TILE_GRADIENTS = [
+  'from-brand-500 to-brand-700',
+  'from-emerald-500 to-emerald-700',
+  'from-violet-500 to-violet-700',
+  'from-amber-500 to-amber-700',
+  'from-rose-500 to-rose-700',
 ]
 
-const currentUser = staff.find((s) => s.role === 'Super Admin')?.name ?? staff[0]?.name ?? 'Admin'
 
 type Filter = 'all' | MediaType
 
-/** Read an image file's natural dimensions + a small preview data-URL. */
-function readImageMeta(file: File): Promise<{ width: number; height: number; thumb: string | null }> {
-  return new Promise((resolve) => {
-    const objectUrl = URL.createObjectURL(file)
-    const img = new Image()
-    img.onload = () => {
-      const dims = { width: img.naturalWidth, height: img.naturalHeight }
-      URL.revokeObjectURL(objectUrl)
-      if (file.size <= maxPreviewBytes) {
-        const reader = new FileReader()
-        reader.onload = () => resolve({ ...dims, thumb: String(reader.result) })
-        reader.onerror = () => resolve({ ...dims, thumb: null })
-        reader.readAsDataURL(file)
-      } else {
-        resolve({ ...dims, thumb: null })
-      }
-    }
-    img.onerror = () => {
-      URL.revokeObjectURL(objectUrl)
-      resolve({ width: 0, height: 0, thumb: null })
-    }
-    img.src = objectUrl
-  })
-}
-
-function today(): string {
-  const d = new Date()
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-  return `${String(d.getDate()).padStart(2, '0')} ${months[d.getMonth()]} ${d.getFullYear()}`
-}
-
 export default function MediaLibraryPage() {
-  const [rev, setRev] = useState(0)
+  // React Query owns the list and re-runs it after every upload, so the `rev`
+  // counter that forced a re-read of the mutable mock module is gone.
+  const { data: media = [] } = useMedia()
+  const uploadMedia = useUploadMedia()
   const [filter, setFilter] = useState<Filter>('all')
   const [search, setSearch] = useState('')
   const [dragOver, setDragOver] = useState(false)
@@ -76,19 +45,24 @@ export default function MediaLibraryPage() {
   }
 
 
-  // `rev` is the dependency on purpose: mediaCounts() reads a mutable mock
-  // module, which React cannot observe, so bumping rev is what forces the
-  // recount after an upload or delete.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const counts = useMemo(() => mediaCounts(), [rev])
+  // Counted from the list itself rather than a second query — one source, so
+  // the tabs and the grid can never disagree.
+  const counts = useMemo(() => {
+    const c = { all: media.length, image: 0, video: 0, document: 0 }
+    for (const m of media) {
+      if (m.type === 'image') c.image += 1
+      else if (m.type === 'video') c.video += 1
+      else c.document += 1
+    }
+    return c
+  }, [media])
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
     return media
       .filter((m) => filter === 'all' || m.type === filter)
       .filter((m) => !q || `${m.name} ${m.uploadedBy}`.toLowerCase().includes(q))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filter, search, rev])
+  }, [media, filter, search])
 
   const handleFiles = async (files: FileList | null) => {
     if (!files || files.length === 0) return
@@ -104,26 +78,11 @@ export default function MediaLibraryPage() {
         rejected.push(`${file.name} (>${maxMediaMb}MB)`)
         continue
       }
-      const type: MediaType = mediaTypeOf(file.name)
-      const meta =
-        type === 'image'
-          ? await readImageMeta(file)
-          : { width: null as number | null, height: null as number | null, thumb: null as string | null }
-      addMedia({
-        name: file.name,
-        type,
-        url: mockMediaUrl(file.name),
-        thumb: meta.thumb,
-        gradient: GRADIENTS[added % GRADIENTS.length],
-        width: meta.width || null,
-        height: meta.height || null,
-        size: file.size,
-        uploadedBy: currentUser,
-        uploadedAt: today(),
-      })
+      // The server derives the type from the MIME type and stores the bytes
+      // through the same StorageService the application documents use.
+      await uploadMedia.mutateAsync(file)
       added += 1
     }
-    setRev((n) => n + 1)
     if (added && rejected.length) showToast(`${added} uploaded · ${rejected.length} skipped`)
     else if (added) showToast(`${added} file${added > 1 ? 's' : ''} uploaded`)
     else if (rejected.length) showToast(`Skipped: ${rejected[0]}${rejected.length > 1 ? ` +${rejected.length - 1}` : ''}`)
@@ -229,21 +188,23 @@ export default function MediaLibraryPage() {
 }
 
 /** A clickable thumbnail — real preview for uploaded images, gradient tile otherwise. */
-export function MediaTile({ item }: { item: MediaItem }) {
+export function MediaTile({ item }: { item: ApiMediaItem }) {
   return (
     <a
       href={`/media-library/${item.id}`}
       className="group block overflow-hidden rounded-xl border border-slate-200 bg-white transition-shadow hover:shadow-md"
     >
       <div className="relative aspect-square overflow-hidden bg-slate-100">
-        {item.thumb ? (
+        {item.type === 'image' ? (
+          // The real file, not a stored data-URL preview: the bytes already
+          // live in the media store, so a second copy would only drift.
           <img
-            src={item.thumb}
+            src={`${API_BASE_URL}${item.url}`}
             alt={item.name}
             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
           />
         ) : (
-          <div className={cn('flex h-full w-full items-center justify-center bg-gradient-to-br text-white/90 transition-transform duration-300 group-hover:scale-105', item.gradient)}>
+          <div className={cn('flex h-full w-full items-center justify-center bg-gradient-to-br text-white/90 transition-transform duration-300 group-hover:scale-105', TILE_GRADIENTS[item.id % TILE_GRADIENTS.length])}>
             {item.type === 'video' ? <Film className="h-9 w-9" /> : <ImageIcon className="h-9 w-9" />}
           </div>
         )}

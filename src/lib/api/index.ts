@@ -123,6 +123,21 @@ export {
   useEnrollInWebinar,
   useDeleteWebinar,
 } from './hooks/useWebinars'
+export type {
+  ApiMediaItem,
+  ApiResourceCategory,
+  ApiStudentResource,
+} from './resources/content'
+export { mediaApi, resourcesApi, formatFileSize } from './resources/content'
+export {
+  useMedia,
+  useUploadMedia,
+  useDeleteMedia,
+  useResourceCategories,
+  useResources,
+  useUploadResource,
+  useDeleteResource,
+} from './hooks/useContent'
 export type { ApplicationDocument } from './resources/documents'
 export { documentsApi, ACCEPTED_FILE_TYPES, MAX_FILE_BYTES } from './resources/documents'
 export { useApplicationDocuments, useUploadDocument, useDeleteDocument } from './hooks/useDocuments'

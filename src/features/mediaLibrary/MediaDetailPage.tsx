@@ -2,16 +2,28 @@ import { useState } from 'react'
 import { showSuccessDialog } from '../../store/successDialog'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, Copy, Trash2, Image as ImageIcon, Film, Play, Calendar, User, HardDrive, Ruler } from 'lucide-react'
-import { cn } from '../../lib/cn'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
-import { getMedia, deleteMedia, formatFileSize } from '../../mock/mediaLibrary'
+import { useMedia, useDeleteMedia, formatFileSize, API_BASE_URL } from '../../lib/api'
 
 export default function MediaDetailPage() {
   const navigate = useNavigate()
   const { id } = useParams()
-  const item = getMedia(Number(id))
+  // Resolved from the list: the API has no single-media endpoint, and the list
+  // is already cached from the library page the user arrived from.
+  const { data: media = [], isPending } = useMedia()
+  const removeMedia = useDeleteMedia()
+  const item = media.find((m) => m.id === Number(id))
   const [confirm, setConfirm] = useState(false)
   const [toast, setToast] = useState('')
+
+  // Without this a valid id would flash "not found" while the list loads.
+  if (isPending) {
+    return (
+      <div className="rounded-xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+        <p className="text-slate-500">Loading…</p>
+      </div>
+    )
+  }
 
   if (!item) {
     return (
@@ -55,10 +67,14 @@ export default function MediaDetailPage() {
         <div>
           <div className="overflow-hidden rounded-xl border border-slate-200 bg-slate-100">
             <div className="relative aspect-video">
-              {item.thumb ? (
-                <img src={item.thumb} alt={item.name} className="h-full w-full object-contain" />
+              {item.type === 'image' ? (
+                <img
+                  src={`${API_BASE_URL}${item.url}`}
+                  alt={item.name}
+                  className="h-full w-full object-contain"
+                />
               ) : (
-                <div className={cn('flex h-full w-full items-center justify-center bg-gradient-to-br text-white/90', item.gradient)}>
+                <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-brand-500 to-brand-700 text-white/90">
                   {item.type === 'video' ? <Film className="h-16 w-16" /> : <ImageIcon className="h-16 w-16" />}
                 </div>
               )}
@@ -126,7 +142,7 @@ export default function MediaDetailPage() {
         confirmLabel="Delete"
         onCancel={() => setConfirm(false)}
         onConfirm={() => {
-          deleteMedia(item.id)
+          removeMedia.mutate(item.id)
           showSuccessDialog(`"${item.name}" deleted successfully`)
           navigate('/media-library')
         }}

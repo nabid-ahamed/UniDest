@@ -1,13 +1,27 @@
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { ArrowLeft, Download, FileText, Image, Video, FileArchive, File, GraduationCap } from 'lucide-react'
 import { showSuccessDialog } from '../../store/successDialog'
+import { relatedCourse, type ResourceFileType } from '../../mock/studentResources'
 import {
-  getResourceCategory,
-  resourcesForCategory,
+  useResourceCategories,
+  useResources,
+  resourcesApi,
   formatFileSize,
-  relatedCourse,
-  type ResourceFileType,
-} from '../../mock/studentResources'
+} from '../../lib/api'
+
+/**
+ * File extension → the icon bucket the UI paints. The API stores a MIME type
+ * and the original filename rather than this UI-facing category, so it is
+ * derived here instead of being a column that could disagree with the file.
+ */
+function fileTypeOf(name: string): ResourceFileType {
+  const ext = name.slice(name.lastIndexOf('.') + 1).toLowerCase()
+  if (['pdf'].includes(ext)) return 'pdf'
+  if (['doc', 'docx', 'txt', 'rtf'].includes(ext)) return 'doc'
+  if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'heic'].includes(ext)) return 'image'
+  if (['mp4', 'mov', 'avi', 'mkv'].includes(ext)) return 'video'
+  return 'other'
+}
 
 /** File-type → icon + tint (matches the resource's `fileType`). */
 const FILE_ICON: Record<ResourceFileType, { icon: typeof FileText; tint: string }> = {
@@ -22,7 +36,17 @@ const FILE_ICON: Record<ResourceFileType, { icon: typeof FileText; tint: string 
 export default function StudentResourceCategoryPage() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const category = getResourceCategory(Number(id))
+  const { data: categories = [], isPending } = useResourceCategories()
+  const { data: files = [] } = useResources(id ? Number(id) : undefined)
+  const category = categories.find((c) => c.id === Number(id))
+
+  if (isPending) {
+    return (
+      <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center shadow-sm">
+        <p className="text-slate-500">Loading…</p>
+      </div>
+    )
+  }
 
   if (!category) {
     return (
@@ -38,8 +62,6 @@ export default function StudentResourceCategoryPage() {
       </div>
     )
   }
-
-  const files = resourcesForCategory(category.id)
 
   return (
     <div className="space-y-6">
@@ -66,7 +88,7 @@ export default function StudentResourceCategoryPage() {
       ) : (
         <ul className="space-y-4">
           {files.map((r) => {
-            const { icon: Icon, tint } = FILE_ICON[r.fileType]
+            const { icon: Icon, tint } = FILE_ICON[fileTypeOf(r.fileName)]
             const course = relatedCourse(r.relatedCourseId)
             return (
               <li
@@ -94,7 +116,12 @@ export default function StudentResourceCategoryPage() {
                 </div>
                 <button
                   type="button"
-                  onClick={() => showSuccessDialog(`"${r.title}" download has started.`, 'Downloading')}
+                  onClick={() => {
+                    // Fetched with the auth header and saved via a blob — a
+                    // plain link cannot carry the token these routes require.
+                    void resourcesApi.download(r)
+                    showSuccessDialog(`"${r.title}" download has started.`, 'Downloading')
+                  }}
                   className="inline-flex items-center gap-1.5 rounded-lg border border-brand-300 bg-white px-4 py-2 text-sm font-semibold text-brand-600 transition-colors hover:bg-brand-50"
                 >
                   <Download className="h-4 w-4" /> Download
