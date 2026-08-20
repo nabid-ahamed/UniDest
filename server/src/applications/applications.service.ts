@@ -1,5 +1,6 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
+import { ActivityService } from '../activity/activity.service'
 import type {
   CreateApplicationDto,
   ListApplicationsDto,
@@ -32,7 +33,10 @@ const MONTHS = ['', 'January', 'February', 'March', 'April', 'May', 'June',
 
 @Injectable()
 export class ApplicationsService {
-  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
+  constructor(
+    @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Inject(ActivityService) private readonly activity: ActivityService,
+  ) {}
 
   private get db() {
     return this.prisma.client
@@ -143,6 +147,17 @@ export class ApplicationsService {
         },
       })
 
+      await this.activity.recordWithActorId(
+        {
+          action: 'application.created',
+          entity: 'application',
+          entityId: created.id,
+          meta: { studentNo: dto.studentNo },
+        },
+        changedById,
+        tx,
+      )
+
       return this.toDto(created as ApplicationWithRelations)
     })
   }
@@ -189,6 +204,17 @@ export class ApplicationsService {
           },
         })
       }
+
+      await this.activity.recordWithActorId(
+        {
+          action: statusChanged ? 'application.status_changed' : 'application.updated',
+          entity: 'application',
+          entityId: BigInt(id),
+          meta: statusChanged ? { note: dto.note ?? null } : { fields: Object.keys(dto) },
+        },
+        changedById,
+        tx,
+      )
 
       return this.toDto(updated as ApplicationWithRelations)
     })

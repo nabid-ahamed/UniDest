@@ -9,8 +9,10 @@ import {
   Patch,
   Post,
   Query,
+  Req,
 } from '@nestjs/common'
 import { RequirePermission } from '../auth/guards/permissions.guard'
+import type { JwtPayload } from '../auth/auth.types'
 import {
   BulkStudentsDto,
   ConvertLeadDto,
@@ -72,7 +74,11 @@ export class LeadConversionController {
 
   @Post(':id/convert')
   @RequirePermission('lead-create-update')
-  convert(@Param('id', ParseIntPipe) id: number, @Body() dto: ConvertLeadDto) {
-    return this.students.convertLead(id, dto)
+  convert(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: ConvertLeadDto,
+    @Req() req: { user?: JwtPayload },
+  ) {
+    return this.students.convertLead(id, dto, req.user?.sub)
   }
 }

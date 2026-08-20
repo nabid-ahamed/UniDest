@@ -112,6 +112,7 @@ model User {
 
   /// The student record this login belongs to, when the user is a student.
   studentProfile      Student?                   @relation("StudentPortalAccount")
+  activityLog         ActivityLog[]              @relation("ActivityActor")
 
   @@unique([tenantId, email])
   @@index([tenantId, roleId])
@@ -596,4 +597,46 @@ model Student {
   @@index([tenantId, assignedToId])
   @@index([tenantId, deletedAt])
   @@map("students")
+}
+
+// ---------------------------------------------------------------------------
+// Audit trail (spec §5.7)
+// ---------------------------------------------------------------------------
+
+/// Who changed what, and when.
+///
+/// Written inside the same transaction as the change it describes — the same
+/// rule ApplicationStatusHistory follows. An audit row that can go missing while
+/// its write succeeded is worse than none, because the log then looks complete
+/// when it is not.
+///
+/// `entityId` is a plain BigInt rather than a foreign key on purpose: the log
+/// spans leads, students, applications, staff and documents, and it must survive
+/// the row it describes being deleted. That is the point of an audit trail.
+model ActivityLog {
+  id       BigInt @id @default(autoincrement())
+  publicId String @unique @default(uuid()) @db.Uuid
+  tenantId BigInt @default(1)
+
+  /// NULL for system-generated entries (seeds, migrations, scheduled jobs).
+  userId BigInt?
+
+  /// Verb, dot-namespaced: 'lead.created', 'application.status_changed'.
+  action String
+
+  /// 'lead' | 'student' | 'application' | 'staff' | 'document'
+  entityType String
+  entityId   BigInt
+
+  /// Whatever the action needs to be readable later — old and new values, the
+  /// status labels, a note. Shape varies by action, hence JSON.
+  meta Json @default("{}")
+
+  createdAt DateTime @default(now())
+
+  user User? @relation("ActivityActor", fields: [userId], references: [id])
+
+  @@index([tenantId, entityType, entityId])
+  @@index([tenantId, createdAt])
+  @@map("activity_log")
 }

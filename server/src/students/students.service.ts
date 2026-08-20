@@ -1,5 +1,6 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
+import { ActivityService } from '../activity/activity.service'
 import type {
   ConvertLeadDto,
   CreateStudentDto,
@@ -38,7 +39,10 @@ type StudentWithRelations = {
 
 @Injectable()
 export class StudentsService {
-  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
+  constructor(
+    @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Inject(ActivityService) private readonly activity: ActivityService,
+  ) {}
 
   private get db() {
     return this.prisma.client
@@ -200,7 +204,7 @@ export class StudentsService {
    * §5.4. Wrapped in a transaction so a failure cannot leave a half-converted
    * pair behind.
    */
-  async convertLead(leadId: number, dto: ConvertLeadDto) {
+  async convertLead(leadId: number, dto: ConvertLeadDto, actorPublicId?: string) {
     const lead = await this.db.lead.findFirst({
       where: { id: BigInt(leadId), tenantId: TENANT_ID, deletedAt: null },
       include: { branch: true, assignedTo: true, primaryInterestCountry: true },
@@ -259,8 +263,43 @@ export class StudentsService {
         },
       })
 
+      // Logged against both ends of the conversion: the funnel question
+      // ("what became of this lead?") and the provenance question ("where did
+      // this student come from?") are asked from opposite directions.
+      const actorId = await this.resolveActorId(actorPublicId)
+      await this.activity.recordWithActorId(
+        {
+          action: 'lead.converted',
+          entity: 'lead',
+          entityId: lead.id,
+          meta: { studentId: Number(created.id), studentNo: student.studentNo },
+        },
+        actorId,
+        tx,
+      )
+      await this.activity.recordWithActorId(
+        {
+          action: 'student.created',
+          entity: 'student',
+          entityId: created.id,
+          meta: { from: 'lead_convert', leadId: Number(lead.id) },
+        },
+        actorId,
+        tx,
+      )
+
       return this.toDto(student as StudentWithRelations)
     })
+  }
+
+  /** JWT subject (users.publicId) -> numeric id, or null for system actions. */
+  private async resolveActorId(publicId?: string): Promise<bigint | null> {
+    if (!publicId) return null
+    const user = await this.db.user.findFirst({
+      where: { publicId, tenantId: TENANT_ID },
+      select: { id: true },
+    })
+    return user?.id ?? null
   }
 
   private readonly relations = {

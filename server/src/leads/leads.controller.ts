@@ -9,8 +9,10 @@ import {
   Patch,
   Post,
   Query,
+  Req,
 } from '@nestjs/common'
 import { RequirePermission } from '../auth/guards/permissions.guard'
+import type { JwtPayload } from '../auth/auth.types'
 import { CreateLeadDto, ListLeadsDto, UpdateLeadDto } from './dto/lead.dto'
 import { LeadsService } from './leads.service'
 
@@ -37,19 +39,23 @@ export class LeadsController {
 
   @Post()
   @RequirePermission('lead-create-update')
-  create(@Body() dto: CreateLeadDto) {
-    return this.leads.create(dto)
+  create(@Body() dto: CreateLeadDto, @Req() req: { user?: JwtPayload }) {
+    return this.leads.create(dto, req.user?.sub)
   }
 
   @Patch(':id')
   @RequirePermission('lead-create-update')
-  update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateLeadDto) {
-    return this.leads.update(id, dto)
+  update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateLeadDto,
+    @Req() req: { user?: JwtPayload },
+  ) {
+    return this.leads.update(id, dto, req.user?.sub)
   }
 
   @Delete(':id')
   @RequirePermission('lead-create-update')
-  remove(@Param('id', ParseIntPipe) id: number) {
-    return this.leads.remove(id)
+  remove(@Param('id', ParseIntPipe) id: number, @Req() req: { user?: JwtPayload }) {
+    return this.leads.remove(id, req.user?.sub)
   }
 }

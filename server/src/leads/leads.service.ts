@@ -1,5 +1,6 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
+import { ActivityService } from '../activity/activity.service'
 import type { CreateLeadDto, ListLeadsDto, UpdateLeadDto } from './dto/lead.dto'
 
 const TENANT_ID = 1n
@@ -29,7 +30,10 @@ type LeadWithRelations = {
 
 @Injectable()
 export class LeadsService {
-  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
+  constructor(
+    @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Inject(ActivityService) private readonly activity: ActivityService,
+  ) {}
 
   private get db() {
     return this.prisma.client
@@ -80,12 +84,16 @@ export class LeadsService {
     return this.toDto(lead as LeadWithRelations)
   }
 
-  async create(dto: CreateLeadDto) {
+  async create(dto: CreateLeadDto, actorPublicId?: string) {
     const links = await this.resolveLinks(dto)
     // Every lead needs a status; new ones start at the first pipeline stage.
     const statusId = links.statusId ?? (await this.defaultStatusId())
 
-    const lead = await this.db.lead.create({
+    const actorId = await this.resolveActorId(actorPublicId)
+
+    // Wrapped so the audit row commits with the lead, never on its own.
+    const lead = await this.db.$transaction(async (tx) => {
+      const created = await tx.lead.create({
       data: {
         tenantId: TENANT_ID,
         name: dto.name,
@@ -105,15 +113,26 @@ export class LeadsService {
         primaryInterestCountryId: links.countryId,
       },
       include: this.relations,
+      })
+
+      await this.activity.recordWithActorId(
+        { action: 'lead.created', entity: 'lead', entityId: created.id, meta: { name: dto.name } },
+        actorId,
+        tx,
+      )
+      return created
     })
     return this.toDto(lead as LeadWithRelations)
   }
 
-  async update(id: number, dto: UpdateLeadDto) {
+  async update(id: number, dto: UpdateLeadDto, actorPublicId?: string) {
     await this.get(id) // 404s if missing or already deleted
     const links = await this.resolveLinks(dto)
 
-    const lead = await this.db.lead.update({
+    const actorId = await this.resolveActorId(actorPublicId)
+
+    const lead = await this.db.$transaction(async (tx) => {
+      const changed = await tx.lead.update({
       where: { id: BigInt(id) },
       data: {
         // `undefined` tells Prisma to leave a column alone, so a PATCH only
@@ -135,18 +154,52 @@ export class LeadsService {
         primaryInterestCountryId: links.countryId ?? undefined,
       },
       include: this.relations,
+      })
+
+      await this.activity.recordWithActorId(
+        {
+          action: 'lead.updated',
+          entity: 'lead',
+          entityId: BigInt(id),
+          // Field names only — the values can hold personal data, and an audit
+          // trail should not become a second copy of the record.
+          meta: { fields: Object.keys(dto) },
+        },
+        actorId,
+        tx,
+      )
+      return changed
     })
     return this.toDto(lead as LeadWithRelations)
   }
 
   /** Soft delete: the row stays for audit, every query filters `deletedAt: null`. */
-  async remove(id: number) {
+  async remove(id: number, actorPublicId?: string) {
     await this.get(id)
-    await this.db.lead.update({
-      where: { id: BigInt(id) },
-      data: { deletedAt: new Date() },
+    const actorId = await this.resolveActorId(actorPublicId)
+
+    await this.db.$transaction(async (tx) => {
+      await tx.lead.update({
+        where: { id: BigInt(id) },
+        data: { deletedAt: new Date() },
+      })
+      await this.activity.recordWithActorId(
+        { action: 'lead.deleted', entity: 'lead', entityId: BigInt(id) },
+        actorId,
+        tx,
+      )
     })
     return { ok: true }
+  }
+
+  /** JWT subject (users.publicId) -> numeric id, or null for system actions. */
+  private async resolveActorId(publicId?: string): Promise<bigint | null> {
+    if (!publicId) return null
+    const user = await this.db.user.findFirst({
+      where: { publicId, tenantId: TENANT_ID },
+      select: { id: true },
+    })
+    return user?.id ?? null
   }
 
   private readonly relations = {
