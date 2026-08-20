@@ -32,6 +32,11 @@ export const qk = {
     roles: () => [...qk.staff.all, 'roles'] as const,
     branches: () => [...qk.staff.all, 'branches'] as const,
   },
+  /** Files attached to an application, keyed by that application. */
+  documents: {
+    all: ['documents'] as const,
+    list: (applicationId: number) => [...qk.documents.all, 'list', applicationId] as const,
+  },
   /** Dashboard read model — keyed by branch, since every card is branch-scoped. */
   dashboard: {
     all: ['dashboard'] as const,

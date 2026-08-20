@@ -28,7 +28,13 @@ import {
   deleteApplication,
 } from '../../mock/applications'
 import type { Application } from '../../mock/applications'
-import { useApplication, useSetApplicationStatus } from '../../lib/api'
+import {
+  useApplication,
+  useSetApplicationStatus,
+  useApplicationDocuments,
+  useDeleteDocument,
+  documentsApi,
+} from '../../lib/api'
 import {
   loadAppDocuments,
   addAppDocument,
@@ -341,6 +347,8 @@ function ApplicationView({ app }: { app: Application }) {
             }}
           />
 
+          <UploadedFiles applicationId={app.id} />
+
           <RecordsSection
             title="Invoices"
             headers={['Date', 'Invoice #', 'Amount']}
@@ -555,5 +563,77 @@ function StatusMenu({ current, onPick }: { current: string; onPick: (status: str
         </div>
       )}
     </div>
+  )
+}
+
+/**
+ * Files students have actually uploaded, read from the API.
+ *
+ * Separate from the "Documents" card above, which is still the mock's
+ * metadata-only list (a name and a type, no bytes). Merging the two means
+ * rewriting that card and its dialog around real uploads — Stage 4 work.
+ */
+function UploadedFiles({ applicationId }: { applicationId: number }) {
+  const { data: files = [], isPending } = useApplicationDocuments(applicationId)
+  const remove = useDeleteDocument(applicationId)
+
+  return (
+    <section>
+      <h2 className="text-lg font-bold text-slate-800">Uploaded Files</h2>
+      <div className="mt-4 overflow-x-auto rounded-lg border border-slate-200">
+        <table className="w-full min-w-[560px]">
+          <thead>
+            <tr className="border-b border-slate-200 bg-slate-50 text-left text-sm font-semibold text-slate-600">
+              <th className="px-4 py-3">Uploaded</th>
+              <th className="px-4 py-3">File</th>
+              <th className="px-4 py-3">Type</th>
+              <th className="px-4 py-3">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {isPending ? (
+              <tr>
+                <td colSpan={4} className="px-4 py-8 text-center text-sm text-slate-500">
+                  Loading files...
+                </td>
+              </tr>
+            ) : files.length === 0 ? (
+              <tr>
+                <td colSpan={4} className="px-4 py-8 text-center text-sm text-slate-500">
+                  The student has not uploaded any files yet.
+                </td>
+              </tr>
+            ) : (
+              files.map((f) => (
+                <tr key={f.id} className="border-b border-slate-100 text-sm odd:bg-slate-50/60">
+                  <td className="whitespace-nowrap px-4 py-3 text-slate-600">{f.uploadedAt}</td>
+                  <td className="px-4 py-3 font-medium text-slate-700 [overflow-wrap:anywhere]">{f.name}</td>
+                  <td className="px-4 py-3 text-slate-600">{f.type}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex gap-3">
+                      <button
+                        type="button"
+                        onClick={() => documentsApi.download(f)}
+                        className="text-sm font-semibold text-brand-600 hover:text-brand-700"
+                      >
+                        Download
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => remove.mutate(f.id)}
+                        disabled={remove.isPending}
+                        className="text-sm font-semibold text-rose-600 hover:text-rose-700 disabled:opacity-50"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </section>
   )
 }

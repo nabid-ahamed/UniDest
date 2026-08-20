@@ -1,12 +1,41 @@
 import { useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, GraduationCap, Clock, Send, Paperclip } from 'lucide-react'
+import { ArrowLeft, GraduationCap, Clock, Send, Paperclip, Download } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { StatusPill } from './components/StatusPill'
 import { SectionHead } from './components/SectionHead'
-import { useApplication, type Application } from '../../lib/api'
-import { currentStudent, documentRequests, documentStatusColor } from '../../mock/student/portal'
+import {
+  useApplication,
+  useApplicationDocuments,
+  useUploadDocument,
+  documentsApi,
+  ACCEPTED_FILE_TYPES,
+  MAX_FILE_BYTES,
+  type Application,
+} from '../../lib/api'
+import { currentStudent } from '../../mock/student/portal'
 import { loadMessages, sendMessage, type AppMessage } from '../../mock/student/applicationMessages'
+
+/**
+ * Pill colour per document status. Defined here rather than reusing the mock's
+ * map, which only covers the two states the fake document *requests* had —
+ * the API's documents also reach 'Verified' and 'Rejected'.
+ */
+const DOC_STATUS_COLORS: Record<string, string> = {
+  Uploaded: '#0e7490',
+  'Pending Review': '#a16207',
+  Verified: '#15803d',
+  Rejected: '#b91c1c',
+}
+const docStatusColor = (status: string) => DOC_STATUS_COLORS[status] ?? '#475569'
+
+/** Bytes → a short human label. */
+function formatSize(bytes: number): string {
+  if (!bytes) return '--'
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`
+}
 
 /**
  * Route entry: resolves the application and guards access. Rendering the body as
@@ -48,7 +77,7 @@ export default function StudentApplicationDetailPage() {
 function ApplicationDetail({ app }: { app: Application }) {
   const navigate = useNavigate()
 
-  const docs = documentRequests.filter((d) => d.applicationRef === `University Application #${app.id}`)
+  const { data: docs = [] } = useApplicationDocuments(app.id)
 
   const [messages, setMessages] = useState<AppMessage[]>(() => loadMessages(app.id))
   const [draft, setDraft] = useState('')
@@ -88,42 +117,47 @@ function ApplicationDetail({ app }: { app: Application }) {
           <StatusPill label={app.status} color={app.statusColor} />
         </div>
 
-        {/* Document Requests */}
+        {/* Documents */}
         <section className="space-y-4">
-          <SectionHead>Document Requests</SectionHead>
+          <SectionHead>Documents</SectionHead>
           <div className="overflow-x-auto rounded-lg border border-slate-200">
             <table className="w-full min-w-[640px]">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50 text-left text-sm font-semibold text-slate-600">
-                  <th className="px-4 py-3">Date</th>
-                  <th className="px-4 py-3">Document Requested</th>
-                  <th className="px-4 py-3">Upload Date</th>
+                  <th className="px-4 py-3">Uploaded</th>
+                  <th className="px-4 py-3">Document</th>
+                  <th className="px-4 py-3">Size</th>
+                  <th className="px-4 py-3">Status</th>
                   <th className="px-4 py-3">File</th>
                 </tr>
               </thead>
               <tbody>
                 {docs.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="px-4 py-10 text-center text-sm text-slate-500">
-                      No Record Found
+                    <td colSpan={5} className="px-4 py-10 text-center text-sm text-slate-500">
+                      No documents uploaded yet.
                     </td>
                   </tr>
                 ) : (
-                  docs.map((d) => {
-                    const uploaded = d.status === 'Uploaded'
-                    return (
-                      <tr key={d.id} className="border-b border-slate-100 text-sm odd:bg-slate-50/60">
-                        <td className="whitespace-nowrap px-4 py-3 text-slate-600">{d.requestedAt}</td>
-                        <td className="px-4 py-3 font-medium text-slate-700 [overflow-wrap:anywhere]">{d.document}</td>
-                        <td className="whitespace-nowrap px-4 py-3 text-slate-600">
-                          {uploaded ? d.requestedAt : '--'}
-                        </td>
-                        <td className="px-4 py-3">
-                          <StatusPill label={d.status} color={documentStatusColor(d.status)} />
-                        </td>
-                      </tr>
-                    )
-                  })
+                  docs.map((d) => (
+                    <tr key={d.id} className="border-b border-slate-100 text-sm odd:bg-slate-50/60">
+                      <td className="whitespace-nowrap px-4 py-3 text-slate-600">{d.uploadedAt}</td>
+                      <td className="px-4 py-3 font-medium text-slate-700 [overflow-wrap:anywhere]">{d.name}</td>
+                      <td className="whitespace-nowrap px-4 py-3 text-slate-600">{formatSize(d.size)}</td>
+                      <td className="px-4 py-3">
+                        <StatusPill label={d.status} color={docStatusColor(d.status)} />
+                      </td>
+                      <td className="px-4 py-3">
+                        <button
+                          type="button"
+                          onClick={() => documentsApi.download(d)}
+                          className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand-600 hover:text-brand-700"
+                        >
+                          <Download className="h-4 w-4" /> Download
+                        </button>
+                      </td>
+                    </tr>
+                  ))
                 )}
               </tbody>
             </table>
@@ -174,7 +208,7 @@ function ApplicationDetail({ app }: { app: Application }) {
                 <Send className="h-4 w-4" /> Send Message
               </button>
             </div>
-            <AttachFiles />
+            <AttachFiles applicationId={app.id} />
           </div>
         </section>
 
@@ -205,30 +239,58 @@ function ApplicationDetail({ app }: { app: Application }) {
   )
 }
 
-/** "Attach files" chooser (matches the reference; attachment is display-only). */
-function AttachFiles() {
+/**
+ * Attach a document to this application. One file at a time: each upload is its
+ * own request and its own row, so a multi-select would only hide which of them
+ * failed.
+ */
+function AttachFiles({ applicationId }: { applicationId: number }) {
   const inputRef = useRef<HTMLInputElement>(null)
-  const [name, setName] = useState('')
+  const upload = useUploadDocument(applicationId)
+  const [error, setError] = useState('')
+
+  const pick = (file: File | undefined) => {
+    if (!file) return
+    setError('')
+    // Checked here as well as on the server so an oversized file fails
+    // instantly instead of after uploading the whole thing.
+    if (file.size > MAX_FILE_BYTES) {
+      setError(`"${file.name}" is larger than ${MAX_FILE_BYTES / 1024 / 1024} MB.`)
+      return
+    }
+    upload.mutate(
+      { file },
+      { onError: (e) => setError(e instanceof Error ? e.message : 'Upload failed.') },
+    )
+  }
+
   return (
-    <div className="flex items-center gap-3">
-      <button
-        type="button"
-        onClick={() => inputRef.current?.click()}
-        className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
-      >
-        <Paperclip className="h-4 w-4" /> Attach files
-      </button>
-      <span className="text-sm text-slate-500">{name || 'No file chosen'}</span>
-      <input
-        ref={inputRef}
-        type="file"
-        multiple
-        className="hidden"
-        onChange={(e) => {
-          const files = Array.from(e.target.files ?? [])
-          setName(files.length ? files.map((f) => f.name).join(', ') : '')
-        }}
-      />
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          disabled={upload.isPending}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-60"
+        >
+          <Paperclip className="h-4 w-4" /> {upload.isPending ? 'Uploading…' : 'Attach files'}
+        </button>
+        <span className="text-sm text-slate-500">
+          {upload.isSuccess ? 'Uploaded ✓' : `Max ${MAX_FILE_BYTES / 1024 / 1024} MB`}
+        </span>
+        <input
+          ref={inputRef}
+          type="file"
+          accept={ACCEPTED_FILE_TYPES}
+          className="hidden"
+          onChange={(e) => {
+            pick(e.target.files?.[0])
+            // Reset so re-picking the same file fires onChange again.
+            e.target.value = ''
+          }}
+        />
+      </div>
+      {error && <p className="text-sm text-rose-600">{error}</p>}
     </div>
   )
 }

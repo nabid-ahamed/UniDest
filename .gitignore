@@ -52,3 +52,6 @@ temp-docs/
 
 # TypeScript incremental build cache
 *.tsbuildinfo
+
+# Uploaded documents (passports, transcripts) — never in git
+server/uploads/
