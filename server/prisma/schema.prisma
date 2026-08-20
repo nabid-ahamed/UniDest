@@ -119,6 +119,9 @@ model User {
   recordedPayments    Payment[]                  @relation("PaymentRecordedBy")
   announcements       Announcement[]             @relation("AnnouncementAuthor")
   notificationReads   NotificationRead[]         @relation("NotificationReader")
+  cmsContent          CmsContent[]               @relation("CmsAuthor")
+  mediaUploads        MediaItem[]                @relation("MediaUploader")
+  resourceUploads     StudentResource[]          @relation("ResourceUploader")
 
   @@unique([tenantId, email])
   @@index([tenantId, roleId])
@@ -330,6 +333,7 @@ model Course {
   category     CourseCategory? @relation(fields: [categoryId], references: [id])
   intakes      Intake[]
   applications Application[]
+  resources    StudentResource[]
 
   @@index([tenantId])
   @@index([universityId])
@@ -1053,4 +1057,182 @@ model NotificationRead {
   @@unique([userId, notificationKey])
   @@index([tenantId, userId])
   @@map("notification_reads")
+}
+
+// ---------------------------------------------------------------------------
+// Content: webinars, CMS, media, student resources
+// ---------------------------------------------------------------------------
+
+model Webinar {
+  id       BigInt @id @default(autoincrement())
+  publicId String @unique @default(uuid()) @db.Uuid
+  tenantId BigInt @default(1)
+
+  topic        String
+  startsAt     DateTime
+  venue        String?
+  /// Student | Agent | Student / Agent
+  audienceType String  @default("Student")
+  webinarLink  String?
+  description  String?
+  notifiedEmail String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  enrollments WebinarEnrollment[]
+
+  @@index([tenantId, startsAt])
+  @@index([tenantId, deletedAt])
+  @@map("webinars")
+}
+
+/// Someone signed up for a webinar. Counted rather than stored on the webinar —
+/// a denormalised `enrolledUsers` integer is exactly the field that drifts.
+model WebinarEnrollment {
+  id       BigInt @id @default(autoincrement())
+  publicId String @unique @default(uuid()) @db.Uuid
+  tenantId BigInt @default(1)
+
+  webinarId BigInt
+  name      String
+  email     String
+  phone     String?
+  /// Student | Agent
+  userType  String @default("Student")
+
+  createdAt DateTime @default(now())
+
+  webinar Webinar @relation(fields: [webinarId], references: [id], onDelete: Cascade)
+
+  @@unique([webinarId, email])
+  @@index([tenantId, webinarId])
+  @@map("webinar_enrollments")
+}
+
+/// Blog posts and static pages share one table: both are titled, slugged bodies
+/// with a publish state, and the only difference is which screen lists them.
+model CmsContent {
+  id       BigInt @id @default(autoincrement())
+  publicId String @unique @default(uuid()) @db.Uuid
+  tenantId BigInt @default(1)
+
+  /// 'post' | 'page' | 'country'
+  kind     String
+  title    String
+  slug     String
+  excerpt  String?
+  body     String  @default("")
+  coverUrl String?
+  /// Draft | Published
+  status   String  @default("Draft")
+  featured Boolean @default(false)
+
+  authorId    BigInt?
+  publishedAt DateTime?
+
+  /// Anything specific to one kind (country flags, page layout hints) rather
+  /// than a column per variant that is null for the other two.
+  meta Json @default("{}")
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  author User? @relation("CmsAuthor", fields: [authorId], references: [id])
+
+  @@unique([tenantId, kind, slug])
+  @@index([tenantId, kind, status])
+  @@map("cms_content")
+}
+
+model NewsletterSubscriber {
+  id       BigInt @id @default(autoincrement())
+  publicId String @unique @default(uuid()) @db.Uuid
+  tenantId BigInt @default(1)
+
+  email        String
+  name         String?
+  subscribedAt DateTime  @default(now())
+  unsubscribedAt DateTime?
+
+  @@unique([tenantId, email])
+  @@map("newsletter_subscribers")
+}
+
+/// An uploaded file in the media library.
+///
+/// `storageKey` is the opaque key from StorageService — the same store the
+/// application documents use, rather than a second upload path with its own
+/// validation to keep correct.
+model MediaItem {
+  id       BigInt @id @default(autoincrement())
+  publicId String @unique @default(uuid()) @db.Uuid
+  tenantId BigInt @default(1)
+
+  name       String
+  /// image | video | document
+  type       String
+  storageKey String?
+  mimeType   String?
+  sizeBytes  Int     @default(0)
+  width      Int?
+  height     Int?
+
+  uploadedById BigInt?
+
+  createdAt DateTime  @default(now())
+  deletedAt DateTime?
+
+  uploadedBy User? @relation("MediaUploader", fields: [uploadedById], references: [id])
+
+  @@index([tenantId, type])
+  @@index([tenantId, deletedAt])
+  @@map("media_items")
+}
+
+model ResourceCategory {
+  id       BigInt @id @default(autoincrement())
+  publicId String @unique @default(uuid()) @db.Uuid
+  tenantId BigInt @default(1)
+
+  name        String
+  description String?
+
+  createdAt DateTime  @default(now())
+  deletedAt DateTime?
+
+  resources StudentResource[]
+
+  @@unique([tenantId, name])
+  @@map("resource_categories")
+}
+
+/// A file shared with students (guides, checklists, sample essays).
+model StudentResource {
+  id       BigInt @id @default(autoincrement())
+  publicId String @unique @default(uuid()) @db.Uuid
+  tenantId BigInt @default(1)
+
+  title      String
+  categoryId BigInt?
+  fileName   String
+  storageKey String?
+  mimeType   String?
+  sizeBytes  Int     @default(0)
+
+  relatedCourseId BigInt?
+  uploadedById    BigInt?
+
+  createdAt DateTime  @default(now())
+  deletedAt DateTime?
+
+  category      ResourceCategory? @relation(fields: [categoryId], references: [id])
+  relatedCourse Course?           @relation(fields: [relatedCourseId], references: [id])
+  uploadedBy    User?             @relation("ResourceUploader", fields: [uploadedById], references: [id])
+
+  @@index([tenantId, categoryId])
+  @@index([tenantId, deletedAt])
+  @@map("student_resources")
 }
