@@ -19,25 +19,24 @@ import { useAuth } from '../../store/auth'
 import { ExportButtons } from '../../components/ExportButtons'
 import { Field, PageBtn } from '../../components/DataTableUI'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
+import { studentInvoiceStatuses } from '../../mock/studentInvoices'
 import {
-  studentInvoices,
-  studentInvoiceStatuses,
-  businessById,
-  invoiceGrandTotal,
-  invoiceDue,
-  invoiceStatus,
-  invoiceCurrency,
+  useInvoices,
+  useRecordPayment,
+  useDeleteInvoice,
   formatMoney,
-  updateStudentInvoice,
-  deleteStudentInvoice,
-  type StudentInvoice,
-} from '../../mock/studentInvoices'
+  type ApiInvoice,
+} from '../../lib/api'
 
 const PAGE_SIZES = [25, 50, 100]
 
 export default function StudentInvoicesPage() {
-  const [rev, setRev] = useState(0)
-  const bump = () => setRev((n) => n + 1)
+  // Totals arrive computed from the API, so the local invoiceGrandTotal /
+  // invoiceDue helpers — and the `rev` counter that forced a re-read of the
+  // mutable mock array — are both gone.
+  const { data: invoices = [], isPending } = useInvoices('student')
+  const recordPaymentM = useRecordPayment()
+  const removeInvoice = useDeleteInvoice()
 
   // Staff can view invoices but not edit or delete them (admin-only actions).
   const canManage = useAuth((s) => s.user?.role !== 'Staff')
@@ -47,9 +46,9 @@ export default function StudentInvoicesPage() {
   const [status, setStatus] = useState('')
   const [pageSize, setPageSize] = useState(25)
   const [page, setPage] = useState(1)
-  const [viewRow, setViewRow] = useState<StudentInvoice | null>(null)
-  const [payRow, setPayRow] = useState<StudentInvoice | null>(null)
-  const [deleteRow, setDeleteRow] = useState<StudentInvoice | null>(null)
+  const [viewRow, setViewRow] = useState<ApiInvoice | null>(null)
+  const [payRow, setPayRow] = useState<ApiInvoice | null>(null)
+  const [deleteRow, setDeleteRow] = useState<ApiInvoice | null>(null)
   const [toast, setToast] = useState('')
 
   const showToast = (msg: string) => {
@@ -67,15 +66,14 @@ export default function StudentInvoicesPage() {
   const filtered = useMemo(() => {
     const top = search.trim().toLowerCase()
     const tbl = tableSearch.trim().toLowerCase()
-    return studentInvoices.filter((inv) => {
-      if (status && invoiceStatus(inv) !== status) return false
-      const hay = `${inv.id} ${inv.student} ${inv.email}`.toLowerCase()
+    return invoices.filter((inv) => {
+      if (status && inv.status !== status) return false
+      const hay = `${inv.invoiceNo} ${inv.student} ${inv.email}`.toLowerCase()
       if (top && !hay.includes(top)) return false
-      if (tbl && !`${hay} ${inv.date} ${invoiceStatus(inv)}`.toLowerCase().includes(tbl)) return false
+      if (tbl && !`${hay} ${inv.date} ${inv.status}`.toLowerCase().includes(tbl)) return false
       return true
     })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, tableSearch, status, rev])
+  }, [invoices, search, tableSearch, status])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
   const currentPage = Math.min(page, totalPages)
@@ -85,19 +83,23 @@ export default function StudentInvoicesPage() {
 
   const exportHeader = ['Invoice #', 'Date', 'Student', 'Amount', 'Status']
   const exportRows = filtered.map((inv) => [
-    inv.id,
+    inv.invoiceNo,
     inv.date,
     inv.student,
-    formatMoney(invoiceCurrency(inv), invoiceGrandTotal(inv)),
-    invoiceStatus(inv),
+    formatMoney(inv.currency, inv.grandTotal),
+    inv.status,
   ])
 
   const recordPayment = (amount: number, date: string, note: string) => {
     if (!payRow) return
-    updateStudentInvoice({ ...payRow, payments: [...payRow.payments, { amount, date, note }] })
-    showToast(`Payment recorded for invoice #${payRow.id}`)
+    // The server appends the payment and re-derives the status from the new
+    // balance; it refuses anything that would overpay.
+    recordPaymentM.mutate(
+      { id: payRow.id, amount, note, paidAt: date },
+      { onError: (e) => showToast(e instanceof Error ? e.message : 'Payment failed') },
+    )
+    showToast(`Payment recorded for invoice #${payRow.invoiceNo}`)
     setPayRow(null)
-    bump()
   }
 
   return (
@@ -213,18 +215,16 @@ export default function StudentInvoicesPage() {
           </thead>
           <tbody>
             {pageRows.map((inv) => {
-              const currency = invoiceCurrency(inv)
-              const st = invoiceStatus(inv)
-              const due = invoiceDue(inv)
+              const { currency, status: st, due } = inv
               return (
                 <tr key={inv.id} className="border-b border-slate-100 align-top text-sm">
-                  <td className="px-4 py-4 font-bold text-slate-800">{inv.id}</td>
+                  <td className="px-4 py-4 font-bold text-slate-800">{inv.invoiceNo}</td>
                   <td className="whitespace-nowrap px-4 py-4 text-slate-600">{inv.date}</td>
                   <td className="px-4 py-4 font-bold text-slate-800 [overflow-wrap:anywhere]">
                     {inv.student}
                   </td>
                   <td className="whitespace-nowrap px-4 py-4 font-semibold text-slate-800">
-                    {formatMoney(currency, invoiceGrandTotal(inv))}
+                    {formatMoney(currency, inv.grandTotal)}
                   </td>
                   <td className="px-4 py-4">
                     <span
@@ -296,7 +296,7 @@ export default function StudentInvoicesPage() {
             {pageRows.length === 0 && (
               <tr>
                 <td colSpan={6} className="px-4 py-12 text-center text-sm text-slate-500">
-                  No invoices found.
+                  {isPending ? 'Loading invoices…' : 'No invoices found.'}
                   <a href="/invoices/student/new" className="ml-1 font-semibold text-brand-600 hover:underline">
                     Create one
                   </a>
@@ -353,10 +353,9 @@ export default function StudentInvoicesPage() {
             }
             confirmLabel="Delete"
             onConfirm={() => {
-              deleteStudentInvoice(deleteRow.id)
-              showSuccessDialog(`Invoice #${deleteRow.id} deleted successfully`)
+              removeInvoice.mutate(deleteRow.id)
+              showSuccessDialog(`Invoice #${deleteRow.invoiceNo} deleted successfully`)
               setDeleteRow(null)
-              bump()
             }}
             onCancel={() => setDeleteRow(null)}
           />,
@@ -432,16 +431,13 @@ function ModalShell({
   )
 }
 
-function ViewInvoiceModal({ invoice, onClose }: { invoice: StudentInvoice; onClose: () => void }) {
-  const biz = businessById(invoice.businessId)
-  const currency = invoiceCurrency(invoice)
-  const subTotal = invoice.items.reduce((s, it) => s + (Number(it.amount) || 0), 0)
-  const grand = invoiceGrandTotal(invoice)
-  const paid = invoice.payments.reduce((s, p) => s + p.amount, 0)
-  const due = invoiceDue(invoice)
+function ViewInvoiceModal({ invoice, onClose }: { invoice: ApiInvoice; onClose: () => void }) {
+  // Every total is computed server-side, so the modal, the row and the PDF
+  // cannot disagree about what is owed.
+  const { currency, subTotal, grandTotal: grand, paid, due } = invoice
 
   return (
-    <ModalShell title={`Invoice #${invoice.id}`} onClose={onClose} wide>
+    <ModalShell title={`Invoice #${invoice.invoiceNo}`} onClose={onClose} wide>
       <div className="flex flex-wrap justify-between gap-4 text-sm">
         <div>
           <p className="font-bold text-slate-800">Bill To</p>
@@ -450,9 +446,7 @@ function ViewInvoiceModal({ invoice, onClose }: { invoice: StudentInvoice; onClo
           <p className="text-slate-500">{invoice.phone}</p>
         </div>
         <div className="text-right">
-          <p className="font-bold text-slate-800">{biz.name}</p>
-          <p className="mt-1 text-slate-500">{biz.address}</p>
-          <p className="text-slate-500">GSTN: {biz.gstn}</p>
+          <p className="font-bold text-slate-800">{invoice.business}</p>
           <p className="mt-1 text-slate-500">Date: {invoice.date}</p>
           <p className="text-slate-500">Due: {invoice.dueDate}</p>
         </div>
@@ -535,12 +529,11 @@ function RecordPaymentModal({
   onClose,
   onSave,
 }: {
-  invoice: StudentInvoice
+  invoice: ApiInvoice
   onClose: () => void
   onSave: (amount: number, date: string, note: string) => void
 }) {
-  const currency = invoiceCurrency(invoice)
-  const due = invoiceDue(invoice)
+  const { currency, due } = invoice
   const [amount, setAmount] = useState(String(due))
   const [date, setDate] = useState('')
   const [note, setNote] = useState('')
@@ -557,7 +550,7 @@ function RecordPaymentModal({
   }
 
   return (
-    <ModalShell title={`Record Payment — #${invoice.id}`} onClose={onClose}>
+    <ModalShell title={`Record Payment — #${invoice.invoiceNo}`} onClose={onClose}>
       <div className="space-y-4">
         <p className="rounded-lg bg-brand-50 px-3 py-2 text-sm font-medium text-brand-700">
           {invoice.student} · Due {formatMoney(currency, due)}
@@ -612,22 +605,20 @@ function RecordPaymentModal({
 }
 
 /** Printable one-page PDF for a student invoice (reuses jsPDF like the profile export). */
-async function downloadStudentInvoicePdf(inv: StudentInvoice) {
+async function downloadStudentInvoicePdf(inv: ApiInvoice) {
   // Loaded on demand — jsPDF is ~630 kB and only PDF export needs it.
   const [{ jsPDF }, { default: autoTable }] = await Promise.all([
     import('jspdf'),
     import('jspdf-autotable'),
   ])
 
-  const biz = businessById(inv.businessId)
-  const currency = invoiceCurrency(inv)
+  const currency = inv.currency
   const doc = new jsPDF()
   doc.setFontSize(18)
-  doc.text(biz.name, 14, 20)
+  doc.text(inv.business || 'Invoice', 14, 20)
   doc.setFontSize(11)
   doc.setTextColor(100)
-  doc.text(`Invoice #${inv.id}`, 196, 20, { align: 'right' })
-  doc.text(biz.address, 14, 28)
+  doc.text(`Invoice #${inv.invoiceNo}`, 196, 20, { align: 'right' })
   doc.text(`Date: ${inv.date}`, 196, 28, { align: 'right' })
   doc.text(`Due: ${inv.dueDate}`, 196, 34, { align: 'right' })
   doc.setTextColor(30)
@@ -644,7 +635,8 @@ async function downloadStudentInvoicePdf(inv: StudentInvoice) {
     columnStyles: { 2: { halign: 'right' } },
   })
 
-  const subTotal = inv.items.reduce((s, it) => s + (Number(it.amount) || 0), 0)
+  // Server-computed, like every other total on this page.
+  const subTotal = inv.subTotal
   // @ts-expect-error jspdf-autotable augments the doc with lastAutoTable.
   let y = (doc.lastAutoTable?.finalY ?? 70) + 8
   const put = (label: string, value: string) => {
@@ -654,8 +646,8 @@ async function downloadStudentInvoicePdf(inv: StudentInvoice) {
   }
   put('Sub Total', formatMoney(currency, subTotal))
   put('Discount', formatMoney(currency, inv.discount))
-  put('Grand Total', formatMoney(currency, invoiceGrandTotal(inv)))
-  put('Due', formatMoney(currency, invoiceDue(inv)))
+  put('Grand Total', formatMoney(currency, inv.grandTotal))
+  put('Due', formatMoney(currency, inv.due))
 
-  doc.save(`student-invoice-${inv.id}.pdf`)
+  doc.save(`student-invoice-${inv.invoiceNo}.pdf`)
 }

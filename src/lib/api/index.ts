@@ -79,6 +79,23 @@ export {
   useReplyToTicket,
   useDeleteTicket,
 } from './hooks/useTickets'
+export type {
+  ApiInvoice,
+  ApiInvoiceItem,
+  ApiPayment,
+  ApiBusiness,
+  InvoiceItemInput,
+} from './resources/invoices'
+export { invoicesApi, formatMoney } from './resources/invoices'
+export {
+  useInvoices,
+  useInvoice,
+  useBusinesses,
+  useCreateInvoice,
+  useUpdateInvoice,
+  useRecordPayment,
+  useDeleteInvoice,
+} from './hooks/useInvoices'
 export type { ApplicationDocument } from './resources/documents'
 export { documentsApi, ACCEPTED_FILE_TYPES, MAX_FILE_BYTES } from './resources/documents'
 export { useApplicationDocuments, useUploadDocument, useDeleteDocument } from './hooks/useDocuments'
