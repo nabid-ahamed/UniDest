@@ -1,29 +1,38 @@
-import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Download } from 'lucide-react'
 import { showSuccessDialog } from '../../store/successDialog'
 import { StatusPill } from './components/StatusPill'
-import { currentStudent, invoiceStatusColor, payInvoice } from '../../mock/student/portal'
-import {
-  studentInvoiceById,
-  businessById,
-  invoiceSubTotal,
-  invoiceGrandTotal,
-  invoicePaid,
-  invoiceDue,
-  invoiceStatus,
-  invoiceCurrency,
-  formatMoney,
-} from '../../mock/studentInvoices'
+import { useInvoice, formatMoney } from '../../lib/api'
+
+/**
+ * Pill colour per invoice status. Defined here rather than reusing the portal
+ * mock's map, which covers only the two states the fake invoices had — the API
+ * also reports "Partially Paid".
+ */
+const STATUS_COLORS: Record<string, string> = {
+  Paid: '#15803d',
+  'Partially Paid': '#a16207',
+  Due: '#b91c1c',
+}
+const statusColor = (s: string) => STATUS_COLORS[s] ?? '#475569'
 
 export default function StudentInvoiceDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const [, setRev] = useState(0)
-  const invoice = studentInvoiceById(Number(id))
+  // Ownership is enforced by the API: a student requesting someone else's
+  // invoice gets a 403, so `invoice` is undefined here. A client-side check
+  // against a mock list would not be a guard at all.
+  const { data: invoice, isPending } = useInvoice(id ? Number(id) : undefined)
 
-  // Guard: students only see their own invoices.
-  if (!invoice || invoice.studentNo !== currentStudent().studentNo) {
+  if (isPending) {
+    return (
+      <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center shadow-sm">
+        <p className="text-slate-500">Loading invoice…</p>
+      </div>
+    )
+  }
+
+  if (!invoice) {
     return (
       <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center shadow-sm">
         <p className="text-slate-500">Invoice not found.</p>
@@ -38,23 +47,28 @@ export default function StudentInvoiceDetailPage() {
     )
   }
 
-  const biz = businessById(invoice.businessId)
-  const currency = invoiceCurrency(invoice)
+  // Every total is computed server-side, so this page, the staff list and the
+  // PDF cannot disagree about what is owed.
+  const { currency, status, due } = invoice
   const money = (n: number) => formatMoney(currency, n)
-  const status = invoiceStatus(invoice)
-  const due = invoiceDue(invoice)
 
+  /**
+   * Students can read their invoice but not settle it: recording a payment
+   * needs the `invoice` permission, and letting a student mark their own bill
+   * paid with no payment gateway behind it would be an accounting hole. The
+   * button therefore tells them how to pay rather than pretending it did.
+   */
   const pay = () => {
-    if (payInvoice(invoice)) {
-      setRev((n) => n + 1)
-      showSuccessDialog('Your payment has been received. Thank you!', 'Payment Successful')
-    }
+    showSuccessDialog(
+      'Please contact your counsellor to complete this payment.',
+      'Payment Instructions',
+    )
   }
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold text-brand-700">Invoice #{invoice.id}</h1>
+        <h1 className="text-2xl font-bold text-brand-700">Invoice #{invoice.invoiceNo}</h1>
         <button
           type="button"
           onClick={() => navigate('/portal/fees')}
@@ -68,15 +82,12 @@ export default function StudentInvoiceDetailPage() {
         {/* Header: business + status */}
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h2 className="text-lg font-bold text-slate-800">{biz.name}</h2>
-            <p className="mt-1 text-sm text-slate-600">{biz.address}</p>
-            <p className="text-sm text-slate-600">{biz.phone} · {biz.email}</p>
-            <p className="text-sm text-slate-500">GSTN: {biz.gstn}</p>
+            <h2 className="text-lg font-bold text-slate-800">{invoice.business}</h2>
           </div>
           <div className="text-right">
-            <StatusPill label={status} color={invoiceStatusColor(status)} />
+            <StatusPill label={status} color={statusColor(status)} />
             <p className="mt-2 text-sm text-slate-500">Invoice Date: {invoice.date}</p>
-            <p className="text-sm text-slate-500">Due Date: {invoice.dueDate}</p>
+            {invoice.dueDate && <p className="text-sm text-slate-500">Due Date: {invoice.dueDate}</p>}
           </div>
         </div>
 
@@ -113,10 +124,10 @@ export default function StudentInvoiceDetailPage() {
         {/* Totals */}
         <div className="flex justify-end">
           <dl className="w-full max-w-xs space-y-2 text-sm">
-            <Row label="Subtotal" value={money(invoiceSubTotal(invoice))} />
+            <Row label="Subtotal" value={money(invoice.subTotal)} />
             {invoice.discount > 0 && <Row label="Discount" value={`- ${money(invoice.discount)}`} />}
-            <Row label="Grand Total" value={money(invoiceGrandTotal(invoice))} strong />
-            <Row label="Paid" value={money(invoicePaid(invoice))} />
+            <Row label="Grand Total" value={money(invoice.grandTotal)} strong />
+            <Row label="Paid" value={money(invoice.paid)} />
             <Row label="Due" value={money(due)} strong danger={due > 0} />
           </dl>
         </div>

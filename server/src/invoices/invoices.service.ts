@@ -367,6 +367,16 @@ export class InvoicesService {
     }))
   }
 
+  /** studentNo for a student row — used to scope the portal's invoice list. */
+  async studentNoFor(studentId: bigint): Promise<string> {
+    const student = await this.db.student.findFirst({
+      where: { id: studentId, tenantId: TENANT_ID },
+      select: { studentNo: true },
+    })
+    if (!student) throw new NotFoundException('Student not found.')
+    return student.studentNo
+  }
+
   async statuses() {
     const rows = await this.db.invoiceStatus.findMany({
       where: { tenantId: TENANT_ID, deletedAt: null },

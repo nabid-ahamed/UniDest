@@ -72,4 +72,27 @@ export class StudentScopeService {
     // for valid ids.
     if (!owned) throw new ForbiddenException('Application not found.')
   }
+
+  /**
+   * Confirm a student owns an invoice before it is read.
+   *
+   * Same shape as the application check, and the same reason: a student must
+   * see their own bill and no one else's, which the `invoice` permission cannot
+   * express — that permission means "every invoice", which is a staff answer.
+   */
+  async assertOwnsInvoice(user: JwtPayload | undefined, invoiceId: number): Promise<void> {
+    if (!user || !this.isStudent(user)) return
+
+    const studentId = await this.requireStudentId(user)
+    const owned = await this.db.invoice.findFirst({
+      where: {
+        id: BigInt(invoiceId),
+        studentId,
+        tenantId: TENANT_ID,
+        deletedAt: null,
+      },
+      select: { id: true },
+    })
+    if (!owned) throw new ForbiddenException('Invoice not found.')
+  }
 }

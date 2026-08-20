@@ -11,7 +11,8 @@ import {
   Query,
   Req,
 } from '@nestjs/common'
-import { RequirePermission } from '../auth/guards/permissions.guard'
+import { AllowStudent, RequirePermission } from '../auth/guards/permissions.guard'
+import { StudentScopeService } from '../auth/student-scope.service'
 import type { JwtPayload } from '../auth/auth.types'
 import { InvoicesService } from './invoices.service'
 import {
@@ -23,11 +24,26 @@ import {
 
 @Controller('invoices')
 export class InvoicesController {
-  constructor(@Inject(InvoicesService) private readonly invoices: InvoicesService) {}
+  constructor(
+    @Inject(InvoicesService) private readonly invoices: InvoicesService,
+    @Inject(StudentScopeService) private readonly scope: StudentScopeService,
+  ) {}
 
+  /**
+   * Staff see every invoice; a student sees only their own.
+   *
+   * The student's own studentNo overrides whatever they send, so the portal
+   * cannot page through anyone else's bills by guessing a value.
+   */
   @Get()
   @RequirePermission('invoice')
-  list(@Query() query: ListInvoicesDto) {
+  @AllowStudent()
+  async list(@Query() query: ListInvoicesDto, @Req() req: { user?: JwtPayload }) {
+    if (this.scope.isStudent(req.user)) {
+      const studentId = await this.scope.requireStudentId(req.user!)
+      const student = await this.invoices.studentNoFor(studentId)
+      return this.invoices.list({ ...query, studentNo: student })
+    }
     return this.invoices.list(query)
   }
 
@@ -46,7 +62,9 @@ export class InvoicesController {
 
   @Get(':id')
   @RequirePermission('invoice')
-  get(@Param('id', ParseIntPipe) id: number) {
+  @AllowStudent()
+  async get(@Param('id', ParseIntPipe) id: number, @Req() req: { user?: JwtPayload }) {
+    await this.scope.assertOwnsInvoice(req.user, id)
     return this.invoices.get(id)
   }
 
