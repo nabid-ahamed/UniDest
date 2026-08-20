@@ -736,6 +736,21 @@ async function main() {
   }
   console.log(`  invoice statuses: ${INVOICE_STATUSES.length}, businesses: ${BUSINESSES.length}`)
 
+  // ---- Commission statuses -------------------------------------------------
+  const COMMISSION_STATUSES = [
+    { key: 'pending', label: 'Pending', color: '#a16207', isPaid: false },
+    { key: 'paid', label: 'Paid', color: '#15803d', isPaid: true },
+  ]
+  for (const [i, st] of COMMISSION_STATUSES.entries()) {
+    await prisma.commissionStatus.upsert({
+      where: { tenantId_key: { tenantId: TENANT_ID, key: st.key } },
+      update: { label: st.label, color: st.color, isPaid: st.isPaid, sortOrder: i },
+      create: { tenantId: TENANT_ID, ...st, sortOrder: i, isSystem: true },
+    })
+  }
+  console.log(`  commission statuses: ${COMMISSION_STATUSES.length}`)
+
+
 
 
   console.log('Seed complete.')

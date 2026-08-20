@@ -14,6 +14,7 @@ type ApplicationWithRelations = {
   publicId: string
   appliedThrough: string
   agentName: string | null
+  agent: { name: string } | null
   priority: string
   submittedAt: Date | null
   decisionAt: Date | null
@@ -132,6 +133,7 @@ export class ApplicationsService {
           assignedToId: links.assignedToId,
           appliedThrough: dto.appliedThrough ?? 'DIRECT',
           agentName: dto.agent ?? null,
+          agentId: await this.resolveAgentId(dto.agent),
           priority: dto.priority ?? 'normal',
         },
         include: this.relations,
@@ -187,6 +189,7 @@ export class ApplicationsService {
           assignedToId: dto.assignedTo === '' ? null : (links.assignedToId ?? undefined),
           appliedThrough: dto.appliedThrough ?? undefined,
           agentName: dto.agent ?? undefined,
+          agentId: dto.agent !== undefined ? await this.resolveAgentId(dto.agent) : undefined,
           priority: dto.priority ?? undefined,
         },
         include: this.relations,
@@ -229,12 +232,35 @@ export class ApplicationsService {
     return { ok: true }
   }
 
+  /**
+   * Agent name -> id, creating the agent if it is new.
+   *
+   * The UI still submits a name, so an unknown one is registered rather than
+   * silently dropped — that is how the free-text column filled up in the first
+   * place, and losing the association again would defeat the migration.
+   */
+  private async resolveAgentId(name?: string | null): Promise<bigint | null> {
+    const trimmed = name?.trim()
+    if (!trimmed) return null
+    const existing = await this.db.agent.findFirst({
+      where: { tenantId: TENANT_ID, name: trimmed },
+      select: { id: true },
+    })
+    if (existing) return existing.id
+    const created = await this.db.agent.create({
+      data: { tenantId: TENANT_ID, name: trimmed },
+      select: { id: true },
+    })
+    return created.id
+  }
+
   private readonly relations = {
     status: true,
     student: true,
     branch: true,
     assignedTo: true,
     intake: true,
+    agent: true,
     course: { include: { university: { include: { country: true } } } },
   } as const
 
@@ -316,7 +342,9 @@ export class ApplicationsService {
       intake: a.intake
         ? `${MONTHS[a.intake.month]}${a.intake.year ? ` ${a.intake.year}` : ''}`
         : '',
-      agent: a.agentName,
+      // Prefer the joined agent; agentName is the legacy free-text column kept
+      // only until the backfill has shipped everywhere.
+      agent: a.agent?.name ?? a.agentName,
       appliedThrough: a.appliedThrough,
       status: a.status.label,
       statusColor: a.status.color,

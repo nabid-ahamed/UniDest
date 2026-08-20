@@ -384,8 +384,10 @@ model Application {
   /// a plain column because it is not admin-edited in the UI.
   appliedThrough String @default("DIRECT")
 
-  /// Free text until the agents table lands in Phase 4 (spec 5.8).
+  /// Superseded by agentId. Kept for one migration so existing values can be
+  /// backfilled into the agents table before the column is dropped.
   agentName String?
+  agentId   BigInt?
 
   /// 'low' | 'normal' | 'high'
   priority String @default("normal")
@@ -403,10 +405,12 @@ model Application {
   branch     Branch?           @relation(fields: [branchId], references: [id])
   assignedTo User?             @relation("ApplicationAssignee", fields: [assignedToId], references: [id])
   status     ApplicationStatus @relation(fields: [statusId], references: [id])
+  agent      Agent?            @relation(fields: [agentId], references: [id])
 
   statusHistory ApplicationStatusHistory[]
   documents     ApplicationDocument[]
   invoices      Invoice[]
+  commissions   Commission[]
 
   @@index([tenantId, statusId])
   @@index([tenantId, studentId])
@@ -898,4 +902,100 @@ model Payment {
 
   @@index([tenantId, invoiceId])
   @@map("payments")
+}
+
+// ---------------------------------------------------------------------------
+// Agents & commissions (spec §5.8)
+// ---------------------------------------------------------------------------
+
+/// A partner agency that refers students.
+///
+/// Replaces the free-text `applications.agentName`, which existed only because
+/// this table did not: renaming an agency there changed nothing on the
+/// applications it had referred, exactly the orphaning that foreign keys exist
+/// to prevent (the same bug the staff rename had in Phase 2).
+model Agent {
+  id       BigInt @id @default(autoincrement())
+  publicId String @unique @default(uuid()) @db.Uuid
+  tenantId BigInt @default(1)
+
+  name    String
+  company String?
+  email   String?
+  phone   String?
+
+  /// Percent of the application fee this agent earns, e.g. 12.5 for 12.5%.
+  /// Stored in basis points (1250) so the arithmetic stays in integers, for
+  /// the same reason invoice amounts do.
+  commissionRateBps Int @default(0)
+
+  status String @default("active") // active | inactive
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  applications Application[]
+  commissions  Commission[]
+
+  @@unique([tenantId, name])
+  @@index([tenantId, deletedAt])
+  @@map("agents")
+}
+
+/// What an agent earned on one application.
+///
+/// Money is minor units, as everywhere else in this schema.
+model Commission {
+  id       BigInt @id @default(autoincrement())
+  publicId String @unique @default(uuid()) @db.Uuid
+  tenantId BigInt @default(1)
+
+  agentId       BigInt
+  applicationId BigInt
+
+  amountMinor Int
+  currency    String @default("USD")
+
+  statusId BigInt
+
+  /// When it was actually settled. Null until paid.
+  paidAt DateTime?
+  note   String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  agent       Agent            @relation(fields: [agentId], references: [id])
+  application Application      @relation(fields: [applicationId], references: [id])
+  status      CommissionStatus @relation(fields: [statusId], references: [id])
+
+  @@index([tenantId, agentId])
+  @@index([tenantId, applicationId])
+  @@index([tenantId, statusId])
+  @@map("commissions")
+}
+
+/// Lookup rather than the ENUM(pending|paid) spec §5.8 names — same reasoning
+/// as every other status table here. Reports read isPaid, not the label.
+model CommissionStatus {
+  id        BigInt    @id @default(autoincrement())
+  publicId  String    @unique @default(uuid()) @db.Uuid
+  tenantId  BigInt    @default(1)
+  key       String
+  label     String
+  color     String
+  sortOrder Int       @default(0)
+  isPaid    Boolean   @default(false)
+  isSystem  Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  commissions Commission[]
+
+  @@unique([tenantId, key])
+  @@index([tenantId, sortOrder])
+  @@map("commission_statuses")
 }
