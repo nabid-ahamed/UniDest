@@ -2,22 +2,49 @@ import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { ArrowLeft, Save, Globe2, Building2 } from 'lucide-react'
 import {
-  getCmsCountry,
-  updateCmsCountry,
   universitiesInCountry,
   countryStatuses,
   slugify,
   type CountryStatus,
 } from '../../mock/cms'
+import { useCmsList, useUpdateCms, type ApiCmsContent } from '../../lib/api'
 
 export default function CountryFormPage() {
   const { id } = useParams()
-  const country = getCmsCountry(Number(id))
+  const { data: countries = [], isPending } = useCmsList('country')
+  const country = countries.find((c) => c.id === Number(id))
 
-  const [heading, setHeading] = useState(country?.heading ?? '')
-  const [intro, setIntro] = useState(country?.intro ?? '')
-  const [slug, setSlug] = useState(country?.slug ?? '')
-  const [status, setStatus] = useState<CountryStatus>(country?.status ?? 'Published')
+  if (isPending) {
+    return (
+      <div className="rounded-xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+        <p className="text-slate-500">Loading country…</p>
+      </div>
+    )
+  }
+
+  if (!country) {
+    return (
+      <div className="rounded-xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+        <p className="text-slate-500">Country not found.</p>
+        <a href="/cms/countries" className="mt-3 inline-block text-sm font-semibold text-brand-600 hover:underline">
+          Back to Countries
+        </a>
+      </div>
+    )
+  }
+
+  // `key` remounts the form per country, so switching resets the fields.
+  return <CountryForm key={country.id} country={country} />
+}
+
+function CountryForm({ country }: { country: ApiCmsContent }) {
+  const updateCountry = useUpdateCms()
+
+  // heading/intro are country-specific, so they live in the shared table's meta.
+  const [heading, setHeading] = useState(String(country.meta.heading ?? country.title))
+  const [intro, setIntro] = useState(String(country.meta.intro ?? country.excerpt ?? ''))
+  const [slug, setSlug] = useState(country.slug)
+  const [status, setStatus] = useState<CountryStatus>(country.status as CountryStatus)
   const [saved, setSaved] = useState(false)
 
   if (!country) {
@@ -31,10 +58,17 @@ export default function CountryFormPage() {
     )
   }
 
-  const unis = universitiesInCountry(country.name)
+  const unis = universitiesInCountry(country.title)
 
   const onSave = () => {
-    updateCmsCountry(country.id, { heading, intro, slug: slugify(slug || country.name), status })
+    updateCountry.mutate({
+      kind: 'country',
+      id: country.id,
+      slug: slugify(slug || country.title),
+      status,
+      excerpt: intro,
+      meta: { ...country.meta, heading, intro },
+    })
     setSaved(true)
     window.setTimeout(() => setSaved(false), 2600)
   }
@@ -43,7 +77,7 @@ export default function CountryFormPage() {
     <div className="mx-auto max-w-3xl space-y-5">
       <div className="flex items-center justify-between gap-3">
         <h1 className="flex items-center gap-2 text-xl font-bold text-slate-900">
-          <Globe2 className="h-5 w-5 text-brand-500" /> Edit — Study in {country.name}
+          <Globe2 className="h-5 w-5 text-brand-500" /> Edit — Study in {country.title}
         </h1>
         <a
           href="/cms/countries"
@@ -59,7 +93,7 @@ export default function CountryFormPage() {
           <Building2 className="h-4 w-4 text-brand-500" />
           <span>
             <span className="font-bold text-slate-800">{unis}</span> partner{' '}
-            {unis === 1 ? 'university' : 'universities'} in {country.name} —{' '}
+            {unis === 1 ? 'university' : 'universities'} in {country.title} —{' '}
             <a href="/universities" className="font-semibold text-brand-600 hover:underline">
               manage in Course Management
             </a>

@@ -1,13 +1,26 @@
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { Info, Download, FileText } from 'lucide-react'
 import { showSuccessDialog } from '../../store/successDialog'
-import { getCmsCountry, universitiesInCountry } from '../../mock/cms'
+import { universitiesInCountry } from '../../mock/cms'
+import { useCmsList } from '../../lib/api'
 import { countryDocuments } from '../../mock/student/countryDocs'
 
 export default function StudentCountryInfoDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const country = getCmsCountry(Number(id))
+  // Resolved from the list rather than a per-id fetch: the portal arrives here
+  // from the grid, so the list is already cached.
+  const { data: countries = [], isPending } = useCmsList('country')
+  const country = countries.find((c) => c.id === Number(id))
+
+  if (isPending) {
+    return (
+      <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center shadow-sm">
+        <p className="text-slate-500">Loading…</p>
+      </div>
+    )
+  }
+
 
   if (!country || country.status === 'Hidden') {
     return (
@@ -24,8 +37,8 @@ export default function StudentCountryInfoDetailPage() {
     )
   }
 
-  const categories = countryDocuments(country.name)
-  const uniCount = universitiesInCountry(country.name)
+  const categories = countryDocuments(country.title)
+  const uniCount = universitiesInCountry(country.title)
 
   const download = (title: string) =>
     showSuccessDialog(`"${title}" download has started.`, 'Downloading')
@@ -39,7 +52,7 @@ export default function StudentCountryInfoDetailPage() {
             Documents
           </Link>
           <span>›</span>
-          <span className="font-semibold uppercase text-slate-700">{country.name}</span>
+          <span className="font-semibold uppercase text-slate-700">{country.title}</span>
         </nav>
       </div>
 
@@ -49,8 +62,8 @@ export default function StudentCountryInfoDetailPage() {
           <Info className="h-10 w-10" />
         </span>
         <div className="min-w-0">
-          <h2 className="text-xl font-bold text-slate-800">{country.heading}</h2>
-          <p className="mt-1 text-sm text-slate-600">{country.intro}</p>
+          <h2 className="text-xl font-bold text-slate-800">{String(country.meta.heading ?? country.title)}</h2>
+          <p className="mt-1 text-sm text-slate-600">{String(country.meta.intro ?? country.excerpt)}</p>
           {uniCount > 0 && (
             <p className="mt-2 text-sm font-semibold text-brand-600">
               {uniCount} partner {uniCount === 1 ? 'university' : 'universities'}

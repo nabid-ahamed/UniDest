@@ -1,29 +1,39 @@
 import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { ArrowLeft, Save, Boxes } from 'lucide-react'
-import {
-  getCmsPage,
-  addCmsPage,
-  updateCmsPage,
-  postStatuses,
-  slugify,
-  type PostStatus,
-} from '../../mock/cms'
+import { postStatuses, slugify, type PostStatus } from '../../mock/cms'
+import { useCmsItem, useCreateCms, useUpdateCms, type ApiCmsContent } from '../../lib/api'
 
 export default function PageFormPage() {
   const { id } = useParams()
-  const editing = id != null
-  const existing = editing ? getCmsPage(Number(id)) : undefined
+  const { data: existing, isPending } = useCmsItem('page', id != null ? Number(id) : undefined)
 
-  const [name, setName] = useState(existing?.name ?? '')
+  if (id != null && isPending) {
+    return (
+      <div className="rounded-xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+        <p className="text-slate-500">Loading page…</p>
+      </div>
+    )
+  }
+
+  // `key` remounts the form per id, so switching pages resets the editor.
+  return <PageForm key={id ?? 'new'} existing={existing ?? undefined} editing={id != null} />
+}
+
+function PageForm({ existing, editing }: { existing?: ApiCmsContent; editing: boolean }) {
+  const createPage = useCreateCms()
+  const updatePage = useUpdateCms()
+
+  const [name, setName] = useState(existing?.title ?? '')
   const [slug, setSlug] = useState(existing?.slug ?? '')
   const [slugTouched, setSlugTouched] = useState(editing)
   const [content, setContent] = useState(existing?.content ?? '')
-  const [status, setStatus] = useState<PostStatus>(existing?.status ?? 'Published')
+  const [status, setStatus] = useState<PostStatus>((existing?.status as PostStatus) ?? 'Published')
   const [error, setError] = useState('')
   const [saved, setSaved] = useState(false)
 
-  const isSystem = existing?.system ?? false
+  // System pages come from the shared table's meta, not a column.
+  const isSystem = Boolean(existing?.meta.system)
 
   if (editing && !existing) {
     return (
@@ -47,10 +57,12 @@ export default function PageFormPage() {
       return
     }
     const finalSlug = slugify(slug || name)
+    // `name` is the page's title in the shared content table.
+    const payload = { title: name, slug: finalSlug, body: content, status }
     if (editing && existing) {
-      updateCmsPage(existing.id, { name, slug: finalSlug, content, status })
+      updatePage.mutate({ kind: 'page', id: existing.id, ...payload })
     } else {
-      addCmsPage({ name, slug: finalSlug, content, status })
+      createPage.mutate({ kind: 'page', ...payload })
     }
     setSaved(true)
     window.setTimeout(() => {
@@ -78,7 +90,7 @@ export default function PageFormPage() {
         <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
           <Boxes className="h-4 w-4 text-slate-400" />
           <span>
-            This is a <span className="font-semibold">module page</span> ({existing?.module}). It renders live data and
+            This is a <span className="font-semibold">module page</span> ({String(existing?.meta.module ?? "")}). It renders live data and
             can't be deleted or renamed.
           </span>
         </div>

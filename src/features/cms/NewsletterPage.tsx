@@ -3,17 +3,13 @@ import { showSuccessDialog } from '../../store/successDialog'
 import { Search, Trash2, Mail, Users } from 'lucide-react'
 import { ExportButtons } from '../../components/ExportButtons'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
-import {
-  sortedSubscribers,
-  deleteSubscriber,
-  formatSubscribedAt,
-  type NewsletterSubscriber,
-} from '../../mock/cms'
+import { useSubscribers, useUnsubscribe, type ApiSubscriber } from '../../lib/api'
 
 export default function NewsletterPage() {
-  const [rev, setRev] = useState(0)
+  const { data: subscribers = [], isPending } = useSubscribers()
+  const unsubscribe = useUnsubscribe()
   const [search, setSearch] = useState('')
-  const [confirm, setConfirm] = useState<NewsletterSubscriber | null>(null)
+  const [confirm, setConfirm] = useState<ApiSubscriber | null>(null)
   const [toast, setToast] = useState('')
 
   const showToast = (msg: string) => {
@@ -24,11 +20,10 @@ export default function NewsletterPage() {
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
-    return sortedSubscribers().filter((s) => !q || `${s.email} ${s.ip}`.toLowerCase().includes(q))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, rev])
+    return subscribers.filter((s) => !q || `${s.email} ${s.name}`.toLowerCase().includes(q))
+  }, [subscribers, search])
 
-  const exportRows = filtered.map((s) => [s.email, formatSubscribedAt(s.subscribedAt), s.ip])
+  const exportRows = filtered.map((s) => [s.email, s.subscribedAt, s.name])
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
@@ -43,7 +38,7 @@ export default function NewsletterPage() {
         <ExportButtons
           title="Newsletter Subscribers"
           filename="newsletter-subscribers"
-          header={['Email', 'Subscribed At', 'IP Address']}
+          header={['Email', 'Subscribed At', 'Name']}
           rows={exportRows}
           onDone={showToast}
         />
@@ -55,7 +50,7 @@ export default function NewsletterPage() {
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search email or IP..."
+            placeholder="Search email or name..."
             aria-label="Search subscribers"
             className="input w-full pl-9"
           />
@@ -69,7 +64,7 @@ export default function NewsletterPage() {
               <th className="w-12 px-4 py-3">#</th>
               <th className="px-4 py-3">Email</th>
               <th className="px-4 py-3">Subscribed At</th>
-              <th className="px-4 py-3">IP Address</th>
+              <th className="px-4 py-3">Name</th>
               <th className="px-4 py-3 text-right">Action</th>
             </tr>
           </thead>
@@ -82,9 +77,9 @@ export default function NewsletterPage() {
                     <Mail className="h-3.5 w-3.5 shrink-0 text-slate-400" /> {s.email}
                   </a>
                 </td>
-                <td className="whitespace-nowrap px-4 py-3.5 text-slate-600">{formatSubscribedAt(s.subscribedAt)}</td>
+                <td className="whitespace-nowrap px-4 py-3.5 text-slate-600">{s.subscribedAt}</td>
                 <td className="whitespace-nowrap px-4 py-3.5">
-                  <code className="rounded bg-slate-50 px-1.5 py-0.5 text-xs text-slate-500">{s.ip}</code>
+                  <span className="text-slate-600">{s.name || '—'}</span>
                 </td>
                 <td className="px-4 py-3.5 text-right">
                   <button
@@ -100,7 +95,7 @@ export default function NewsletterPage() {
             {filtered.length === 0 && (
               <tr>
                 <td colSpan={5} className="px-4 py-12 text-center text-sm text-slate-500">
-                  No subscribers found.
+                  {isPending ? 'Loading subscribers…' : 'No subscribers found.'}
                 </td>
               </tr>
             )}
@@ -116,10 +111,9 @@ export default function NewsletterPage() {
         onCancel={() => setConfirm(null)}
         onConfirm={() => {
           if (confirm) {
-            deleteSubscriber(confirm.id)
+            unsubscribe.mutate(confirm.id)
             showSuccessDialog('Subscriber removed successfully', 'Removed!')
             setConfirm(null)
-            setRev((n) => n + 1)
           }
         }}
       />

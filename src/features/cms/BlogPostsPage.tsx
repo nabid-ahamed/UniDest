@@ -5,13 +5,21 @@ import { cn } from '../../lib/cn'
 import { PageBtn } from '../../components/DataTableUI'
 import { ExportButtons } from '../../components/ExportButtons'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
+import { postStatuses } from '../../mock/cms'
+
+/** Fallback cover tints, picked by id so a post keeps the same one. */
+const COVER_GRADIENTS = [
+  'from-brand-500 to-brand-700',
+  'from-emerald-500 to-emerald-700',
+  'from-violet-500 to-violet-700',
+  'from-amber-500 to-amber-700',
+]
 import {
-  sortedPosts,
-  deletePost,
-  togglePostFeatured,
-  postStatuses,
-  type BlogPost,
-} from '../../mock/cms'
+  useCmsList,
+  useUpdateCms,
+  useDeleteCms,
+  type ApiCmsContent,
+} from '../../lib/api'
 
 const PAGE_SIZES = [10, 25, 50, 100]
 
@@ -21,12 +29,14 @@ const STATUS_BADGE: Record<string, string> = {
 }
 
 export default function BlogPostsPage() {
-  const [rev, setRev] = useState(0)
+  const { data: posts = [], isPending } = useCmsList('post')
+  const updatePost = useUpdateCms()
+  const removePost = useDeleteCms()
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [pageSize, setPageSize] = useState(10)
   const [page, setPage] = useState(1)
-  const [confirm, setConfirm] = useState<BlogPost | null>(null)
+  const [confirm, setConfirm] = useState<ApiCmsContent | null>(null)
   const [toast, setToast] = useState('')
 
   const showToast = (msg: string) => {
@@ -37,11 +47,11 @@ export default function BlogPostsPage() {
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
-    return sortedPosts()
+    // The API already returns them newest-first.
+    return posts
       .filter((p) => !statusFilter || p.status === statusFilter)
       .filter((p) => !q || `${p.title} ${p.slug} ${p.author}`.toLowerCase().includes(q))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, statusFilter, rev])
+  }, [posts, search, statusFilter])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
   const currentPage = Math.min(page, totalPages)
@@ -126,7 +136,7 @@ export default function BlogPostsPage() {
                   {p.cover ? (
                     <img src={p.cover} alt="" className="h-12 w-16 rounded-md object-cover" />
                   ) : (
-                    <span className={cn('flex h-12 w-16 items-center justify-center rounded-md bg-gradient-to-br text-[10px] font-bold text-white/90', p.gradient)}>
+                    <span className={cn('flex h-12 w-16 items-center justify-center rounded-md bg-gradient-to-br text-[10px] font-bold text-white/90', COVER_GRADIENTS[p.id % COVER_GRADIENTS.length])}>
                       BLOG
                     </span>
                   )}
@@ -143,7 +153,7 @@ export default function BlogPostsPage() {
                 </td>
                 <td className="px-4 py-3.5">
                   <button
-                    onClick={() => { togglePostFeatured(p.id); setRev((n) => n + 1) }}
+                    onClick={() => updatePost.mutate({ kind: 'post', id: p.id, featured: !p.featured })}
                     aria-label={p.featured ? 'Unfeature' : 'Feature'}
                     title={p.featured ? 'Featured — click to unfeature' : 'Not featured — click to feature'}
                     className={cn(
@@ -176,7 +186,7 @@ export default function BlogPostsPage() {
             {pageRows.length === 0 && (
               <tr>
                 <td colSpan={6} className="px-4 py-12 text-center text-sm text-slate-500">
-                  No blog posts found.
+                  {isPending ? 'Loading posts…' : 'No blog posts found.'}
                 </td>
               </tr>
             )}
@@ -217,10 +227,9 @@ export default function BlogPostsPage() {
         onCancel={() => setConfirm(null)}
         onConfirm={() => {
           if (confirm) {
-            deletePost(confirm.id)
+            removePost.mutate({ kind: 'post', id: confirm.id })
             showSuccessDialog('Blog post deleted successfully')
             setConfirm(null)
-            setRev((n) => n + 1)
           }
         }}
       />

@@ -138,6 +138,17 @@ export {
   useUploadResource,
   useDeleteResource,
 } from './hooks/useContent'
+export type { ApiCmsContent, ApiSubscriber, CmsKind } from './resources/cms'
+export {
+  useCmsList,
+  useCmsItem,
+  useCreateCms,
+  useUpdateCms,
+  useDeleteCms,
+  useSubscribers,
+  useSubscribe,
+  useUnsubscribe,
+} from './hooks/useCms'
 export type { ApplicationDocument } from './resources/documents'
 export { documentsApi, ACCEPTED_FILE_TYPES, MAX_FILE_BYTES } from './resources/documents'
 export { useApplicationDocuments, useUploadDocument, useDeleteDocument } from './hooks/useDocuments'

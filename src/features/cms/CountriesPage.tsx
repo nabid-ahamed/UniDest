@@ -2,13 +2,8 @@ import { useMemo, useState } from 'react'
 import { Search, Pencil, Eye, Globe2, Building2 } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { ExportButtons } from '../../components/ExportButtons'
-import {
-  cmsCountries,
-  countryStatuses,
-  cycleCountryStatus,
-  universitiesInCountry,
-  type CountryStatus,
-} from '../../mock/cms'
+import { countryStatuses, universitiesInCountry, type CountryStatus } from '../../mock/cms'
+import { useCmsList, useUpdateCms } from '../../lib/api'
 
 const STATUS_BADGE: Record<CountryStatus, string> = {
   Published: 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200',
@@ -17,7 +12,8 @@ const STATUS_BADGE: Record<CountryStatus, string> = {
 }
 
 export default function CountriesPage() {
-  const [rev, setRev] = useState(0)
+  const { data: cmsCountries = [], isPending } = useCmsList('country')
+  const updateCountry = useUpdateCms()
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [toast, setToast] = useState('')
@@ -32,11 +28,11 @@ export default function CountriesPage() {
     const q = search.trim().toLowerCase()
     return cmsCountries
       .filter((c) => !statusFilter || c.status === statusFilter)
-      .filter((c) => !q || `${c.name} ${c.slug}`.toLowerCase().includes(q))
+      .filter((c) => !q || `${c.title} ${c.slug}`.toLowerCase().includes(q))
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, statusFilter, rev])
+  }, [cmsCountries, search, statusFilter])
 
-  const exportRows = filtered.map((c) => [c.name, c.slug, c.status, universitiesInCountry(c.name)])
+  const exportRows = filtered.map((c) => [c.title, c.slug, c.status, universitiesInCountry(c.title)])
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
@@ -100,10 +96,10 @@ export default function CountriesPage() {
           </thead>
           <tbody>
             {filtered.map((c) => {
-              const unis = universitiesInCountry(c.name)
+              const unis = universitiesInCountry(c.title)
               return (
                 <tr key={c.id} className="border-b border-slate-100 text-sm">
-                  <td className="whitespace-nowrap px-4 py-3.5 font-semibold text-slate-800">{c.name}</td>
+                  <td className="whitespace-nowrap px-4 py-3.5 font-semibold text-slate-800">{c.title}</td>
                   <td className="px-4 py-3.5">
                     <code className="rounded bg-slate-50 px-1.5 py-0.5 text-xs text-rose-600">/study-in/{c.slug}</code>
                   </td>
@@ -115,11 +111,14 @@ export default function CountriesPage() {
                   <td className="px-4 py-3.5">
                     <button
                       onClick={() => {
-                        cycleCountryStatus(c.id)
-                        setRev((n) => n + 1)
+                        // Cycle through the configured statuses — the same
+                        // rotation the mock's cycleCountryStatus applied.
+                        const order = countryStatuses
+                        const next = order[(order.indexOf(c.status as CountryStatus) + 1) % order.length]
+                        updateCountry.mutate({ kind: 'country', id: c.id, status: next })
                       }}
                       title="Click to change status"
-                      className={cn('rounded-md px-2.5 py-1 text-xs font-semibold transition-colors', STATUS_BADGE[c.status])}
+                      className={cn('rounded-md px-2.5 py-1 text-xs font-semibold transition-colors', STATUS_BADGE[c.status as CountryStatus])}
                     >
                       {c.status}
                     </button>
@@ -133,7 +132,7 @@ export default function CountriesPage() {
                         <Pencil className="h-3.5 w-3.5" /> Edit
                       </a>
                       <a
-                        href={`/course-finder?country=${encodeURIComponent(c.name)}`}
+                        href={`/course-finder?country=${encodeURIComponent(c.title)}`}
                         className="inline-flex items-center gap-1 rounded-md border border-slate-300 px-2.5 py-1.5 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50"
                       >
                         <Eye className="h-3.5 w-3.5" /> Preview
@@ -146,7 +145,7 @@ export default function CountriesPage() {
             {filtered.length === 0 && (
               <tr>
                 <td colSpan={5} className="px-4 py-12 text-center text-sm text-slate-500">
-                  No countries found.
+                  {isPending ? 'Loading countries…' : 'No countries found.'}
                 </td>
               </tr>
             )}

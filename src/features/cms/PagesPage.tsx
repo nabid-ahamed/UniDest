@@ -3,7 +3,17 @@ import { showSuccessDialog } from '../../store/successDialog'
 import { Search, Plus, Pencil, Trash2, Lock, FileText, Boxes } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
-import { cmsPages, deleteCmsPage, type CmsPage } from '../../mock/cms'
+import { useCmsList, useDeleteCms, type ApiCmsContent } from '../../lib/api'
+
+/**
+ * Page-specific fields the shared cms_content table has no column for — the
+ * page "type", which module it renders, and whether it is a system page that
+ * cannot be deleted. They live in `meta` rather than as columns that would be
+ * null for every blog post and country entry.
+ */
+const pageType = (p: ApiCmsContent) => String(p.meta.type ?? 'Custom')
+const isSystemPage = (p: ApiCmsContent) => Boolean(p.meta.system)
+const pageModule = (p: ApiCmsContent) => (p.meta.module ? String(p.meta.module) : null)
 
 const STATUS_BADGE: Record<string, string> = {
   Published: 'bg-emerald-100 text-emerald-700',
@@ -11,22 +21,19 @@ const STATUS_BADGE: Record<string, string> = {
 }
 
 export default function PagesPage() {
-  const [rev, setRev] = useState(0)
+  const { data: cmsPages = [], isPending } = useCmsList('page')
+  const removePage = useDeleteCms()
   const [search, setSearch] = useState('')
-  const [confirm, setConfirm] = useState<CmsPage | null>(null)
-  const [toast, setToast] = useState('')
+  const [confirm, setConfirm] = useState<ApiCmsContent | null>(null)
 
-  const showToast = (msg: string) => {
-    setToast(msg)
-    window.clearTimeout((showToast as unknown as { t?: number }).t)
-    ;(showToast as unknown as { t?: number }).t = window.setTimeout(() => setToast(''), 2600)
-  }
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
-    return cmsPages.filter((p) => !q || `${p.name} ${p.type} ${p.status}`.toLowerCase().includes(q))
+    return cmsPages.filter(
+      (p) => !q || `${p.title} ${pageType(p)} ${p.status}`.toLowerCase().includes(q),
+    )
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, rev])
+  }, [cmsPages, search])
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
@@ -76,14 +83,14 @@ export default function PagesPage() {
                 <td className="px-4 py-3.5 text-slate-500">{i + 1}</td>
                 <td className="px-4 py-3.5">
                   <a href={`/cms/pages/${p.id}/edit`} className="inline-flex items-center gap-2 font-semibold text-slate-800 hover:text-brand-600 hover:underline">
-                    {p.system ? <Boxes className="h-4 w-4 text-slate-400" /> : <FileText className="h-4 w-4 text-slate-400" />}
-                    {p.name}
+                    {isSystemPage(p) ? <Boxes className="h-4 w-4 text-slate-400" /> : <FileText className="h-4 w-4 text-slate-400" />}
+                    {p.title}
                   </a>
                 </td>
                 <td className="px-4 py-3.5">
                   <span className="text-slate-600">
-                    {p.type}
-                    {p.module && <span className="text-slate-400"> — {p.module}</span>}
+                    {pageType(p)}
+                    {pageModule(p) && <span className="text-slate-400"> — {pageModule(p)}</span>}
                   </span>
                 </td>
                 <td className="px-4 py-3.5">
@@ -97,7 +104,7 @@ export default function PagesPage() {
                     >
                       <Pencil className="h-3.5 w-3.5" /> Edit
                     </a>
-                    {p.system ? (
+                    {isSystemPage(p) ? (
                       <span
                         title="System page — can't be deleted"
                         className="inline-flex items-center gap-1 rounded-md border border-slate-200 px-2.5 py-1.5 text-xs font-semibold text-slate-300"
@@ -119,7 +126,7 @@ export default function PagesPage() {
             {filtered.length === 0 && (
               <tr>
                 <td colSpan={5} className="px-4 py-12 text-center text-sm text-slate-500">
-                  No pages found.
+                  {isPending ? 'Loading pages…' : 'No pages found.'}
                 </td>
               </tr>
             )}
@@ -139,25 +146,20 @@ export default function PagesPage() {
       <ConfirmDialog
         open={confirm !== null}
         title="Delete page"
-        message={`Delete "${confirm?.name}"? This cannot be undone.`}
+        message={`Delete "${confirm?.title}"? This cannot be undone.`}
         confirmLabel="Delete"
         onCancel={() => setConfirm(null)}
         onConfirm={() => {
           if (confirm) {
-            const ok = deleteCmsPage(confirm.id)
-            if (ok) showSuccessDialog('Page deleted successfully')
-            else showToast("System page can't be deleted")
+            // System pages are protected in the UI (no delete button), so
+            // anything reaching here is a normal page.
+            removePage.mutate({ kind: 'page', id: confirm.id })
+            showSuccessDialog('Page deleted successfully')
             setConfirm(null)
-            setRev((n) => n + 1)
           }
         }}
       />
 
-      {toast && (
-        <div className="animate-toast-in fixed right-4 top-20 z-[120] rounded-lg bg-slate-800 px-4 py-3 text-sm font-medium text-white shadow-lg">
-          {toast}
-        </div>
-      )}
     </div>
   )
 }

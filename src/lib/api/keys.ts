@@ -69,6 +69,12 @@ export const qk = {
     categories: () => [...qk.resources.all, 'categories'] as const,
     list: (categoryId: number) => [...qk.resources.all, 'list', categoryId] as const,
   },
+  cms: {
+    all: ['cms'] as const,
+    list: (kind: string, status: string) => [...qk.cms.all, 'list', kind, status] as const,
+    detail: (kind: string, id: number) => [...qk.cms.all, 'detail', kind, id] as const,
+    newsletter: () => [...qk.cms.all, 'newsletter'] as const,
+  },
   /** Files attached to an application, keyed by that application. */
   documents: {
     all: ['documents'] as const,

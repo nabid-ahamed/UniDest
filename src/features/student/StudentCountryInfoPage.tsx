@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import { Info } from 'lucide-react'
-import { cmsCountries } from '../../mock/cms'
+import { useCmsList } from '../../lib/api'
 
 /**
  * "Country Information" — a grid of destination-country cards. Countries come
@@ -10,7 +10,10 @@ import { cmsCountries } from '../../mock/cms'
  */
 export default function StudentCountryInfoPage() {
   const navigate = useNavigate()
-  const countries = cmsCountries.filter((c) => c.status !== 'Hidden')
+  // Hidden entries are excluded, so the portal always matches what the office
+  // has actually published.
+  const { data: all = [] } = useCmsList('country')
+  const countries = all.filter((c) => c.status !== 'Hidden')
 
   return (
     <div className="space-y-6">
@@ -33,7 +36,7 @@ export default function StudentCountryInfoPage() {
               </span>
             </div>
             <div className="space-y-2 px-5 py-5 text-center">
-              <h2 className="text-lg font-bold uppercase tracking-wide text-slate-800">{c.name}</h2>
+              <h2 className="text-lg font-bold uppercase tracking-wide text-slate-800">{c.title}</h2>
               <span className="inline-block text-sm font-semibold text-brand-600 group-hover:underline">
                 Browse Documents
               </span>

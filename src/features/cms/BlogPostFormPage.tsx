@@ -3,26 +3,39 @@ import { useParams } from 'react-router-dom'
 import { ArrowLeft, Save, ImagePlus, Star, X } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { staff } from '../../mock/staff'
+import { postStatuses, slugify, type PostStatus } from '../../mock/cms'
 import {
-  getPost,
-  addPost,
-  updatePost,
-  postStatuses,
-  slugify,
-  type PostStatus,
-} from '../../mock/cms'
+  useCmsItem,
+  useCreateCms,
+  useUpdateCms,
+  type ApiCmsContent,
+} from '../../lib/api'
 
-/** "02 Jun 2026" for a fresh post. */
-function today(): string {
-  const d = new Date()
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-  return `${String(d.getDate()).padStart(2, '0')} ${months[d.getMonth()]} ${d.getFullYear()}`
-}
-
+/**
+ * Route entry: resolves the post being edited before the form mounts.
+ *
+ * The form seeds its fields from `existing` once, so it must not mount until
+ * that value has arrived — and the `key` remounts it per id, so switching posts
+ * resets the editor instead of keeping the previous one's text.
+ */
 export default function BlogPostFormPage() {
   const { id } = useParams()
-  const editing = id != null
-  const existing = editing ? getPost(Number(id)) : undefined
+  const { data: existing, isPending } = useCmsItem('post', id != null ? Number(id) : undefined)
+
+  if (id != null && isPending) {
+    return (
+      <div className="rounded-xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+        <p className="text-slate-500">Loading post…</p>
+      </div>
+    )
+  }
+
+  return <BlogPostForm key={id ?? 'new'} existing={existing ?? undefined} editing={id != null} />
+}
+
+function BlogPostForm({ existing, editing }: { existing?: ApiCmsContent; editing: boolean }) {
+  const createPost = useCreateCms()
+  const updatePost = useUpdateCms()
 
   const [title, setTitle] = useState(existing?.title ?? '')
   const [slug, setSlug] = useState(existing?.slug ?? '')
@@ -30,7 +43,7 @@ export default function BlogPostFormPage() {
   const [excerpt, setExcerpt] = useState(existing?.excerpt ?? '')
   const [content, setContent] = useState(existing?.content ?? '')
   const [cover, setCover] = useState<string | null>(existing?.cover ?? null)
-  const [status, setStatus] = useState<PostStatus>(existing?.status ?? 'Published')
+  const [status, setStatus] = useState<PostStatus>((existing?.status as PostStatus) ?? 'Published')
   const [featured, setFeatured] = useState(existing?.featured ?? false)
   const [author, setAuthor] = useState(existing?.author ?? staff[0]?.name ?? 'Admin Admin')
   const [error, setError] = useState('')
@@ -66,10 +79,21 @@ export default function BlogPostFormPage() {
       return
     }
     const finalSlug = slugify(slug || title)
+    // `author` and `publishedAt` are set by the server — from the token and
+    // from the publish state — so neither is sent from here.
+    const payload = {
+      title,
+      slug: finalSlug,
+      excerpt,
+      body: content,
+      coverUrl: cover ?? undefined,
+      status,
+      featured,
+    }
     if (editing && existing) {
-      updatePost(existing.id, { title, slug: finalSlug, excerpt, content, cover, status, featured, author })
+      updatePost.mutate({ kind: 'post', id: existing.id, ...payload })
     } else {
-      addPost({ title, slug: finalSlug, excerpt, content, cover, status, featured, author, publishedAt: today() })
+      createPost.mutate({ kind: 'post', ...payload })
     }
     setSaved(true)
     window.setTimeout(() => {
