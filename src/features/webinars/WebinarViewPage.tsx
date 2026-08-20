@@ -1,12 +1,28 @@
 import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { Undo2 } from 'lucide-react'
-import { webinars, webinarShareLink } from '../../mock/webinars'
+import { useWebinar } from '../../lib/api'
+
+/** Public share link for a webinar — a slug built from its id and topic. */
+const webinarShareLink = (w: { id: number; topic: string }) =>
+  `https://unidest.com/webinar/${w.id}-${w.topic
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')}`
 
 /** "View Webinar" detail page (route /webinars/:id), matching the reference. */
 export default function WebinarViewPage() {
   const { id } = useParams()
-  const webinar = webinars.find((w) => w.id === Number(id))
+  const { data: webinar, isPending } = useWebinar(id ? Number(id) : undefined)
+
+  if (isPending) {
+    return (
+      <div className="rounded-xl border border-slate-200 bg-white p-12 text-center shadow-sm">
+        <p className="text-slate-500">Loading webinar…</p>
+      </div>
+    )
+  }
+
   const [toast, setToast] = useState('')
 
   const showToast = (msg: string) => {

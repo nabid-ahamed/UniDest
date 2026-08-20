@@ -2,13 +2,13 @@ import { useState } from 'react'
 import { Calendar, MapPin, Users, Video, CheckCircle2 } from 'lucide-react'
 import { showSuccessDialog } from '../../store/successDialog'
 import { currentStudent } from '../../mock/student/portal'
-import { upcomingStudentWebinars, parseWebinarDate, type Webinar } from '../../mock/webinars'
+import { useWebinars, useEnrollInWebinar, type ApiWebinar } from '../../lib/api'
 import { loadRegistrations, registerForWebinar } from '../../mock/student/webinarRegistrations'
 
-/** "15-08-2026 06:00 PM" → "15 Aug 2026, 06:00 PM". */
-function formatWebinarDate(d: string): string {
-  const dt = parseWebinarDate(d)
-  if (!dt) return d
+/** ISO → "15 Aug 2026, 06:00 PM". */
+function formatWebinarDate(iso: string): string {
+  const dt = new Date(iso)
+  if (Number.isNaN(dt.getTime())) return iso
   return new Intl.DateTimeFormat('en-GB', {
     day: '2-digit',
     month: 'short',
@@ -25,12 +25,29 @@ function formatWebinarDate(d: string): string {
  * bumps the shared enrolment count. Matches demo.eductrl.com/cn4/webinar.
  */
 export default function StudentWebinarsPage() {
-  const studentId = currentStudent().id
-  const [registered, setRegistered] = useState<number[]>(() => loadRegistrations(studentId))
-  const webinars = upcomingStudentWebinars()
+  const student = currentStudent()
+  const [registered, setRegistered] = useState<number[]>(() => loadRegistrations(student.id))
+  const enroll = useEnrollInWebinar()
 
-  const register = (w: Webinar) => {
-    setRegistered(registerForWebinar(studentId, w.id))
+  // Upcoming, and not agent-only — the same rule the mock's
+  // `upcomingStudentWebinars` applied, now over API data.
+  const { data: all = [] } = useWebinars()
+  const now = Date.now()
+  const webinars = all
+    .filter((w) => w.audienceType !== 'Agent' && new Date(w.startsAt).getTime() >= now)
+    .sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime())
+
+  const register = (w: ApiWebinar) => {
+    // Recorded server-side so staff see the enrolment; the local list only
+    // drives this page's "Registered" badge.
+    enroll.mutate({
+      id: w.id,
+      name: student.name,
+      email: student.email,
+      phone: student.phone,
+      userType: 'Student',
+    })
+    setRegistered(registerForWebinar(student.id, w.id))
     showSuccessDialog(`You're registered for "${w.topic}". We'll email you the joining details.`, 'Registered!')
   }
 
@@ -62,7 +79,7 @@ export default function StudentWebinarsPage() {
                     <tr key={w.id} className="border-b border-slate-100 text-sm last:border-0 align-top">
                       <td className="whitespace-nowrap px-6 py-5">
                         <span className="inline-flex items-center gap-1.5 font-semibold text-slate-700">
-                          <Calendar className="h-4 w-4 text-brand-600" /> {formatWebinarDate(w.date)}
+                          <Calendar className="h-4 w-4 text-brand-600" /> {formatWebinarDate(w.startsAt)}
                         </span>
                       </td>
                       <td className="px-6 py-5">

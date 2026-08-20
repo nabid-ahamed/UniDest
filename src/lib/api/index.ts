@@ -113,6 +113,16 @@ export {
   useUpdateAnnouncement,
   useDeleteAnnouncement,
 } from './hooks/useNotifications'
+export type { ApiWebinar, ApiEnrollment } from './resources/webinars'
+export {
+  useWebinars,
+  useWebinar,
+  useWebinarEnrollments,
+  useCreateWebinar,
+  useUpdateWebinar,
+  useEnrollInWebinar,
+  useDeleteWebinar,
+} from './hooks/useWebinars'
 export type { ApplicationDocument } from './resources/documents'
 export { documentsApi, ACCEPTED_FILE_TYPES, MAX_FILE_BYTES } from './resources/documents'
 export { useApplicationDocuments, useUploadDocument, useDeleteDocument } from './hooks/useDocuments'

@@ -12,16 +12,10 @@ import {
 } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { DateTimePicker } from '../../components/DateTimePicker'
-import { formatDateTime } from '../../lib/formatDateTime'
 import { SuccessDialog } from '../../components/ui/SuccessDialog'
 import { useParams } from 'react-router-dom'
-import {
-  webinars,
-  webinarAudienceTypes,
-  updateWebinar,
-  parseWebinarDate,
-  type Webinar,
-} from '../../mock/webinars'
+import { webinarAudienceTypes } from '../../mock/webinars'
+import { useWebinar, useUpdateWebinar, type ApiWebinar } from '../../lib/api'
 import { WebinarBanner } from './WebinarViewPage'
 
 const RTE_ACTIONS = [
@@ -37,7 +31,15 @@ const RTE_ACTIONS = [
 /** "Edit Webinar / Event" page (route /webinars/:id/edit), per the reference. */
 export default function EditWebinarPage() {
   const { id } = useParams()
-  const webinar = webinars.find((w) => w.id === Number(id))
+  const { data: webinar, isPending } = useWebinar(id ? Number(id) : undefined)
+
+  if (isPending) {
+    return (
+      <div className="rounded-xl border border-slate-200 bg-white p-12 text-center shadow-sm">
+        <p className="text-slate-500">Loading webinar…</p>
+      </div>
+    )
+  }
 
   if (!webinar) {
     return (
@@ -53,14 +55,17 @@ export default function EditWebinarPage() {
     )
   }
 
-  return <EditForm webinar={webinar} />
+  // `key` remounts the form per webinar, so switching records resets the fields.
+  return <EditForm key={webinar.id} webinar={webinar} />
 }
 
-function EditForm({ webinar }: { webinar: Webinar }) {
+function EditForm({ webinar }: { webinar: ApiWebinar }) {
+  const updateWebinarM = useUpdateWebinar()
   const [topic, setTopic] = useState(webinar.topic)
-  const [audience, setAudience] = useState<Webinar['audienceType']>(webinar.audienceType)
+  const [audience, setAudience] = useState<string>(webinar.audienceType)
   const [shortDesc, setShortDesc] = useState(webinar.description ?? '')
-  const [when, setWhen] = useState<Date | null>(() => parseWebinarDate(webinar.date))
+  // The API returns an ISO timestamp, so no display-string parsing is needed.
+  const [when, setWhen] = useState<Date | null>(() => new Date(webinar.startsAt))
   const [venue, setVenue] = useState(webinar.venue)
   const [link, setLink] = useState(webinar.webinarLink ?? '')
   const [bannerPreview, setBannerPreview] = useState<string | null>(null)
@@ -81,14 +86,14 @@ function EditForm({ webinar }: { webinar: Webinar }) {
     if (!venue.trim()) next.venue = 'Please enter a venue.'
     setErrors(next)
     if (Object.keys(next).length || !when) return
-    updateWebinar({
-      ...webinar,
+    updateWebinarM.mutate({
+      id: webinar.id,
       topic: topic.trim(),
       audienceType: audience,
-      date: formatDateTime(when),
+      startsAt: when.toISOString(),
       venue: venue.trim(),
-      webinarLink: link.trim() || null,
-      description: shortDesc.trim() || null,
+      webinarLink: link.trim(),
+      description: shortDesc.trim(),
     })
     setSaved(true)
   }
@@ -148,7 +153,7 @@ function EditForm({ webinar }: { webinar: Webinar }) {
               <select
                 id="edit-audience"
                 value={audience}
-                onChange={(e) => setAudience(e.target.value as Webinar['audienceType'])}
+                onChange={(e) => setAudience(e.target.value)}
                 className={fieldClass(false)}
               >
                 {webinarAudienceTypes.map((a) => (

@@ -54,6 +54,12 @@ export const qk = {
     list: () => [...qk.announcements.all, 'list'] as const,
     detail: (id: number) => [...qk.announcements.all, 'detail', id] as const,
   },
+  webinars: {
+    all: ['webinars'] as const,
+    list: () => [...qk.webinars.all, 'list'] as const,
+    detail: (id: number) => [...qk.webinars.all, 'detail', id] as const,
+    enrollments: (id: number) => [...qk.webinars.all, 'enrollments', id] as const,
+  },
   /** Files attached to an application, keyed by that application. */
   documents: {
     all: ['documents'] as const,

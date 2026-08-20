@@ -4,50 +4,35 @@ import { PlusCircle, Eye, SquarePen, Users, Trash2, X } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { DotsLoader } from '../../components/DataTableUI'
 import { DateTimePicker } from '../../components/DateTimePicker'
-import { formatDateTime } from '../../lib/formatDateTime'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { SuccessDialog } from '../../components/ui/SuccessDialog'
+import { webinarAudienceTypes } from '../../mock/webinars'
 import {
-  webinars as initialWebinars,
-  webinarAudienceTypes,
-  saveWebinars,
-  type Webinar,
-} from '../../mock/webinars'
+  useWebinars,
+  useCreateWebinar,
+  useDeleteWebinar,
+  type ApiWebinar,
+} from '../../lib/api'
 
 export default function WebinarsPage() {
-  const [rows, setRows] = useState<Webinar[]>(initialWebinars)
-  const [loading, setLoading] = useState(true)
+  // A real request replaces the mock's 700ms fake preloader.
+  const { data: rows = [], isPending: loading } = useWebinars()
+  const createWebinar = useCreateWebinar()
+  const removeWebinar = useDeleteWebinar()
   const [createOpen, setCreateOpen] = useState(false)
-  const [deleteTarget, setDeleteTarget] = useState<Webinar | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<ApiWebinar | null>(null)
   const [successMsg, setSuccessMsg] = useState('')
 
-  // Initial "fetch" preloader on mount.
-  useEffect(() => {
-    const t = window.setTimeout(() => setLoading(false), 700)
-    return () => window.clearTimeout(t)
-  }, [])
 
-
-  const addWebinar = (w: Omit<Webinar, 'id' | 'enrolledUsers'>) => {
-    setRows((prev) => {
-      const next = [
-        { ...w, id: Math.max(0, ...prev.map((x) => x.id)) + 1, enrolledUsers: null },
-        ...prev,
-      ]
-      saveWebinars(next)
-      return next
-    })
+  const addWebinar = (w: { topic: string; startsAt: string; venue: string; audienceType: string }) => {
+    createWebinar.mutate(w)
     setCreateOpen(false)
     setSuccessMsg('Webinar Created Successfully')
   }
 
   const confirmDelete = () => {
     if (!deleteTarget) return
-    setRows((prev) => {
-      const next = prev.filter((w) => w.id !== deleteTarget.id)
-      saveWebinars(next)
-      return next
-    })
+    removeWebinar.mutate(deleteTarget.id)
     setDeleteTarget(null)
     setSuccessMsg('Webinar Deleted Successfully')
   }
@@ -217,12 +202,12 @@ function CreateWebinarDialog({
   onCreate,
 }: {
   onClose: () => void
-  onCreate: (w: { topic: string; date: string; venue: string; audienceType: Webinar['audienceType'] }) => void
+  onCreate: (w: { topic: string; startsAt: string; venue: string; audienceType: string }) => void
 }) {
   const [topic, setTopic] = useState('')
   const [when, setWhen] = useState<Date | null>(null)
   const [venue, setVenue] = useState('')
-  const [audience, setAudience] = useState<Webinar['audienceType']>('Student')
+  const [audience, setAudience] = useState<string>('Student')
   const [errors, setErrors] = useState<{ topic?: string; when?: string; venue?: string }>({})
 
   useEffect(() => {
@@ -241,7 +226,13 @@ function CreateWebinarDialog({
     if (!venue.trim()) next.venue = 'Please enter a venue.'
     setErrors(next)
     if (Object.keys(next).length || !when) return
-    onCreate({ topic: topic.trim(), date: formatDateTime(when), venue: venue.trim(), audienceType: audience })
+    // ISO on the wire; the server owns the display formatting.
+    onCreate({
+      topic: topic.trim(),
+      startsAt: when.toISOString(),
+      venue: venue.trim(),
+      audienceType: audience,
+    })
   }
 
   const fieldClass = (invalid: boolean) =>
@@ -344,7 +335,7 @@ function CreateWebinarDialog({
           <select
             id="webinar-audience"
             value={audience}
-            onChange={(e) => setAudience(e.target.value as Webinar['audienceType'])}
+            onChange={(e) => setAudience(e.target.value)}
             className={fieldClass(false)}
           >
             {webinarAudienceTypes.map((a) => (

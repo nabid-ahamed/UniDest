@@ -3,12 +3,24 @@ import { useParams } from 'react-router-dom'
 import { Undo2, CalendarDays, MapPin, Mail, Phone, UsersRound } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { DotsLoader } from '../../components/DataTableUI'
-import { webinars, webinarEnrollments } from '../../mock/webinars'
+import { useWebinar, useWebinarEnrollments } from '../../lib/api'
 
 /** Enrolled-users list for one webinar (route /webinars/:id/enrolled). */
 export default function WebinarEnrolledPage() {
   const { id } = useParams()
-  const webinar = webinars.find((w) => w.id === Number(id))
+  const { data: webinar, isPending } = useWebinar(id ? Number(id) : undefined)
+  // The roster comes from real enrolment rows, so the count on the list page
+  // and the names here can never disagree.
+  const { data: webinarEnrollments = [] } = useWebinarEnrollments(id ? Number(id) : undefined)
+
+  if (isPending) {
+    return (
+      <div className="rounded-xl border border-slate-200 bg-white p-12 text-center shadow-sm">
+        <p className="text-slate-500">Loading webinar…</p>
+      </div>
+    )
+  }
+
   const [loading, setLoading] = useState(true)
 
   // Initial "fetch" preloader on mount.
@@ -31,7 +43,7 @@ export default function WebinarEnrolledPage() {
     )
   }
 
-  const rows = webinarEnrollments(webinar)
+  const rows = webinarEnrollments
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
