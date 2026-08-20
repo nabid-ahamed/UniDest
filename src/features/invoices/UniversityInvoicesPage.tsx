@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { showSuccessDialog } from '../../store/successDialog'
 import { createPortal } from 'react-dom'
 import {
@@ -22,19 +22,20 @@ import { Field, PageBtn, SingleSelect } from '../../components/DataTableUI'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { applications, applicationStatuses, applicationChannels, intakes } from '../../mock/applications'
 import {
-  universityInvoices,
   invoiceUniversities,
   invoiceStatuses,
   invoiceCurrencies,
   paymentLabels,
   isInvoiceable,
-  invoiceCountForApplication,
-  formatMoney,
-  addInvoice,
-  updateInvoice,
-  deleteInvoice,
-  type UniversityInvoice,
 } from '../../mock/invoices'
+import {
+  useInvoices,
+  useCreateInvoice,
+  useRecordPayment,
+  useDeleteInvoice,
+  formatMoney,
+  type ApiInvoice,
+} from '../../lib/api'
 
 const TABS = ['Invoices', 'University Applications'] as const
 const PAGE_SIZES = [25, 50, 100]
@@ -122,15 +123,18 @@ function InvoicesTab({
 }) {
   // Staff can view invoices but not delete them (admin-only action).
   const canManage = useAuth((s) => s.user?.role !== 'Staff')
+  const { data: universityInvoices = [], isPending } = useInvoices('university')
+  const recordPaymentM = useRecordPayment()
+  const removeInvoice = useDeleteInvoice()
   const [search, setSearch] = useState('')
   const [tableSearch, setTableSearch] = useState('')
   const [university, setUniversity] = useState('')
   const [status, setStatus] = useState('')
   const [pageSize, setPageSize] = useState(25)
   const [page, setPage] = useState(1)
-  const [viewInvoice, setViewInvoice] = useState<UniversityInvoice | null>(null)
-  const [payInvoice, setPayInvoice] = useState<UniversityInvoice | null>(null)
-  const [deleteInvoiceRow, setDeleteInvoiceRow] = useState<UniversityInvoice | null>(null)
+  const [viewInvoice, setViewInvoice] = useState<ApiInvoice | null>(null)
+  const [payInvoice, setPayInvoice] = useState<ApiInvoice | null>(null)
+  const [deleteInvoiceRow, setDeleteInvoiceRow] = useState<ApiInvoice | null>(null)
 
   const clearFilters = () => {
     setSearch('')
@@ -145,13 +149,13 @@ function InvoicesTab({
     return universityInvoices.filter((inv) => {
       if (university && inv.university !== university) return false
       if (status && inv.status !== status) return false
-      const hay = `${inv.id} ${inv.university} ${inv.country} ${inv.student} ${inv.agent ?? ''} ${inv.appliedThrough}`.toLowerCase()
+      const hay = `${inv.invoiceNo} ${inv.university} ${inv.country} ${inv.student} ${inv.agent ?? ''}`.toLowerCase()
       if (top && !hay.includes(top)) return false
-      if (tbl && !`${hay} ${inv.date} ${inv.status} ${inv.currency}${inv.amount}`.toLowerCase().includes(tbl))
+      if (tbl && !`${hay} ${inv.date} ${inv.status} ${inv.currency}${inv.grandTotal}`.toLowerCase().includes(tbl))
         return false
       return true
     })
-  }, [search, tableSearch, university, status])
+  }, [universityInvoices, search, tableSearch, university, status])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
   const currentPage = Math.min(page, totalPages)
@@ -165,18 +169,18 @@ function InvoicesTab({
     inv.id,
     `${inv.university}, ${inv.country}`,
     inv.student,
-    formatMoney(inv.currency, inv.amount),
+    formatMoney(inv.currency, inv.grandTotal),
     inv.status,
   ])
 
   const recordPayment = (amount: number, date: string, note: string) => {
     if (!payInvoice) return
-    updateInvoice({
-      ...payInvoice,
-      status: 'Paid',
-      nextPayment: null,
-      payments: [...payInvoice.payments, { label: payInvoice.paymentLabel, amount, date, note }],
-    })
+    // The server appends the payment and re-derives the status from the
+    // resulting balance, so "Paid" is never set by the client.
+    recordPaymentM.mutate(
+      { id: payInvoice.id, amount, note, paidAt: date },
+      { onError: (e) => onToast(e instanceof Error ? e.message : 'Payment failed') },
+    )
     onToast(`Payment recorded for invoice #${payInvoice.id}`)
     setPayInvoice(null)
     onMutate()
@@ -315,12 +319,10 @@ function InvoicesTab({
                   <p className="text-slate-500">University: {inv.university}</p>
                   <p className="text-slate-500">Student: {inv.student}</p>
                   {inv.agent && <p className="text-slate-500">Agent: {inv.agent}</p>}
-                  {inv.nextPayment && (
-                    <p className="mt-1 text-slate-400">Next Payment: {inv.nextPayment}</p>
-                  )}
+                  {inv.dueDate && <p className="mt-1 text-slate-400">Due: {inv.dueDate}</p>}
                 </td>
                 <td className="whitespace-nowrap px-4 py-4 font-semibold text-slate-800">
-                  {formatMoney(inv.currency, inv.amount)}
+                  {formatMoney(inv.currency, inv.grandTotal)}
                 </td>
                 <td className="px-4 py-4">
                   <span className={cn('font-semibold', statusPill(inv.status))}>{inv.status}</span>
@@ -366,7 +368,7 @@ function InvoicesTab({
                         />
                       )}
                     </div>
-                    {inv.agentInvoiceRequested && (
+                    {inv.agent && (
                       <span className="inline-flex w-fit items-center gap-1.5 rounded-md bg-emerald-600 px-2.5 py-1 text-xs font-semibold text-white">
                         <BadgeCheck className="h-3.5 w-3.5" /> Agent Invoice Requested
                       </span>
@@ -378,7 +380,7 @@ function InvoicesTab({
             {pageRows.length === 0 && (
               <tr>
                 <td colSpan={6} className="px-4 py-12 text-center text-sm text-slate-500">
-                  No invoices found.
+                  {isPending ? 'Loading invoices…' : 'No invoices found.'}
                   <button onClick={onGoApplications} className="ml-1 font-semibold text-brand-600 hover:underline">
                     Raise one from an application
                   </button>
@@ -415,7 +417,7 @@ function InvoicesTab({
             }
             confirmLabel="Delete"
             onConfirm={() => {
-              deleteInvoice(deleteInvoiceRow.id)
+              removeInvoice.mutate(deleteInvoiceRow.id)
               showSuccessDialog(`Invoice #${deleteInvoiceRow.id} deleted successfully`)
               setDeleteInvoiceRow(null)
               onMutate()
@@ -439,6 +441,14 @@ function ApplicationsTab({
   onToast: (msg: string) => void
   onCreated: () => void
 }) {
+  const createInvoice = useCreateInvoice()
+  // How many invoices each application already has — counted from the list the
+  // page already loads rather than a per-application request.
+  const { data: allInvoices = [] } = useInvoices('university')
+  const invoiceCountForApplication = useCallback(
+    (appId: number) => allInvoices.filter((inv) => inv.applicationId === appId).length,
+    [allInvoices],
+  )
   const [intake, setIntake] = useState('')
   const [university, setUniversity] = useState('')
   const [appliedThrough, setAppliedThrough] = useState('')
@@ -471,7 +481,9 @@ function ApplicationsTab({
       }
       return true
     })
-  }, [eligible, intake, university, appliedThrough, noInvoicesOnly, tableSearch])
+    // invoiceCountForApplication closes over the invoice list, so the
+    // "no invoices" filter recomputes once that list arrives.
+  }, [eligible, invoiceCountForApplication, intake, university, appliedThrough, noInvoicesOnly, tableSearch])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
   const currentPage = Math.min(page, totalPages)
@@ -660,8 +672,20 @@ function ApplicationsTab({
           application={createFor}
           onClose={() => setCreateFor(null)}
           onCreate={(payload) => {
-            const inv = addInvoice(payload)
-            onToast(`Invoice #${inv.id} created for ${createFor.student}`)
+            createInvoice.mutate(
+              {
+                studentNo: createFor.studentNo,
+                applicationId: createFor.id,
+                currency: payload.currency,
+                paymentLabel: payload.paymentLabel,
+                agent: payload.agent ?? undefined,
+                items: [{ description: payload.paymentLabel, amount: payload.amount }],
+              },
+              {
+                onSuccess: (inv) => onToast(`Invoice #${inv.invoiceNo} created for ${createFor.student}`),
+                onError: (e) => onToast(e instanceof Error ? e.message : 'Could not create invoice'),
+              },
+            )
             setCreateFor(null)
             onCreated()
           }}
@@ -768,7 +792,7 @@ function ModalShell({
   )
 }
 
-function ViewInvoiceModal({ invoice, onClose }: { invoice: UniversityInvoice; onClose: () => void }) {
+function ViewInvoiceModal({ invoice, onClose }: { invoice: ApiInvoice; onClose: () => void }) {
   const paid = invoice.payments.reduce((sum, p) => sum + p.amount, 0)
   const rows: [string, string][] = [
     ['Invoice #', String(invoice.id)],
@@ -776,12 +800,13 @@ function ViewInvoiceModal({ invoice, onClose }: { invoice: UniversityInvoice; on
     ['University', `${invoice.university}, ${invoice.country}`],
     ['Student', invoice.student],
     ['Application ID', String(invoice.applicationId)],
-    ['Applied Through', invoice.appliedThrough],
+    ['Payment', invoice.paymentLabel ?? '—'],
     ...(invoice.agent ? ([['Agent (Master Agent)', invoice.agent]] as [string, string][]) : []),
-    ['Payment', invoice.paymentLabel],
-    ['Amount', formatMoney(invoice.currency, invoice.amount)],
+    ['Amount', formatMoney(invoice.currency, invoice.grandTotal)],
+    ['Paid', formatMoney(invoice.currency, invoice.paid)],
+    ['Due', formatMoney(invoice.currency, invoice.due)],
     ['Status', invoice.status],
-    ...(invoice.nextPayment ? ([['Next Payment', invoice.nextPayment]] as [string, string][]) : []),
+    ...(invoice.dueDate ? ([['Due Date', invoice.dueDate]] as [string, string][]) : []),
   ]
   return (
     <ModalShell title={`Invoice #${invoice.id}`} onClose={onClose} wide>
@@ -808,7 +833,7 @@ function ViewInvoiceModal({ invoice, onClose }: { invoice: UniversityInvoice; on
           <tbody>
             {invoice.payments.map((p, i) => (
               <tr key={i} className="border-b border-slate-100">
-                <td className="px-3 py-2 text-slate-700">{p.label}</td>
+                <td className="px-3 py-2 text-slate-700">{p.method}</td>
                 <td className="px-3 py-2 text-slate-600">{p.date}</td>
                 <td className="px-3 py-2 font-medium text-slate-800">{formatMoney(invoice.currency, p.amount)}</td>
                 <td className="px-3 py-2 text-slate-500">{p.note || '—'}</td>
@@ -821,7 +846,7 @@ function ViewInvoiceModal({ invoice, onClose }: { invoice: UniversityInvoice; on
       )}
       <p className="mt-3 text-sm text-slate-600">
         <span className="font-semibold">Paid:</span> {formatMoney(invoice.currency, paid)} /{' '}
-        {formatMoney(invoice.currency, invoice.amount)}
+        {formatMoney(invoice.currency, invoice.grandTotal)}
       </p>
 
       <div className="mt-5 flex justify-end gap-2">
@@ -847,11 +872,12 @@ function RecordPaymentModal({
   onClose,
   onSave,
 }: {
-  invoice: UniversityInvoice
+  invoice: ApiInvoice
   onClose: () => void
   onSave: (amount: number, date: string, note: string) => void
 }) {
-  const [amount, setAmount] = useState(String(invoice.amount))
+  // Default to the outstanding balance rather than the full total.
+  const [amount, setAmount] = useState(String(invoice.due))
   const [date, setDate] = useState('')
   const [note, setNote] = useState('')
   const [tried, setTried] = useState(false)
@@ -870,7 +896,7 @@ function RecordPaymentModal({
     <ModalShell title={`Record Payment — #${invoice.id}`} onClose={onClose}>
       <div className="space-y-4">
         <p className="rounded-lg bg-brand-50 px-3 py-2 text-sm font-medium text-brand-700">
-          {invoice.student} · {invoice.university} · {formatMoney(invoice.currency, invoice.amount)}
+          {invoice.student} · {invoice.university} · {formatMoney(invoice.currency, invoice.grandTotal)}
         </p>
         <div>
           <label htmlFor="pay-amount" className="mb-1.5 block text-sm font-semibold text-slate-700">
@@ -928,7 +954,12 @@ function CreateInvoiceModal({
 }: {
   application: (typeof applications)[number]
   onClose: () => void
-  onCreate: (payload: Omit<UniversityInvoice, 'id'>) => void
+  onCreate: (payload: {
+    currency: string
+    amount: number
+    paymentLabel: string
+    agent: string | null
+  }) => void
 }) {
   const [currency, setCurrency] = useState(invoiceCurrencies[0])
   const [amount, setAmount] = useState('')
@@ -941,34 +972,11 @@ function CreateInvoiceModal({
     setTried(true)
     const value = Number(amount)
     if (!value || value <= 0) return
-    const now = new Date()
-    const date =
-      new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })
-        .format(now)
-        .replace(/\//g, '-') +
-      ' ' +
-      new Intl.DateTimeFormat('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
-        .format(now)
-        .toLowerCase()
     onCreate({
-      date,
-      applicationId: application.id,
-      university: application.university,
-      country: application.country,
-      student: application.student,
-      agent: throughAgent ? application.agent ?? 'Master Agent' : null,
-      appliedThrough: application.appliedThrough,
-      paymentLabel,
       currency,
       amount: value,
-      status: 'Due',
-      nextPayment: nextPayment
-        ? new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).format(
-            new Date(nextPayment),
-          )
-        : null,
-      agentInvoiceRequested: throughAgent,
-      payments: [],
+      paymentLabel,
+      agent: throughAgent ? application.agent ?? 'Master Agent' : null,
     })
   }
 
@@ -1046,7 +1054,7 @@ function CreateInvoiceModal({
 }
 
 /** Generate a printable one-page PDF for an invoice (reuses jsPDF like the profile export). */
-async function downloadInvoicePdf(inv: UniversityInvoice) {
+async function downloadInvoicePdf(inv: ApiInvoice) {
   // Loaded on demand — jsPDF is ~630 kB and only PDF export needs it.
   const [{ jsPDF }, { default: autoTable }] = await Promise.all([
     import('jspdf'),
@@ -1069,12 +1077,11 @@ async function downloadInvoicePdf(inv: UniversityInvoice) {
       ['University', `${inv.university}, ${inv.country}`],
       ['Student', inv.student],
       ['Application ID', String(inv.applicationId)],
-      ['Applied Through', inv.appliedThrough],
       ...(inv.agent ? [['Agent (Master Agent)', inv.agent]] : []),
-      ['Payment', inv.paymentLabel],
-      ['Amount', formatMoney(inv.currency, inv.amount)],
+      ['Payment', inv.paymentLabel ?? '—'],
+      ['Amount', formatMoney(inv.currency, inv.grandTotal)],
       ['Status', inv.status],
-      ...(inv.nextPayment ? [['Next Payment', inv.nextPayment]] : []),
+      ...(inv.dueDate ? [['Due Date', inv.dueDate]] : []),
     ],
     headStyles: { fillColor: [37, 99, 235] },
   })

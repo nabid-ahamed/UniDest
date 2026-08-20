@@ -3,32 +3,58 @@ import { useParams } from 'react-router-dom'
 import { Undo2, Plus, Trash2 } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { Field } from '../../components/DataTableUI'
-import { students } from '../../mock/students'
+
 import {
-  businesses,
-  businessById,
+  useStudents,
+  useInvoice,
+  useBusinesses,
+  useCreateInvoice,
+  useUpdateInvoice,
   formatMoney,
-  addStudentInvoice,
-  updateStudentInvoice,
-  studentInvoiceById,
-  invoiceNowStamp,
-  type InvoiceItem,
-  type StudentInvoice,
-} from '../../mock/studentInvoices'
+  type ApiInvoice,
+} from '../../lib/api'
+
+interface InvoiceItem {
+  description: string
+  amount: number
+}
 
 interface DraftItem extends InvoiceItem {
   key: number
 }
 
 /** Create + edit share this one form (route /invoices/student/new and /:id/edit). */
+/**
+ * Route entry: resolves the invoice being edited before the form mounts.
+ *
+ * The form seeds its line items from `existing` once, so it must not mount
+ * until that value has arrived — and the `key` remounts it per id.
+ */
 export default function StudentInvoiceFormPage() {
   const { id } = useParams()
-  const existing = id ? studentInvoiceById(Number(id)) : undefined
+  const { data: existing, isPending } = useInvoice(id ? Number(id) : undefined)
+
+  if (id && isPending) {
+    return (
+      <div className="rounded-xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+        <p className="text-slate-500">Loading invoice…</p>
+      </div>
+    )
+  }
+
+  return <InvoiceForm key={id ?? 'new'} existing={existing ?? undefined} />
+}
+
+function InvoiceForm({ existing }: { existing?: ApiInvoice }) {
+  const { data: students = [] } = useStudents()
+  const { data: businesses = [] } = useBusinesses()
+  const createInvoice = useCreateInvoice()
+  const updateInvoice = useUpdateInvoice()
   const isEdit = Boolean(existing)
 
-  const [businessId, setBusinessId] = useState(existing?.businessId ?? businesses[0].id)
+  const [businessId, setBusinessId] = useState<number | null>(existing?.businessId ?? null)
   const [studentNo, setStudentNo] = useState(existing?.studentNo ?? '')
-  const [dueDate, setDueDate] = useState(toInputDate(existing?.dueDate))
+  const [dueDate, setDueDate] = useState(toInputDate(existing?.dueDate ?? undefined))
   const [terms, setTerms] = useState(existing?.terms ?? 'Payable within 30 days of issue.')
   const [discount, setDiscount] = useState(String(existing?.discount ?? 0))
   const [emailClient, setEmailClient] = useState(false)
@@ -40,8 +66,13 @@ export default function StudentInvoiceFormPage() {
       : [{ description: '', amount: 0, key: 0 }],
   )
 
-  const biz = businessById(businessId)
-  const student = useMemo(() => students.find((s) => s.studentNo === studentNo), [studentNo])
+  const biz = businesses.find((b) => b.id === businessId) ?? businesses[0]
+  // `students` is a dependency: it arrives asynchronously, and omitting it
+  // would leave the selected student unresolved after the list loads.
+  const student = useMemo(
+    () => students.find((s) => s.studentNo === studentNo),
+    [students, studentNo],
+  )
 
   const subTotal = items.reduce((s, it) => s + (Number(it.amount) || 0), 0)
   const grandTotal = Math.max(0, subTotal - (Number(discount) || 0))
@@ -57,21 +88,28 @@ export default function StudentInvoiceFormPage() {
   const save = () => {
     setTried(true)
     if (!student || validItems.length === 0) return
-    const payload: Omit<StudentInvoice, 'id'> = {
-      date: existing?.date ?? invoiceNowStamp(),
-      businessId,
-      studentNo: student.studentNo,
-      student: student.name,
-      email: student.email,
-      phone: student.phone,
-      dueDate: fromInputDate(dueDate),
-      items: validItems.map(({ description, amount }) => ({ description: description.trim(), amount: Number(amount) })),
+    // The student's name, email and phone come from the student row, and the
+    // totals from the line items — none of it is sent from here, so the invoice
+    // cannot disagree with the record it bills.
+    const items = validItems.map(({ description, amount }) => ({
+      description: description.trim(),
+      amount: Number(amount),
+    }))
+    const payload = {
+      items,
       discount: Number(discount) || 0,
       terms: terms.trim(),
-      payments: existing?.payments ?? [],
+      dueDate: dueDate || undefined,
     }
-    if (existing) updateStudentInvoice({ ...existing, ...payload })
-    else addStudentInvoice(payload)
+    if (existing) {
+      updateInvoice.mutate({ id: existing.id, ...payload })
+    } else {
+      createInvoice.mutate({
+        studentNo: student.studentNo,
+        businessId: businessId ?? undefined,
+        ...payload,
+      })
+    }
     setSaved(true)
     window.setTimeout(() => window.location.assign('/invoices/student'), 700)
   }
@@ -95,7 +133,7 @@ export default function StudentInvoiceFormPage() {
         {/* Left: business + student */}
         <div className="space-y-4">
           <Field label="Select Business">
-            <select value={businessId} onChange={(e) => setBusinessId(Number(e.target.value))} className="input">
+            <select value={businessId ?? ''} onChange={(e) => setBusinessId(Number(e.target.value))} className="input">
               {businesses.map((b) => (
                 <option key={b.id} value={b.id}>
                   {b.name}
@@ -297,10 +335,4 @@ function toInputDate(stored?: string): string {
   if (!stored) return ''
   const [d, m, y] = stored.split('-')
   return y && m && d ? `${y}-${m}-${d}` : ''
-}
-/** "yyyy-mm-dd" (date input) → "dd-mm-yyyy" (stored). Empty stays empty. */
-function fromInputDate(input: string): string {
-  if (!input) return ''
-  const [y, m, d] = input.split('-')
-  return `${d}-${m}-${y}`
 }

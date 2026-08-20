@@ -47,7 +47,10 @@ type InvoiceRow = {
   createdAt: Date
   student: { id: bigint; name: string; studentNo: string; email: string | null; phone: string | null }
   business: { id: bigint; name: string; currency: string } | null
-  application: { id: bigint } | null
+  application: {
+    id: bigint
+    course: { university: { name: string; country: { name: string } | null } } | null
+  } | null
   status: { label: string; color: string; isPaid: boolean }
   items: Array<{ id: bigint; description: string; amountMinor: number }>
   payments: Array<{ id: bigint; amountMinor: number; method: string; note: string | null; paidAt: Date }>
@@ -431,7 +434,15 @@ export class InvoicesService {
   private readonly relations = {
     student: { select: { id: true, name: true, studentNo: true, email: true, phone: true } },
     business: { select: { id: true, name: true, currency: true } },
-    application: { select: { id: true } },
+    // The university invoice screens list the university and country, which
+    // live on the application rather than the invoice — joined here so the
+    // client does not have to fetch every application to render a table.
+    application: {
+      select: {
+        id: true,
+        course: { select: { university: { select: { name: true, country: { select: { name: true } } } } } },
+      },
+    },
     status: true,
     items: { orderBy: { sortOrder: 'asc' } },
     payments: { orderBy: { paidAt: 'asc' } },
@@ -464,6 +475,9 @@ export class InvoicesService {
       businessId: inv.business ? Number(inv.business.id) : null,
       business: inv.business?.name ?? '',
       applicationId: inv.application ? Number(inv.application.id) : null,
+      /** Joined from the application, empty for student invoices. */
+      university: inv.application?.course?.university.name ?? '',
+      country: inv.application?.course?.university.country?.name ?? '',
       /** 'university' when tied to an application, else 'student'. */
       kind: inv.application ? 'university' : 'student',
 

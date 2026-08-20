@@ -45,6 +45,9 @@ export interface ApiInvoice {
   businessId: number | null
   business: string
   applicationId: number | null
+  /** Joined from the application; empty for student invoices. */
+  university: string
+  country: string
   /** 'university' when tied to an application, else 'student'. */
   kind: 'student' | 'university'
 
