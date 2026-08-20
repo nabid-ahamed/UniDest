@@ -11,7 +11,8 @@ import {
   Query,
   Req,
 } from '@nestjs/common'
-import { RequirePermission } from '../auth/guards/permissions.guard'
+import { AllowStudent, RequirePermission } from '../auth/guards/permissions.guard'
+import { StudentScopeService } from '../auth/student-scope.service'
 import type { JwtPayload } from '../auth/auth.types'
 import { ApplicationsService } from './applications.service'
 import {
@@ -22,24 +23,38 @@ import {
 
 @Controller('applications')
 export class ApplicationsController {
-  constructor(@Inject(ApplicationsService) private readonly applications: ApplicationsService) {}
+  constructor(
+    @Inject(ApplicationsService) private readonly applications: ApplicationsService,
+    @Inject(StudentScopeService) private readonly scope: StudentScopeService,
+  ) {}
 
   @Get()
   @RequirePermission('view-applications')
-  list(@Query() query: ListApplicationsDto) {
+  @AllowStudent()
+  async list(@Query() query: ListApplicationsDto, @Req() req: { user?: JwtPayload }) {
+    // A student's list is pinned to their own id, overriding any studentId they
+    // send — otherwise the portal could page through everyone's applications.
+    if (this.scope.isStudent(req.user)) {
+      const studentId = await this.scope.requireStudentId(req.user!)
+      return this.applications.list({ ...query, studentId: String(studentId) })
+    }
     return this.applications.list(query)
   }
 
   @Get(':id')
   @RequirePermission('view-applications')
-  get(@Param('id', ParseIntPipe) id: number) {
+  @AllowStudent()
+  async get(@Param('id', ParseIntPipe) id: number, @Req() req: { user?: JwtPayload }) {
+    await this.scope.assertOwnsApplication(req.user, id)
     return this.applications.get(id)
   }
 
   /** Status timeline, newest first. */
   @Get(':id/history')
   @RequirePermission('view-applications')
-  history(@Param('id', ParseIntPipe) id: number) {
+  @AllowStudent()
+  async history(@Param('id', ParseIntPipe) id: number, @Req() req: { user?: JwtPayload }) {
+    await this.scope.assertOwnsApplication(req.user, id)
     return this.applications.history(id)
   }
 

@@ -217,6 +217,9 @@ async function main() {
   const userByName = new Map(
     (await prisma.user.findMany({ where: { tenantId: TENANT_ID } })).map((u) => [u.name, u.id]),
   )
+  const userIdByEmail = new Map(
+    (await prisma.user.findMany({ where: { tenantId: TENANT_ID } })).map((u) => [u.email, u.id]),
+  )
 
   /** All 15 leads from src/mock/leads.ts, so /leads looks the same after the swap. */
   const SEED_LEADS = [
@@ -279,7 +282,7 @@ async function main() {
   const SEED_STUDENTS = [
     { name: 'Aarav Sharma', email: 'aarav.sharma@gmail.com', phone: '+880 1845 012345', phoneNote: 'Primary', branch: 'Sylhet', status: 'active', assignedTo: 'Sarah Ali', residence: 'India', interest: 'United Kingdom', studyLevel: 'Masters', course: 'Computer Science', intake: 'September 2026', university: 'University of Manchester', source: 'Lead Convert' },
     { name: 'Fatima Rahman', email: 'fatima.r@gmail.com', phone: '+880 1712 445566', phoneNote: 'WhatsApp', branch: 'Khulna', status: 'docs-pending', residence: 'Bangladesh', interest: 'Canada', studyLevel: 'Bachelors', course: 'Business & Management', intake: 'January 2027', source: 'Walk-in' },
-    { name: 'Rohan Das', email: 'rohan.das@gmail.com', phone: '+880 1900 801122', phoneNote: 'Primary', branch: 'Dhaka', status: 'applied', assignedTo: 'Mohammed Saleh', residence: 'India', interest: 'Australia', studyLevel: 'Masters', course: 'Engineering', intake: 'February 2027', university: 'University of Melbourne', source: 'Referral' },
+    { name: 'Rohan Das', email: 'rohan.das@gmail.com', phone: '+880 1900 801122', phoneNote: 'Primary', branch: 'Dhaka', status: 'applied', assignedTo: 'Mohammed Saleh', residence: 'India', interest: 'Australia', studyLevel: 'Masters', course: 'Engineering', intake: 'February 2027', university: 'University of Melbourne', source: 'Referral', portalLogin: 'student@gmail.com' },
     { name: 'Ayesha Khan', email: 'ayesha.khan@gmail.com', phone: '+92 300 4455667', phoneNote: 'Father', branch: 'Dhaka', status: 'offer-received', assignedTo: 'Moses Otieno', residence: 'Bangladesh', interest: 'United States', studyLevel: 'Bachelors', course: 'Health Sciences', intake: 'September 2026', university: 'Arizona State University', source: 'Website' },
     { name: 'Vikram Patel', email: 'vikram.p@gmail.com', phone: '+880 1876 543210', phoneNote: 'Primary', branch: 'Sylhet', status: 'visa-applied', assignedTo: 'Sarah Ali', residence: 'India', interest: 'United Kingdom', studyLevel: 'Masters', course: 'Data Science', intake: 'September 2026', university: 'University of Leeds', source: 'Facebook' },
     { name: 'Nabila Haque', email: 'nabila.h@gmail.com', phone: '+880 1811 223344', phoneNote: 'Primary', branch: 'Chattogram', status: 'enrolled', assignedTo: 'Moses Otieno', residence: 'Bangladesh', interest: 'Canada', studyLevel: 'Bachelors', course: 'Nursing', intake: 'January 2027', university: 'University of Toronto', source: 'Referral' },
@@ -287,13 +290,26 @@ async function main() {
     name: string; email: string; phone: string; phoneNote?: string; branch: string
     status: string; assignedTo?: string; residence?: string; interest?: string
     studyLevel?: string; course?: string; intake?: string; university?: string; source?: string
+    /// Email of the users row this student signs in with. The demo student's
+    /// login (student@gmail.com) deliberately differs from their contact email,
+    /// which is exactly why the link is an FK and not an email match.
+    portalLogin?: string
   }>
 
   for (const st of SEED_STUDENTS) {
     const existing = await prisma.student.findFirst({
       where: { tenantId: TENANT_ID, email: st.email, deletedAt: null },
     })
-    if (existing) continue
+    if (existing) {
+      // Backfill the portal link on databases seeded before the column existed.
+      if (st.portalLogin && !existing.userId) {
+        await prisma.student.update({
+          where: { id: existing.id },
+          data: { userId: userIdByEmail.get(st.portalLogin) ?? null },
+        })
+      }
+      continue
+    }
 
     // studentNo needs the generated id, so insert with a placeholder then patch.
     const created = await prisma.student.create({
@@ -314,6 +330,7 @@ async function main() {
         assignedToId: st.assignedTo ? (userByName.get(st.assignedTo) ?? null) : null,
         residenceCountryId: st.residence ? (countryByName.get(st.residence) ?? null) : null,
         interestCountryId: st.interest ? (countryByName.get(st.interest) ?? null) : null,
+        userId: st.portalLogin ? (userIdByEmail.get(st.portalLogin) ?? null) : null,
       },
     })
     await prisma.student.update({

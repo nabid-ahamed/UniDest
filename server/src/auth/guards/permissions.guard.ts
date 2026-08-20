@@ -16,6 +16,22 @@ export const PERMISSIONS_KEY = 'requiredPermissions'
 export const RequirePermission = (...permissions: string[]) =>
   SetMetadata(PERMISSIONS_KEY, permissions)
 
+export const ALLOW_STUDENT_KEY = 'allowStudent'
+
+/**
+ * Let a Student-role token past the permission check on a portal route.
+ *
+ * Students hold no permissions by design, because the portal question is not
+ * "may you read applications?" but "may you read *this* one?" — ownership,
+ * which permissions cannot express. Routes carrying this decorator MUST scope
+ * their query through StudentScopeService; the decorator only opens the door.
+ *
+ * Opt-in rather than a blanket exemption: forgetting it makes a portal route
+ * inaccessible, which is a visible bug, where the inverse would silently expose
+ * every record.
+ */
+export const AllowStudent = () => SetMetadata(ALLOW_STUDENT_KEY, true)
+
 @Injectable()
 export class PermissionsGuard implements CanActivate {
   constructor(@Inject(Reflector) private readonly reflector: Reflector) {}
@@ -32,6 +48,15 @@ export class PermissionsGuard implements CanActivate {
 
     // '*' is the Super Admin wildcard seeded in prisma/seed.ts.
     if (user.permissions.includes('*')) return true
+
+    // Portal routes marked @AllowStudent() admit students, who hold no
+    // permissions. Those routes narrow the query to the caller's own records
+    // via StudentScopeService — this only gets them past the gate.
+    const allowsStudent = this.reflector.getAllAndOverride<boolean>(ALLOW_STUDENT_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ])
+    if (allowsStudent && user.role === 'Student') return true
 
     const missing = required.filter((p) => !user.permissions.includes(p))
     if (missing.length) {

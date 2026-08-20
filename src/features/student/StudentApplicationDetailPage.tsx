@@ -55,8 +55,11 @@ export default function StudentApplicationDetailPage() {
     )
   }
 
-  // Guard: students only see their own applications.
-  if (!app || app.studentNo !== currentStudent().studentNo) {
+  // Ownership is enforced by the API: a student requesting someone else's
+  // application gets a 403 and `app` is undefined here. The old client-side
+  // check compared against the mock student list, which no longer reflects who
+  // is signed in — and a check the server does not repeat is not a guard.
+  if (!app) {
     return (
       <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center shadow-sm">
         <p className="text-slate-500">Application not found.</p>

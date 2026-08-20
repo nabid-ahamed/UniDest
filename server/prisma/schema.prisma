@@ -110,6 +110,9 @@ model User {
   assignedApplications Application[]             @relation("ApplicationAssignee")
   statusChanges       ApplicationStatusHistory[] @relation("StatusChangedBy")
 
+  /// The student record this login belongs to, when the user is a student.
+  studentProfile      Student?                   @relation("StudentPortalAccount")
+
   @@unique([tenantId, email])
   @@index([tenantId, roleId])
   @@index([tenantId, branchId])
@@ -562,6 +565,13 @@ model Student {
   /// The lead this student was converted from — NULL for direct sign-ups.
   leadId BigInt? @unique
 
+  /// The login this student signs in with, NULL for students who have no portal
+  /// account yet. An explicit FK rather than matching on `email`: the seeded
+  /// portal login is student@gmail.com while the student record carries
+  /// rohan.das@gmail.com, so an email join silently matches nothing — and a
+  /// student editing their own email address would lock themselves out.
+  userId BigInt? @unique
+
   /// Set when the student is archived. Distinct from deletedAt: archived rows
   /// are still real students the user can restore, deleted ones are in the bin.
   archivedAt DateTime?
@@ -576,6 +586,7 @@ model Student {
   residenceCountry Country?      @relation("StudentResidence", fields: [residenceCountryId], references: [id])
   interestCountry  Country?      @relation("StudentInterest", fields: [interestCountryId], references: [id])
   lead             Lead?         @relation("StudentFromLead", fields: [leadId], references: [id])
+  user             User?         @relation("StudentPortalAccount", fields: [userId], references: [id])
 
   /// Back-reference for Lead.convertedStudent.
   convertedFromLeads Lead[]        @relation("LeadConversion")

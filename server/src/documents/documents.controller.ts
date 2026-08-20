@@ -8,22 +8,33 @@ import {
   Param,
   ParseIntPipe,
   Post,
+  Request,
   Res,
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common'
 import { FileInterceptor } from '@nestjs/platform-express'
 import type { Response } from 'express'
-import { RequirePermission } from '../auth/guards/permissions.guard'
+import { AllowStudent, RequirePermission } from '../auth/guards/permissions.guard'
+import { StudentScopeService } from '../auth/student-scope.service'
+import type { JwtPayload } from '../auth/auth.types'
 import { DocumentsService, MAX_FILE_BYTES } from './documents.service'
+
+/** Shape Passport puts on the request after the JWT strategy runs. */
+type Req = { user?: JwtPayload }
 
 @Controller('applications/:id/documents')
 export class DocumentsController {
-  constructor(@Inject(DocumentsService) private readonly documents: DocumentsService) {}
+  constructor(
+    @Inject(DocumentsService) private readonly documents: DocumentsService,
+    @Inject(StudentScopeService) private readonly scope: StudentScopeService,
+  ) {}
 
   @Get()
   @RequirePermission('view-applications')
-  list(@Param('id', ParseIntPipe) id: number) {
+  @AllowStudent()
+  async list(@Param('id', ParseIntPipe) id: number, @Request() req: Req) {
+    await this.scope.assertOwnsApplication(req.user, id)
     return this.documents.list(id)
   }
 
@@ -38,12 +49,15 @@ export class DocumentsController {
    */
   @Post()
   @RequirePermission('file-uploads')
+  @AllowStudent()
   @UseInterceptors(FileInterceptor('file', { limits: { fileSize: MAX_FILE_BYTES } }))
-  upload(
+  async upload(
     @Param('id', ParseIntPipe) id: number,
     @UploadedFile() file: Express.Multer.File,
+    @Request() req: Req,
     @Body('type') type?: string,
   ) {
+    await this.scope.assertOwnsApplication(req.user, id)
     return this.documents.upload(id, file, type)
   }
 
@@ -56,11 +70,14 @@ export class DocumentsController {
    */
   @Get(':docId')
   @RequirePermission('view-applications')
+  @AllowStudent()
   async download(
     @Param('id', ParseIntPipe) id: number,
     @Param('docId', ParseIntPipe) docId: number,
     @Res() res: Response,
+    @Request() req: Req,
   ) {
+    await this.scope.assertOwnsApplication(req.user, id)
     const { stream, name, size } = await this.documents.download(id, docId)
     // Quote the filename and strip quotes from it — an unescaped name would let
     // the client's own string break out of the header value.
@@ -71,7 +88,13 @@ export class DocumentsController {
 
   @Delete(':docId')
   @RequirePermission('file-uploads')
-  remove(@Param('id', ParseIntPipe) id: number, @Param('docId', ParseIntPipe) docId: number) {
+  @AllowStudent()
+  async remove(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('docId', ParseIntPipe) docId: number,
+    @Request() req: Req,
+  ) {
+    await this.scope.assertOwnsApplication(req.user, id)
     return this.documents.remove(id, docId)
   }
 }
