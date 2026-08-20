@@ -9,19 +9,14 @@ import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { AssignStaffDialog } from '../leads/components/AssignStaffDialog'
 import type { Ticket, TicketStatus, TicketPriority } from '../../mock/supportTickets'
 import {
-  tickets,
   ticketStatuses,
   ticketPriorities,
   ticketCategories,
   ticketBulkActions,
   ticketBranches,
   ticketStaff,
-  setTicketStatus,
-  setTicketPriority,
-  setTicketAssignee,
-  deleteTicket,
-  deleteTickets,
 } from '../../mock/supportTickets'
+import { useTickets, useUpdateTicket, useDeleteTicket } from '../../lib/api'
 import { TicketRow } from './components/TicketRow'
 
 const PAGE_SIZES = [
@@ -56,8 +51,11 @@ export default function SupportTicketsPage() {
   const [toast, setToast] = useState('')
   const [assignTicket, setAssignTicket] = useState<Ticket | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Ticket | null>(null)
-  const [rev, setRev] = useState(0)
-  const bump = () => setRev((n) => n + 1)
+  // React Query owns the data and its invalidation, so the old `rev` counter
+  // that forced a re-read of the mutable mock array is gone.
+  const { data: tickets = [], isPending } = useTickets()
+  const updateTicket = useUpdateTicket()
+  const removeTicket = useDeleteTicket()
 
   useEffect(() => {
     const t = window.setTimeout(() => setLoading(false), 700)
@@ -109,18 +107,15 @@ export default function SupportTicketsPage() {
 
     if (bulkAction === 'Change status') {
       if (!bulkValue) return showToast('Choose a status to apply')
-      ids.forEach((id) => setTicketStatus(id, bulkValue as TicketStatus))
-      bump()
+      ids.forEach((id) => updateTicket.mutate({ id, status: bulkValue as TicketStatus }))
       showToast(`Status set to ${bulkValue} — ${ids.length} ticket(s)`)
     } else if (bulkAction === 'Change priority') {
       if (!bulkValue) return showToast('Choose a priority to apply')
-      ids.forEach((id) => setTicketPriority(id, bulkValue as TicketPriority))
-      bump()
+      ids.forEach((id) => updateTicket.mutate({ id, priority: bulkValue as TicketPriority }))
       showToast(`Priority set to ${bulkValue} — ${ids.length} ticket(s)`)
     } else if (bulkAction === 'Assign to staff') {
       if (!bulkValue) return showToast('Choose a staff member')
-      ids.forEach((id) => setTicketAssignee(id, bulkValue))
-      bump()
+      ids.forEach((id) => updateTicket.mutate({ id, assignedTo: bulkValue }))
       showToast(`Assigned to ${bulkValue} — ${ids.length} ticket(s)`)
     }
     setBulkAction('')
@@ -129,11 +124,12 @@ export default function SupportTicketsPage() {
 
   const confirmBulkDelete = () => {
     const ids = [...selected]
-    deleteTickets(ids)
+    // One request per ticket: the API has no bulk endpoint, and inventing one
+    // for a handful of rows would be scope the UI does not need.
+    ids.forEach((id) => removeTicket.mutate(id))
     setSelected(new Set())
     setBulkConfirm(false)
     setBulkAction('')
-    bump()
     showSuccessDialog(`${ids.length} ticket(s) deleted successfully`)
   }
 
@@ -142,13 +138,11 @@ export default function SupportTicketsPage() {
     if (type === 'View') return window.location.assign(`/support-tickets/${ticket.id}`)
     if (type === 'Delete') return setDeleteTarget(ticket)
     if (type === 'SetStatus' && payload) {
-      setTicketStatus(ticket.id, payload as TicketStatus)
-      bump()
+      updateTicket.mutate({ id: ticket.id, status: payload as TicketStatus })
       return showToast(`#${ticket.id} → ${payload}`)
     }
     if (type === 'SetPriority' && payload) {
-      setTicketPriority(ticket.id, payload as TicketPriority)
-      bump()
+      updateTicket.mutate({ id: ticket.id, priority: payload as TicketPriority })
       return showToast(`#${ticket.id} priority → ${payload}`)
     }
     showToast(`${type}: #${ticket.id}`)
@@ -156,21 +150,19 @@ export default function SupportTicketsPage() {
 
   const saveAssignee = (member: string) => {
     if (!assignTicket) return
-    setTicketAssignee(assignTicket.id, member)
-    bump()
+    updateTicket.mutate({ id: assignTicket.id, assignedTo: member })
     showToast(`Ticket #${assignTicket.id} assigned to ${member}`)
     setAssignTicket(null)
   }
 
   const confirmDelete = () => {
     if (!deleteTarget) return
-    deleteTicket(deleteTarget.id)
+    removeTicket.mutate(deleteTarget.id)
     setSelected((prev) => {
       const next = new Set(prev)
       next.delete(deleteTarget.id)
       return next
     })
-    bump()
     showSuccessDialog(`Ticket #${deleteTarget.id} deleted successfully`)
     setDeleteTarget(null)
   }
@@ -191,8 +183,7 @@ export default function SupportTicketsPage() {
       }
       return true
     })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, statuses, priority, category, staff, branch, kind, rev])
+  }, [tickets, search, statuses, priority, category, staff, branch, kind])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
   const currentPage = Math.min(page, totalPages)
@@ -517,7 +508,7 @@ export default function SupportTicketsPage() {
                   {pageRows.length === 0 && (
                     <tr>
                       <td colSpan={8} className="px-3 py-10 text-center text-sm text-slate-500">
-                        No tickets found.
+                        {isPending ? 'Loading tickets…' : 'No tickets found.'}
                         {activeFilterCount > 0 && (
                           <button
                             onClick={clearFilters}

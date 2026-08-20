@@ -32,6 +32,12 @@ export const qk = {
     roles: () => [...qk.staff.all, 'roles'] as const,
     branches: () => [...qk.staff.all, 'branches'] as const,
   },
+  tickets: {
+    all: ['tickets'] as const,
+    list: () => [...qk.tickets.all, 'list'] as const,
+    detail: (id: number) => [...qk.tickets.all, 'detail', id] as const,
+    statuses: () => [...qk.tickets.all, 'statuses'] as const,
+  },
   /** Files attached to an application, keyed by that application. */
   documents: {
     all: ['documents'] as const,

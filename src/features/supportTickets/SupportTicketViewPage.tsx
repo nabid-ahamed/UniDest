@@ -6,42 +6,28 @@ import { ArrowLeft, Send, Trash2, User, Headset, Clock, Tag } from 'lucide-react
 import { cn } from '../../lib/cn'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { AssignStaffDialog } from '../leads/components/AssignStaffDialog'
-import { useAuth } from '../../store/auth'
 import {
-  getTicket,
   ticketStatuses,
   ticketPriorities,
   ticketStaff,
-  setTicketStatus,
-  setTicketPriority,
-  setTicketAssignee,
-  addTicketReply,
-  deleteTicket,
   type TicketStatus,
   type TicketPriority,
 } from '../../mock/supportTickets'
+import { useTicket, useUpdateTicket, useReplyToTicket, useDeleteTicket } from '../../lib/api'
 import { StatusBadge, PriorityBadge } from './components/TicketBadges'
-
-/** "dd Mon yyyy · h:mm AM" — same display style as the seeded thread. */
-function nowStamp() {
-  const d = new Date()
-  const date = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
-  const time = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
-  return `${date} · ${time}`
-}
 
 export default function SupportTicketViewPage() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const admin = useAuth((s) => s.user)
-  const ticket = getTicket(Number(id))
+  const { data: ticket, isPending } = useTicket(id ? Number(id) : undefined)
+  const updateTicket = useUpdateTicket()
+  const replyToTicket = useReplyToTicket()
+  const removeTicket = useDeleteTicket()
 
   const [reply, setReply] = useState('')
   const [assignOpen, setAssignOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [toast, setToast] = useState('')
-  const [rev, setRev] = useState(0)
-  const bump = () => setRev((n) => n + 1)
 
   const showToast = (msg: string) => {
     setToast(msg)
@@ -49,11 +35,17 @@ export default function SupportTicketViewPage() {
     ;(showToast as unknown as { t?: number }).t = window.setTimeout(() => setToast(''), 2500)
   }
 
-  // Read the (possibly mutated) thread whenever we bump.
-  // `rev` is deliberate — replies mutate the ticket object in place, so only
-  // the bump tells React the message list changed.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const messages = useMemo(() => ticket?.messages ?? [], [ticket, rev])
+  // The thread comes back with the ticket, and React Query replaces the object
+  // on every mutation — so no manual invalidation counter is needed any more.
+  const messages = useMemo(() => ticket?.messages ?? [], [ticket])
+
+  if (isPending) {
+    return (
+      <div className="rounded-xl border border-slate-200 bg-white p-12 text-center shadow-sm">
+        <p className="text-slate-500">Loading ticket…</p>
+      </div>
+    )
+  }
 
   if (!ticket) {
     return (
@@ -72,35 +64,33 @@ export default function SupportTicketViewPage() {
   const sendReply = () => {
     const body = reply.trim()
     if (!body) return
-    addTicketReply(ticket.id, admin?.name || 'Admin', body, nowStamp())
-    // Replying to an open/pending ticket moves it to Pending (awaiting requester).
-    if (ticket.status === 'Open') setTicketStatus(ticket.id, 'Pending')
+    // The server records the author from the token, so the display name is no
+    // longer passed in — it would only ever be a second, less trustworthy copy.
+    replyToTicket.mutate({ id: ticket.id, body })
+    // Replying to an open ticket moves it to Pending (awaiting the requester).
+    if (ticket.status === 'Open') updateTicket.mutate({ id: ticket.id, status: 'Pending' })
     setReply('')
-    bump()
     showToast('Reply sent')
   }
 
   const changeStatus = (status: TicketStatus) => {
-    setTicketStatus(ticket.id, status)
-    bump()
+    updateTicket.mutate({ id: ticket.id, status })
     showToast(`Status → ${status}`)
   }
 
   const changePriority = (priority: TicketPriority) => {
-    setTicketPriority(ticket.id, priority)
-    bump()
+    updateTicket.mutate({ id: ticket.id, priority })
     showToast(`Priority → ${priority}`)
   }
 
   const saveAssignee = (member: string) => {
-    setTicketAssignee(ticket.id, member)
-    bump()
+    updateTicket.mutate({ id: ticket.id, assignedTo: member })
     setAssignOpen(false)
     showToast(`Assigned to ${member}`)
   }
 
   const confirmDelete = () => {
-    deleteTicket(ticket.id)
+    removeTicket.mutate(ticket.id)
     setDeleteOpen(false)
     showSuccessDialog(`Ticket #${ticket.id} deleted successfully`)
     navigate('/support-tickets')

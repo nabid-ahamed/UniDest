@@ -12,8 +12,7 @@ import { LeadProfileTab } from './components/LeadProfileTab'
 import { LeadCourseSuggestionTab } from './components/LeadCourseSuggestionTab'
 import { LeadCoursePreferencesTab } from './components/LeadCoursePreferencesTab'
 import { LeadActions } from './components/LeadActions'
-import { useLead, type Lead } from '../../lib/api'
-import { ticketsFor } from '../../mock/supportTickets'
+import { useLead, useTickets, type Lead } from '../../lib/api'
 
 const TABS = ['Overview', 'Profile', 'Course Suggestion', 'Course Preferences'] as const
 
@@ -50,6 +49,12 @@ export default function LeadViewPage() {
 function LeadView({ lead }: { lead: Lead }) {
   const [tab, setTab] = useState<(typeof TABS)[number]>('Overview')
   const [toast, setToast] = useState('')
+
+  // Tickets raised by this lead. Filtered client-side from the list the page
+  // already needs elsewhere, rather than adding a per-lead endpoint for a
+  // handful of rows.
+  const { data: allTickets = [] } = useTickets()
+  const leadTickets = allTickets.filter((t) => t.requester === lead.name)
 
   const showToast = (msg: string) => {
     setToast(msg)
@@ -133,7 +138,7 @@ function LeadView({ lead }: { lead: Lead }) {
             <RecordsSection
               title="Support Tickets"
               headers={['Ticket', 'Assigned To', 'Status', 'Last Reply']}
-              rows={ticketsFor(lead.name).map((t) => [
+              rows={leadTickets.map((t) => [
                 `#${t.id} · ${t.subject}`,
                 t.assignedTo ?? 'Unassigned',
                 t.status,
