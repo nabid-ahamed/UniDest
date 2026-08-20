@@ -1,9 +1,6 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { useAuth } from '../../store/auth'
-import {
-  branches,
-  branchDashboard,
-} from '../../mock/dashboard'
+import { useDashboard, useDashboardBranches } from '../../lib/api'
 import { StatCard } from './components/StatCard'
 import { CollapsibleSection } from './components/CollapsibleSection'
 import { ChartCard } from './components/ChartCard'
@@ -15,6 +12,9 @@ import { BreakdownCard } from './components/BreakdownCard'
 import { StatTile } from './components/StatTile'
 import { StatusTileGrid } from './components/StatusTileGrid'
 import type { TrendPoint, DailyPoint } from '../../mock/dashboard'
+
+/** Filter sentinel, not a real branch — the API treats it as "no filter". */
+const ALL_BRANCH = 'All Branch'
 
 function ChartsRow({ trend, applications }: { trend: TrendPoint[]; applications: DailyPoint[] }) {
   return (
@@ -31,10 +31,30 @@ function ChartsRow({ trend, applications }: { trend: TrendPoint[]; applications:
 
 export default function DashboardPage() {
   const user = useAuth((s) => s.user)
-  const [branch, setBranch] = useState(branches[0])
+  const [branch, setBranch] = useState(ALL_BRANCH)
 
   // All datasets scoped to the selected branch. "All Branch" is the full total.
-  const data = useMemo(() => branchDashboard(branch), [branch])
+  const { data, isPending, isError } = useDashboard(branch)
+  const { data: branches } = useDashboardBranches()
+  // Keep the filter usable while its own request is in flight.
+  const branchOptions = branches ?? [ALL_BRANCH]
+
+  if (isPending) {
+    return (
+      <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center shadow-sm">
+        <p className="text-slate-500">Loading dashboard…</p>
+      </div>
+    )
+  }
+
+  if (isError || !data) {
+    return (
+      <div className="rounded-2xl border border-rose-200 bg-rose-50 p-12 text-center shadow-sm">
+        <p className="font-semibold text-rose-700">Could not load the dashboard.</p>
+        <p className="mt-1 text-sm text-rose-600">Check that the API is running, then reload.</p>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-2">
@@ -49,7 +69,7 @@ export default function DashboardPage() {
           aria-label="Filter dashboard by branch"
           className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500"
         >
-          {branches.map((b) => (
+          {branchOptions.map((b) => (
             <option key={b}>{b}</option>
           ))}
         </select>

@@ -32,6 +32,12 @@ export const qk = {
     roles: () => [...qk.staff.all, 'roles'] as const,
     branches: () => [...qk.staff.all, 'branches'] as const,
   },
+  /** Dashboard read model — keyed by branch, since every card is branch-scoped. */
+  dashboard: {
+    all: ['dashboard'] as const,
+    overview: (branch: string) => [...qk.dashboard.all, 'overview', branch] as const,
+    branches: () => [...qk.dashboard.all, 'branches'] as const,
+  },
   /** Read-only reference data: countries, universities, courses, categories. */
   catalog: {
     all: ['catalog'] as const,

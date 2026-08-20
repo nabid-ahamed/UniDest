@@ -67,3 +67,5 @@ export {
   useDeleteApplication,
 } from './hooks/useApplications'
 export type { StatusHistoryEntry } from './resources/applications'
+export type { BranchDashboard } from './resources/dashboard'
+export { useDashboard, useDashboardBranches } from './hooks/useDashboard'
