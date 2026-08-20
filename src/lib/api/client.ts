@@ -29,8 +29,23 @@ export const API_BASE_URL = import.meta.env.VITE_API_URL ?? '/api'
  * server, false falls back to `src/mock/`. Set `VITE_USE_REAL_API=false` in a
  * `.env.local` to run entirely on mock data without editing code — useful if
  * the backend is down or a migration bug appears.
+ *
+ * The default is deployment-aware rather than a bare `true`. The NestJS server
+ * only runs on localhost, so a deployed build (Vercel and friends) has no API
+ * to reach: `/api/*` there hits the SPA rewrite and returns 405, which surfaces
+ * as "Could not reach the server" on the login form. Preview deployments are
+ * demos, so mock data is the correct default — an explicit VITE_USE_REAL_API,
+ * or a VITE_API_URL pointing at a hosted backend, still wins.
  */
-export const USING_REAL_API = import.meta.env.VITE_USE_REAL_API !== 'false'
+const isLocalhost =
+  typeof window !== 'undefined' && /^(localhost|127\.0\.0\.1|\[::1\])$/.test(window.location.hostname)
+
+export const USING_REAL_API =
+  import.meta.env.VITE_USE_REAL_API === 'true'
+    ? true
+    : import.meta.env.VITE_USE_REAL_API === 'false'
+      ? false
+      : isLocalhost || Boolean(import.meta.env.VITE_API_URL)
 
 /**
  * Resolve a value the way the network eventually will: asynchronously.
