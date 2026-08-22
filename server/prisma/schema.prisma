@@ -56,6 +56,7 @@ model Branch {
   students     Student[]
   applications Application[]
   tickets      Ticket[]
+  agents       Agent[]
 
   @@unique([tenantId, name])
   @@index([tenantId])
@@ -109,10 +110,12 @@ model User {
   assignedLeads       Lead[]                     @relation("LeadAssignee")
   assignedStudents    Student[]                  @relation("StudentAssignee")
   assignedApplications Application[]             @relation("ApplicationAssignee")
+  agentContacts       Agent[]                    @relation("AgentPointOfContact")
   statusChanges       ApplicationStatusHistory[] @relation("StatusChangedBy")
 
   /// The student record this login belongs to, when the user is a student.
   studentProfile      Student?                   @relation("StudentPortalAccount")
+  agentProfile        Agent?                     @relation("AgentPortalAccount")
   activityLog         ActivityLog[]              @relation("ActivityActor")
   assignedTickets     Ticket[]                   @relation("TicketAssignee")
   ticketMessages      TicketMessage[]            @relation("TicketMessageAuthor")
@@ -496,6 +499,7 @@ model Lead {
 
   branchId                 BigInt?
   assignedToId             BigInt?
+  referredByAgentId        BigInt?
   statusId                 BigInt
   primaryInterestCountryId BigInt?
 
@@ -516,6 +520,7 @@ model Lead {
 
   branch                 Branch?    @relation(fields: [branchId], references: [id])
   assignedTo             User?      @relation("LeadAssignee", fields: [assignedToId], references: [id])
+  referredByAgent        Agent?     @relation("AgentLeads", fields: [referredByAgentId], references: [id])
   status                 LeadStatus @relation(fields: [statusId], references: [id])
   primaryInterestCountry Country?   @relation("LeadPrimaryInterest", fields: [primaryInterestCountryId], references: [id])
 
@@ -528,6 +533,7 @@ model Lead {
 
   @@index([tenantId, statusId])
   @@index([tenantId, assignedToId])
+  @@index([tenantId, referredByAgentId])
   @@index([tenantId, nextFollowUpAt])
   @@index([tenantId, deletedAt])
   @@map("leads")
@@ -566,6 +572,7 @@ model Student {
 
   branchId     BigInt?
   assignedToId BigInt?
+  referredByAgentId BigInt?
   statusId     BigInt
 
   residenceCountryId BigInt?
@@ -599,6 +606,7 @@ model Student {
 
   branch           Branch?       @relation(fields: [branchId], references: [id])
   assignedTo       User?         @relation("StudentAssignee", fields: [assignedToId], references: [id])
+  referredByAgent  Agent?        @relation("AgentStudents", fields: [referredByAgentId], references: [id])
   status           StudentStatus @relation(fields: [statusId], references: [id])
   residenceCountry Country?      @relation("StudentResidence", fields: [residenceCountryId], references: [id])
   interestCountry  Country?      @relation("StudentInterest", fields: [interestCountryId], references: [id])
@@ -613,6 +621,7 @@ model Student {
 
   @@index([tenantId, statusId])
   @@index([tenantId, assignedToId])
+  @@index([tenantId, referredByAgentId])
   @@index([tenantId, deletedAt])
   @@map("students")
 }
@@ -926,9 +935,24 @@ model Agent {
   tenantId BigInt @default(1)
 
   name    String
+  firstName String?
+  lastName  String?
   company String?
   email   String?
   phone   String?
+  country String?
+  state   String?
+  city    String?
+  address String?
+  category String?
+  branchId BigInt
+  pointOfContactId BigInt?
+  logoUrl String?
+  idProofUrl String?
+  incorporationCertUrl String?
+  userId BigInt? @unique
+  canSubmitApplications Boolean @default(false)
+  autoConvertReferrals Boolean @default(false)
 
   /// Percent of the application fee this agent earns, e.g. 12.5 for 12.5%.
   /// Stored in basis points (1250) so the arithmetic stays in integers, for
@@ -941,12 +965,29 @@ model Agent {
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
-  applications Application[]
-  commissions  Commission[]
+  branch         Branch @relation(fields: [branchId], references: [id])
+  pointOfContact User? @relation("AgentPointOfContact", fields: [pointOfContactId], references: [id])
+  user           User?  @relation("AgentPortalAccount", fields: [userId], references: [id])
+  leads          Lead[] @relation("AgentLeads")
+  students       Student[] @relation("AgentStudents")
+  applications   Application[]
+  commissions    Commission[]
 
   @@unique([tenantId, name])
   @@index([tenantId, deletedAt])
   @@map("agents")
+}
+
+model AppSetting {
+  id        BigInt   @id @default(autoincrement())
+  tenantId  BigInt   @default(1)
+  key       String
+  value     Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, key])
+  @@map("app_settings")
 }
 
 /// What an agent earned on one application.

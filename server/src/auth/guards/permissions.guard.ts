@@ -17,6 +17,10 @@ export const RequirePermission = (...permissions: string[]) =>
   SetMetadata(PERMISSIONS_KEY, permissions)
 
 export const ALLOW_STUDENT_KEY = 'allowStudent'
+export const ALLOW_AGENT_KEY = 'allowAgent'
+
+/** Let an Agent-role token pass a permission gate on an explicitly scoped route. */
+export const AllowAgent = () => SetMetadata(ALLOW_AGENT_KEY, true)
 
 /**
  * Let a Student-role token past the permission check on a portal route.
@@ -57,6 +61,12 @@ export class PermissionsGuard implements CanActivate {
       context.getClass(),
     ])
     if (allowsStudent && user.role === 'Student') return true
+
+      const allowsAgent = this.reflector.getAllAndOverride<boolean>(ALLOW_AGENT_KEY, [
+        context.getHandler(),
+        context.getClass(),
+      ])
+      if (allowsAgent && user.role === 'Agent') return true
 
     const missing = required.filter((p) => !user.permissions.includes(p))
     if (missing.length) {

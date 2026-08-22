@@ -53,6 +53,13 @@ const DEMO_ACCOUNTS: DemoAccount[] = [
     redirect: '/dashboard',
     badge: 'bg-amber-50 text-amber-600',
   },
+  {
+    role: 'Agent',
+    email: 'agent@gmail.com',
+    password: '123456',
+    redirect: '/agent/dashboard',
+    badge: 'bg-sky-50 text-sky-600',
+  },
 ]
 
 const highlights = [
@@ -103,7 +110,7 @@ export default function LoginPage() {
         permissions: user.permissions,
       })
 
-      navigate(user.role === 'Student' ? '/portal' : '/dashboard')
+      navigate(user.role === 'Student' ? '/portal' : user.role === 'Agent' ? '/agent/dashboard' : '/dashboard')
     } catch (err) {
       // 401 is a wrong email/password; anything else means the API is
       // unreachable, which deserves a different message than "bad password".

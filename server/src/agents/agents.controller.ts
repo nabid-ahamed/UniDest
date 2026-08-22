@@ -12,6 +12,8 @@ import {
   Req,
 } from '@nestjs/common'
 import { RequirePermission } from '../auth/guards/permissions.guard'
+import { AllowAgent } from '../auth/guards/permissions.guard'
+import { AgentScopeService } from '../auth/agent-scope.service'
 import type { JwtPayload } from '../auth/auth.types'
 import { AgentsService } from './agents.service'
 import {
@@ -19,8 +21,10 @@ import {
   CreateCommissionDto,
   ListAgentsDto,
   ListCommissionsDto,
+  ListReferralsDto,
   UpdateAgentDto,
   UpdateCommissionDto,
+  UpdateSubmissionSettingDto,
 } from './dto/agent.dto'
 
 @Controller('agents')
@@ -31,6 +35,24 @@ export class AgentsController {
   @RequirePermission('agent-management')
   list(@Query() query: ListAgentsDto) {
     return this.agents.list(query)
+  }
+
+  @Get('referrals')
+  @RequirePermission('agent-management')
+  referrals(@Query() query: ListReferralsDto) {
+    return this.agents.listReferrals(query)
+  }
+
+  @Get('settings/submission')
+  @RequirePermission('agent-management')
+  submissionSetting() {
+    return this.agents.submissionSetting()
+  }
+
+  @Patch('settings/submission')
+  @RequirePermission('agent-management')
+  updateSubmissionSetting(@Body() dto: UpdateSubmissionSettingDto, @Req() req: { user?: JwtPayload }) {
+    return this.agents.updateSubmissionSetting(dto, req.user?.sub)
   }
 
   @Get(':id')
@@ -65,11 +87,19 @@ export class AgentsController {
 /** Commissions are money, so they are gated on `commission`, not agent admin. */
 @Controller('commissions')
 export class CommissionsController {
-  constructor(@Inject(AgentsService) private readonly agents: AgentsService) {}
+  constructor(
+    @Inject(AgentsService) private readonly agents: AgentsService,
+    @Inject(AgentScopeService) private readonly scope: AgentScopeService,
+  ) {}
 
   @Get()
   @RequirePermission('commission')
-  list(@Query() query: ListCommissionsDto) {
+  @AllowAgent()
+  async list(@Query() query: ListCommissionsDto, @Req() req: { user?: JwtPayload }) {
+    if (this.scope.isAgent(req.user)) {
+      const agentId = await this.scope.requireAgentId(req.user!)
+      return this.agents.listCommissions({ ...query, agentId: String(agentId) })
+    }
     return this.agents.listCommissions(query)
   }
 

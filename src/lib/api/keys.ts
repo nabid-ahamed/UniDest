@@ -32,6 +32,13 @@ export const qk = {
     roles: () => [...qk.staff.all, 'roles'] as const,
     branches: () => [...qk.staff.all, 'branches'] as const,
   },
+  agents: {
+    all: ['agents'] as const,
+    list: () => [...qk.agents.all, 'list'] as const,
+    detail: (id: number) => [...qk.agents.all, 'detail', id] as const,
+    referrals: () => [...qk.agents.all, 'referrals'] as const,
+    commissions: () => [...qk.agents.all, 'commissions'] as const,
+  },
   tickets: {
     all: ['tickets'] as const,
     list: () => [...qk.tickets.all, 'list'] as const,

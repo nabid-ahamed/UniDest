@@ -48,6 +48,7 @@ export class LeadsService {
 
     const where: Record<string, unknown> = { tenantId: TENANT_ID, deletedAt: null }
 
+    if (query.agentId) where.referredByAgentId = BigInt(query.agentId)
     if (query.includeConverted !== 'true') where.convertedStudentId = null
     if (query.status) where.status = { label: query.status }
     if (query.branch) where.branch = { name: query.branch }

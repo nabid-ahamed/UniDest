@@ -56,6 +56,8 @@ export class StudentsService {
 
     const where: Record<string, unknown> = { tenantId: TENANT_ID }
 
+    if (query.agentId) where.referredByAgentId = BigInt(query.agentId)
+
     // The UI has three tabs; each is a different slice of the same table.
     if (query.view === 'deleted') where.deletedAt = { not: null }
     else if (query.view === 'archived') {
@@ -137,6 +139,104 @@ export class StudentsService {
       include: this.relations,
     })
     return this.toDto(student as StudentWithRelations)
+  }
+
+  async createReferral(dto: CreateStudentDto, agentId: bigint, actorPublicId?: string) {
+    const agent = await this.db.agent.findFirst({
+      where: { id: agentId, tenantId: TENANT_ID, deletedAt: null, status: 'active' },
+      select: { id: true, autoConvertReferrals: true },
+    })
+    if (!agent) throw new NotFoundException('Agent not found.')
+
+    const links = await this.resolveLinks(dto)
+    const studentStatusId = links.statusId ?? (await this.defaultStatusId())
+    const leadStatus = await this.db.leadStatus.findFirst({
+      where: { tenantId: TENANT_ID, key: 'new-lead', deletedAt: null },
+    })
+    if (!leadStatus) throw new NotFoundException('No lead status is configured.')
+    const actorId = await this.resolveActorId(actorPublicId)
+
+    const result = await this.db.$transaction(async (tx) => {
+      const lead = await tx.lead.create({
+        data: {
+          tenantId: TENANT_ID,
+          name: dto.name,
+          email: dto.email ?? null,
+          phone: dto.phone ?? null,
+          phoneNote: dto.phoneNote ?? null,
+          gender: dto.gender ?? null,
+          source: dto.source ?? 'Agent Referral',
+          studyLevel: dto.studyLevel ?? null,
+          statusId: leadStatus.id,
+          branchId: links.branchId,
+          assignedToId: links.assignedToId,
+          primaryInterestCountryId: links.interestId,
+          referredByAgentId: agent.id,
+        },
+      })
+      await this.activity.recordWithActorId(
+        { action: 'lead.created', entity: 'lead', entityId: lead.id, meta: { name: dto.name, referredByAgentId: Number(agent.id) } },
+        actorId,
+        tx,
+      )
+
+      if (!agent.autoConvertReferrals) return { leadId: lead.id, studentId: null }
+
+      const student = await tx.student.create({
+        data: {
+          tenantId: TENANT_ID,
+          studentNo: `PENDING-${Date.now()}-${lead.id}`,
+          name: dto.name,
+          email: dto.email ?? null,
+          phone: dto.phone ?? null,
+          phoneNote: dto.phoneNote ?? null,
+          gender: dto.gender ?? null,
+          source: 'Agent Referral',
+          studyLevel: dto.studyLevel ?? null,
+          course: dto.course ?? null,
+          intake: dto.intake ?? null,
+          university: dto.university ?? null,
+          avatarUrl: dto.avatar ?? null,
+          statusId: studentStatusId,
+          branchId: links.branchId,
+          assignedToId: links.assignedToId,
+          residenceCountryId: links.residenceId,
+          interestCountryId: links.interestId,
+          leadId: lead.id,
+          referredByAgentId: agent.id,
+        },
+      })
+      const updatedStudent = await tx.student.update({
+        where: { id: student.id },
+        data: { studentNo: `STU-${student.createdAt.getFullYear()}-${student.id}` },
+      })
+      const wonLeadStatus = await tx.leadStatus.findFirst({ where: { tenantId: TENANT_ID, isWon: true } })
+      await tx.lead.update({ where: { id: lead.id }, data: { convertedStudentId: student.id, statusId: wonLeadStatus?.id ?? lead.statusId } })
+      await this.activity.recordWithActorId(
+        { action: 'lead.converted', entity: 'lead', entityId: lead.id, meta: { studentId: Number(student.id), studentNo: updatedStudent.studentNo, referredByAgentId: Number(agent.id) } },
+        actorId,
+        tx,
+      )
+      await this.activity.recordWithActorId(
+        { action: 'student.created', entity: 'student', entityId: student.id, meta: { from: 'agent_referral', leadId: Number(lead.id), referredByAgentId: Number(agent.id) } },
+        actorId,
+        tx,
+      )
+      return { leadId: lead.id, studentId: student.id }
+    })
+
+    if (result.studentId) return this.get(Number(result.studentId))
+    const lead = await this.db.lead.findFirst({
+      where: { id: result.leadId },
+      include: { status: true },
+    })
+    return {
+      id: Number(result.leadId),
+      type: 'Lead',
+      name: lead?.name ?? dto.name,
+      email: lead?.email ?? dto.email ?? '',
+      status: lead?.status.label ?? 'New Lead',
+    }
   }
 
   async update(id: number, dto: UpdateStudentDto) {

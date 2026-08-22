@@ -11,7 +11,8 @@ import {
   Query,
   Req,
 } from '@nestjs/common'
-import { RequirePermission } from '../auth/guards/permissions.guard'
+import { AllowAgent, RequirePermission } from '../auth/guards/permissions.guard'
+import { AgentScopeService } from '../auth/agent-scope.service'
 import type { JwtPayload } from '../auth/auth.types'
 import { CreateLeadDto, ListLeadsDto, UpdateLeadDto } from './dto/lead.dto'
 import { LeadsService } from './leads.service'
@@ -23,17 +24,27 @@ import { LeadsService } from './leads.service'
  */
 @Controller('leads')
 export class LeadsController {
-  constructor(@Inject(LeadsService) private readonly leads: LeadsService) {}
+  constructor(
+    @Inject(LeadsService) private readonly leads: LeadsService,
+    @Inject(AgentScopeService) private readonly scope: AgentScopeService,
+  ) {}
 
   @Get()
   @RequirePermission('view-leads')
-  list(@Query() query: ListLeadsDto) {
+  @AllowAgent()
+  async list(@Query() query: ListLeadsDto, @Req() req: { user?: JwtPayload }) {
+    if (this.scope.isAgent(req.user)) {
+      const agentId = await this.scope.requireAgentId(req.user!)
+      return this.leads.list({ ...query, agentId: String(agentId) })
+    }
     return this.leads.list(query)
   }
 
   @Get(':id')
   @RequirePermission('view-leads')
-  get(@Param('id', ParseIntPipe) id: number) {
+  @AllowAgent()
+  async get(@Param('id', ParseIntPipe) id: number, @Req() req: { user?: JwtPayload }) {
+    await this.scope.assertOwnsLead(req.user, id)
     return this.leads.get(id)
   }
 

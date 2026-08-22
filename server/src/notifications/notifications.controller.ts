@@ -11,7 +11,7 @@ import {
   Query,
   Req,
 } from '@nestjs/common'
-import { AllowStudent, RequirePermission } from '../auth/guards/permissions.guard'
+import { AllowAgent, AllowStudent, RequirePermission } from '../auth/guards/permissions.guard'
 import type { JwtPayload } from '../auth/auth.types'
 import { NotificationsService } from './notifications.service'
 import { CreateAnnouncementDto, UpdateAnnouncementDto } from './dto/announcement.dto'
@@ -57,6 +57,7 @@ export class AnnouncementsController {
   /** Readable by anyone signed in — announcements are broadcast by nature. */
   @Get()
   @AllowStudent()
+  @AllowAgent()
   list() {
     return this.notifications.listAnnouncements()
   }

@@ -26,6 +26,8 @@ interface StudentListResponse {
   limit: number
 }
 
+export type CreateStudentInput = Partial<Omit<Student, 'id'>> & { name: string }
+
 export const studentsApi = {
   /** GET /students */
   list: (): Promise<Student[]> =>
@@ -40,10 +42,10 @@ export const studentsApi = {
       : mocked(() => getStudent(id) ?? null),
 
   /** POST /students */
-  create: (...args: Parameters<typeof addStudent>): Promise<Student> =>
+  create: (data: CreateStudentInput): Promise<Student> =>
     USING_REAL_API
-      ? request<Student>('/students', { method: 'POST', body: JSON.stringify(args[0]) })
-      : mocked(() => addStudent(...args)),
+      ? request<Student>('/students', { method: 'POST', body: JSON.stringify(data) })
+      : mocked(() => addStudent(data as Parameters<typeof addStudent>[0])),
 
   /** PATCH /students/:id */
   update: (id: number, patch: Partial<Omit<Student, 'id'>>): Promise<void> =>

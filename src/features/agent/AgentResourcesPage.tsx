@@ -1,0 +1,7 @@
+import { Download, FileText } from 'lucide-react'
+import { useResources, resourcesApi, formatFileSize } from '../../lib/api'
+
+export default function AgentResourcesPage() {
+  const { data = [], isLoading } = useResources()
+  return <section className="mx-auto max-w-6xl"><h1 className="text-xl font-bold text-slate-900">Resources</h1><p className="mt-1 text-sm text-slate-500">Documents and materials published for partner agents.</p><div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{isLoading ? <p className="text-sm text-slate-500">Loading resources...</p> : data.map((resource) => <article key={resource.id} className="flex items-start gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-600"><FileText className="h-5 w-5" /></span><div className="min-w-0 flex-1"><h2 className="truncate text-sm font-bold text-slate-800">{resource.title}</h2><p className="mt-1 text-xs text-slate-500">{resource.category} · {formatFileSize(resource.fileSize)}</p><button onClick={() => resourcesApi.download(resource)} className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-brand-600 hover:text-brand-700"><Download className="h-4 w-4" /> Download</button></div></article>)}{!isLoading && data.length === 0 && <p className="text-sm text-slate-500">No resources have been published yet.</p>}</div></section>
+}

@@ -15,7 +15,7 @@ export interface ApiAuthUser {
   name: string
   email: string
   /** Exactly the vocabulary src/app/router.tsx gates on. */
-  role: 'Administrator' | 'Staff' | 'Student'
+  role: 'Administrator' | 'Staff' | 'Student' | 'Agent'
   phone?: string | null
   avatar?: string | null
   permissions: string[]

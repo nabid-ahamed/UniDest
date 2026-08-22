@@ -92,9 +92,21 @@ import StudentWebinarsPage from '../features/student/StudentWebinarsPage'
 import StudentAccountPage from '../features/student/StudentAccountPage'
 import NotFoundPage from '../features/misc/NotFoundPage'
 import BasicInfoPage from '../features/profile/BasicInfoPage'
+import AgentsPage from '../features/agents/AgentsPage'
+import AgentReferralsPage from '../features/agents/AgentReferralsPage'
+import AgentInvoicesPage from '../features/agents/AgentInvoicesPage'
+import AgentLayout from '../layouts/AgentLayout'
+import AgentDashboardPage from '../features/agent/AgentDashboardPage'
+import AgentCommissionPage from '../features/agent/AgentCommissionPage'
+import AgentResourcesPage from '../features/agent/AgentResourcesPage'
+import AgentStudentsPage from '../features/agent/AgentStudentsPage'
+import AgentEditPage from '../features/agents/AgentEditPage'
+import AgentInvoicesPortalPage from '../features/agent/AgentInvoicesPortalPage'
+import AgentServicesPage from '../features/agent/AgentServicesPage'
 import { useAuth } from '../store/auth'
 
 const isStudent = (role?: string) => role === 'Student'
+const isAgent = (role?: string) => role === 'Agent'
 const isStaff = (role?: string) => role === 'Staff'
 
 /**
@@ -110,7 +122,7 @@ const staffCanAccess = (pathname: string) =>
 
 /** Where a signed-in user's home lives, based on their role. */
 const homeFor = (role?: string) =>
-  isStudent(role) ? '/portal' : '/dashboard'
+  isStudent(role) ? '/portal' : isAgent(role) ? '/agent/dashboard' : '/dashboard'
 
 /**
  * Admin backoffice: authenticated non-students. Admins get everything; Staff are
@@ -120,10 +132,17 @@ function RequireBackoffice() {
   const { isAuthenticated, user } = useAuth()
   const { pathname } = useLocation()
   if (!isAuthenticated) return <Navigate to="/login" replace />
-  if (isStudent(user?.role)) return <Navigate to="/portal" replace />
+  if (isStudent(user?.role) || isAgent(user?.role)) return <Navigate to={homeFor(user?.role)} replace />
   // Staff hitting a module they don't have access to → 404 (those links are hidden
   // from their nav, so a direct URL is effectively a broken link for them).
   if (isStaff(user?.role) && !staffCanAccess(pathname)) return <NotFoundPage />
+  return <Outlet />
+}
+
+function RequireAgent() {
+  const { isAuthenticated, user } = useAuth()
+  if (!isAuthenticated) return <Navigate to="/login" replace />
+  if (!isAgent(user?.role)) return <Navigate to={homeFor(user?.role)} replace />
   return <Outlet />
 }
 
@@ -144,6 +163,20 @@ function RootRedirect() {
 export const router = createBrowserRouter([
   { path: '/', element: <RootRedirect /> },
   { path: '/login', element: <LoginPage /> },
+  {
+    element: <RequireAgent />,
+    children: [{ element: <AgentLayout />, children: [
+      { path: '/agent/dashboard', element: <AgentDashboardPage /> },
+      { path: '/agent/students', element: <AgentStudentsPage /> },
+      { path: '/agent/applications', element: <ApplicationsPage /> },
+      { path: '/agent/course-finder', element: <CourseFinderPage /> },
+      { path: '/agent/webinars', element: <WebinarsPage /> },
+      { path: '/agent/commission', element: <AgentCommissionPage /> },
+      { path: '/agent/resources', element: <AgentResourcesPage /> },
+      { path: '/agent/invoices', element: <AgentInvoicesPortalPage /> },
+      { path: '/agent/services', element: <AgentServicesPage /> },
+    ] }],
+  },
   {
     element: <RequireStudent />,
     children: [
@@ -215,6 +248,11 @@ export const router = createBrowserRouter([
           { path: '/staff/new', element: <StaffFormPage /> },
           { path: '/staff/:id', element: <StaffViewPage /> },
           { path: '/staff/:id/edit', element: <StaffFormPage /> },
+          { path: '/agents', element: <AgentsPage /> },
+          { path: '/agents/referrals', element: <AgentReferralsPage /> },
+          { path: '/agents/invoices', element: <AgentInvoicesPage /> },
+          { path: '/agents/:id', element: <AgentsPage /> },
+          { path: '/agents/:id/edit', element: <AgentEditPage /> },
           { path: '/courses', element: <CoursesPage /> },
           { path: '/courses/new', element: <CourseFormPage /> },
           { path: '/courses/:id', element: <CourseViewPage /> },

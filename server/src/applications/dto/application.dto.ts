@@ -9,6 +9,8 @@ export class ListApplicationsDto {
   @IsOptional() @IsString() assignedTo?: string
   /** Restrict to one student — used by the student detail page. */
   @IsOptional() @IsString() studentId?: string
+  /** Internal server-side scope; client values are overridden for agents. */
+  @IsOptional() @IsString() agentId?: string
 }
 
 export class CreateApplicationDto {

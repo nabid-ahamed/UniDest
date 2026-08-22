@@ -7,6 +7,8 @@ export class ListStudentsDto {
   @IsOptional() @IsString() status?: string
   @IsOptional() @IsString() branch?: string
   @IsOptional() @IsString() assignedTo?: string
+  /** Internal server-side scope; client values are overridden for agents. */
+  @IsOptional() @IsString() agentId?: string
 
   /** 'active' (default) | 'archived' | 'deleted' — mirrors the UI's three tabs. */
   @IsOptional() @IsString() view?: string

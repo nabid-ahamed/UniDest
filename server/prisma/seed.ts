@@ -79,6 +79,8 @@ const ROLES = [
   // Deliberately empty: portal access is ownership-scoped, not permission-based
   // (see StudentScopeService and the @AllowStudent() decorator).
   { name: 'Student', isSystem: true, permissions: [] },
+  // Like students, agents are ownership-scoped rather than permission-scoped.
+  { name: 'Agent', isSystem: true, permissions: [] },
   { name: 'Branch Manager', permissions: [
     'view-backend', 'view-leads', 'lead-create-update', 'lead-assignment', 'view-students', 'manage-students',
     'student-assignment', 'view-applications', 'manage-applications', 'application-assignment', 'view-staff',
@@ -118,6 +120,7 @@ const DEMO_USERS = [
   { name: 'Admin', email: 'admin@gmail.com', role: 'Super Admin', branch: 'Dhaka' },
   { name: 'Staff User', email: 'staff@gmail.com', role: 'Counsellor', branch: 'Dhaka' },
   { name: 'Rohan Das', email: 'student@gmail.com', role: 'Student', branch: 'Dhaka' },
+  { name: 'Demo Agent', email: 'agent@gmail.com', role: 'Agent', branch: 'Dhaka' },
 ]
 
 /** A small country set; the full ~190 list lands with the catalog in Stage 6. */
@@ -158,6 +161,17 @@ async function main() {
     })
   }
   console.log(`  roles: ${ROLES.length}`)
+
+  await prisma.appSetting.upsert({
+    where: { tenantId_key: { tenantId: TENANT_ID, key: 'agents.allowApplicationSubmission' } },
+    update: {},
+    create: {
+      tenantId: TENANT_ID,
+      key: 'agents.allowApplicationSubmission',
+      value: true,
+    },
+  })
+  console.log('  agent application submission: enabled')
 
   for (const [i, s] of LEAD_STATUSES.entries()) {
     await prisma.leadStatus.upsert({
@@ -229,6 +243,26 @@ async function main() {
     })
   }
   console.log(`  users: ${DEMO_USERS.length + STAFF.length} (password for all: ${DEMO_PASSWORD})`)
+
+  const agentUser = await prisma.user.findUnique({
+    where: { tenantId_email: { tenantId: TENANT_ID, email: 'agent@gmail.com' } },
+  })
+  const agentBranch = branchByName.get('Dhaka')
+  if (!agentUser || !agentBranch) throw new Error('Demo agent seed dependencies are missing.')
+  await prisma.agent.upsert({
+    where: { tenantId_name: { tenantId: TENANT_ID, name: 'Demo Agent' } },
+    update: { userId: agentUser.id, branchId: agentBranch },
+    create: {
+      tenantId: TENANT_ID,
+      name: 'Demo Agent',
+      firstName: 'Demo',
+      lastName: 'Agent',
+      email: agentUser.email,
+      branchId: agentBranch,
+      userId: agentUser.id,
+    },
+  })
+  console.log('  demo agent: agent@gmail.com')
 
   // A few leads so /leads has real rows to render.
   const statusByKey = new Map(

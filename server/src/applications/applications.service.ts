@@ -50,6 +50,7 @@ export class ApplicationsService {
     const limit = Math.min(200, Math.max(1, Number(query.limit) || 50))
 
     const where: Record<string, unknown> = { tenantId: TENANT_ID, deletedAt: null }
+    if (query.agentId) where.agentId = BigInt(query.agentId)
     if (query.status) where.status = { label: query.status }
     if (query.branch) where.branch = { name: query.branch }
     if (query.assignedTo) where.assignedTo = { name: query.assignedTo }
@@ -114,7 +115,7 @@ export class ApplicationsService {
    * Create an application. This is genuinely new functionality — the mock had
    * no id generator, so applications could only be read, never created.
    */
-  async create(dto: CreateApplicationDto, userPublicId?: string) {
+  async create(dto: CreateApplicationDto, userPublicId?: string, agentId?: bigint) {
     const links = await this.resolveLinks(dto)
     if (!links.studentId) throw new NotFoundException('Student not found.')
 
@@ -133,7 +134,7 @@ export class ApplicationsService {
           assignedToId: links.assignedToId,
           appliedThrough: dto.appliedThrough ?? 'DIRECT',
           agentName: dto.agent ?? null,
-          agentId: await this.resolveAgentId(dto.agent),
+          agentId: agentId ?? (await this.resolveAgentId(dto.agent)),
           priority: dto.priority ?? 'normal',
         },
         include: this.relations,
@@ -248,7 +249,7 @@ export class ApplicationsService {
     })
     if (existing) return existing.id
     const created = await this.db.agent.create({
-      data: { tenantId: TENANT_ID, name: trimmed },
+      data: { tenantId: TENANT_ID, name: trimmed, branchId: 1n },
       select: { id: true },
     })
     return created.id

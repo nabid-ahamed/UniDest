@@ -1,13 +1,16 @@
 import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
 import { ActivityService } from '../activity/activity.service'
+import argon2 from 'argon2'
 import type {
   CreateAgentDto,
   CreateCommissionDto,
   ListAgentsDto,
   ListCommissionsDto,
+  ListReferralsDto,
   UpdateAgentDto,
   UpdateCommissionDto,
+  UpdateSubmissionSettingDto,
 } from './dto/agent.dto'
 
 const TENANT_ID = 1n
@@ -41,6 +44,8 @@ export class AgentsService {
   async list(query: ListAgentsDto) {
     const where: Record<string, unknown> = { tenantId: TENANT_ID, deletedAt: null }
     if (query.status) where.status = query.status === 'Active' ? 'active' : 'inactive'
+    if (query.category) where.category = query.category
+    if (query.branch) where.branch = { name: query.branch }
     if (query.search?.trim()) {
       const q = query.search.trim()
       where.OR = [
@@ -67,6 +72,63 @@ export class AgentsService {
     return this.toDto(agent)
   }
 
+  async submissionSetting() {
+    const setting = await this.db.appSetting.findUnique({
+      where: { tenantId_key: { tenantId: TENANT_ID, key: 'agents.allowApplicationSubmission' } },
+      select: { value: true },
+    })
+    return { enabled: setting?.value === true }
+  }
+
+  async updateSubmissionSetting(dto: UpdateSubmissionSettingDto, actorPublicId?: string) {
+    const actorId = await this.resolveActorId(actorPublicId)
+    const setting = await this.db.$transaction(async (tx) => {
+      const updated = await tx.appSetting.upsert({
+        where: { tenantId_key: { tenantId: TENANT_ID, key: 'agents.allowApplicationSubmission' } },
+        update: { value: dto.enabled },
+        create: { tenantId: TENANT_ID, key: 'agents.allowApplicationSubmission', value: dto.enabled },
+      })
+      await this.activity.recordWithActorId(
+        { action: 'agent.submission_setting.updated', entity: 'agent', entityId: 0n, meta: { enabled: dto.enabled } },
+        actorId,
+        tx,
+      )
+      return updated
+    })
+    return { enabled: setting.value === true }
+  }
+
+  async listReferrals(query: ListReferralsDto) {
+    const agentId = query.agentId ? BigInt(query.agentId) : undefined
+    const search = query.search?.trim()
+    const text = search
+      ? { OR: [
+          { name: { contains: search, mode: 'insensitive' as const } },
+          { email: { contains: search, mode: 'insensitive' as const } },
+          { phone: { contains: search } },
+        ] }
+      : {}
+    const [leads, students] = await Promise.all([
+      this.db.lead.findMany({
+        where: { ...text, tenantId: TENANT_ID, deletedAt: null, referredByAgentId: agentId },
+        include: { status: true, referredByAgent: { select: { id: true, name: true, email: true } } },
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.db.student.findMany({
+        where: { ...text, tenantId: TENANT_ID, deletedAt: null, referredByAgentId: agentId },
+        include: { status: true, referredByAgent: { select: { id: true, name: true, email: true } } },
+        orderBy: { createdAt: 'desc' },
+      }),
+    ])
+    return [...leads.map((row) => ({
+      id: Number(row.id), type: 'Lead' as const, name: row.name, email: row.email ?? '', phone: row.phone ?? '',
+      status: row.status.label, addedOn: fmtDate(row.createdAt), agent: row.referredByAgent,
+    })), ...students.map((row) => ({
+      id: Number(row.id), type: 'Student' as const, name: row.name, email: row.email ?? '', phone: row.phone ?? '',
+      status: row.status.label, addedOn: fmtDate(row.createdAt), agent: row.referredByAgent,
+    }))].sort((a, b) => b.addedOn.localeCompare(a.addedOn))
+  }
+
   async create(dto: CreateAgentDto, actorPublicId?: string) {
     const existing = await this.db.agent.findFirst({
       where: { tenantId: TENANT_ID, name: dto.name.trim() },
@@ -79,14 +141,36 @@ export class AgentsService {
         data: {
           tenantId: TENANT_ID,
           name: dto.name.trim(),
+          firstName: dto.firstName ?? null,
+          lastName: dto.lastName ?? null,
+          branchId: BigInt(dto.branchId ?? 1),
+          pointOfContactId: dto.pointOfContactId != null ? BigInt(dto.pointOfContactId) : null,
           company: dto.company ?? null,
           email: dto.email ?? null,
           phone: dto.phone ?? null,
+          country: dto.country ?? null,
+          state: dto.state ?? null,
+          city: dto.city ?? null,
+          address: dto.address ?? null,
+          category: dto.category ?? null,
+          logoUrl: dto.logoUrl ?? null,
+          idProofUrl: dto.idProofUrl ?? null,
+          incorporationCertUrl: dto.incorporationCertUrl ?? null,
+          canSubmitApplications: dto.canSubmitApplications ?? false,
+          autoConvertReferrals: dto.autoConvertReferrals ?? false,
           commissionRateBps: toBps(dto.commissionRate ?? 0),
           status: dto.status === 'Inactive' ? 'inactive' : 'active',
         },
         include: this.relations,
       })
+      if (dto.email && dto.password) {
+        const role = await tx.role.findFirst({ where: { tenantId: TENANT_ID, name: 'Agent', deletedAt: null } })
+        if (!role) throw new NotFoundException('Agent role is not configured.')
+        const user = await tx.user.create({
+          data: { tenantId: TENANT_ID, name: dto.name.trim(), email: dto.email.toLowerCase().trim(), passwordHash: await argon2.hash(dto.password), roleId: role.id, branchId: BigInt(dto.branchId ?? 1) },
+        })
+        await tx.agent.update({ where: { id: agent.id }, data: { userId: user.id } })
+      }
       await this.activity.recordWithActorId(
         { action: 'agent.created', entity: 'agent', entityId: agent.id, meta: { name: agent.name } },
         actorId,
@@ -107,18 +191,36 @@ export class AgentsService {
     const actorId = await this.resolveActorId(actorPublicId)
 
     const updated = await this.db.$transaction(async (tx) => {
+      const current = await tx.agent.findUnique({ where: { id: BigInt(id) }, select: { userId: true } })
       const agent = await tx.agent.update({
         where: { id: BigInt(id) },
         data: {
           name: dto.name?.trim() ?? undefined,
+          firstName: dto.firstName ?? undefined,
+          lastName: dto.lastName ?? undefined,
+          country: dto.country ?? undefined,
+          state: dto.state ?? undefined,
+          city: dto.city ?? undefined,
+          address: dto.address ?? undefined,
+          category: dto.category ?? undefined,
+          branchId: dto.branchId != null ? BigInt(dto.branchId) : undefined,
+          pointOfContactId: dto.pointOfContactId != null ? BigInt(dto.pointOfContactId) : undefined,
+          logoUrl: dto.logoUrl ?? undefined,
+          idProofUrl: dto.idProofUrl ?? undefined,
+          incorporationCertUrl: dto.incorporationCertUrl ?? undefined,
           company: dto.company ?? undefined,
           email: dto.email ?? undefined,
           phone: dto.phone ?? undefined,
+          canSubmitApplications: dto.canSubmitApplications ?? undefined,
+          autoConvertReferrals: dto.autoConvertReferrals ?? undefined,
           commissionRateBps: dto.commissionRate != null ? toBps(dto.commissionRate) : undefined,
           status: dto.status ? (dto.status === 'Inactive' ? 'inactive' : 'active') : undefined,
         },
         include: this.relations,
       })
+      if (current?.userId && (dto.password || dto.email)) {
+        await tx.user.update({ where: { id: current.userId }, data: { email: dto.email?.toLowerCase().trim() ?? undefined, passwordHash: dto.password ? await argon2.hash(dto.password) : undefined } })
+      }
       await this.activity.recordWithActorId(
         {
           action: 'agent.updated',
@@ -161,12 +263,13 @@ export class AgentsService {
     const where: Record<string, unknown> = { tenantId: TENANT_ID, deletedAt: null }
     if (query.agentId) where.agentId = BigInt(query.agentId)
     if (query.status) where.status = { label: query.status }
+    if (query.from || query.to) where.createdAt = { ...(query.from ? { gte: new Date(query.from) } : {}), ...(query.to ? { lte: new Date(`${query.to}T23:59:59.999Z`) } : {}) }
 
     const rows = await this.db.commission.findMany({
       where,
       include: {
         agent: { select: { id: true, name: true } },
-        application: { select: { id: true, student: { select: { name: true, studentNo: true } } } },
+        application: { select: { id: true, student: { select: { name: true, studentNo: true } }, course: { select: { title: true, university: { select: { name: true } } } }, intake: { select: { month: true, year: true } } } },
         status: true,
       },
       orderBy: { createdAt: 'desc' },
@@ -234,7 +337,7 @@ export class AgentsService {
       where: { id: created.id },
       include: {
         agent: { select: { id: true, name: true } },
-        application: { select: { id: true, student: { select: { name: true, studentNo: true } } } },
+        application: { select: { id: true, student: { select: { name: true, studentNo: true } }, course: { select: { title: true, university: { select: { name: true } } } }, intake: { select: { month: true, year: true } } } },
         status: true,
       },
     })
@@ -285,7 +388,7 @@ export class AgentsService {
       where: { id: BigInt(id) },
       include: {
         agent: { select: { id: true, name: true } },
-        application: { select: { id: true, student: { select: { name: true, studentNo: true } } } },
+        application: { select: { id: true, student: { select: { name: true, studentNo: true } }, course: { select: { title: true, university: { select: { name: true } } } }, intake: { select: { month: true, year: true } } } },
         status: true,
       },
     })
@@ -335,9 +438,24 @@ export class AgentsService {
     id: bigint
     publicId: string
     name: string
+    firstName: string | null
+    lastName: string | null
     company: string | null
     email: string | null
     phone: string | null
+    country: string | null
+    state: string | null
+    city: string | null
+    address: string | null
+    category: string | null
+    branchId: bigint
+    pointOfContactId: bigint | null
+    logoUrl: string | null
+    idProofUrl: string | null
+    incorporationCertUrl: string | null
+    userId: bigint | null
+    canSubmitApplications: boolean
+    autoConvertReferrals: boolean
     commissionRateBps: number
     status: string
     createdAt: Date
@@ -347,9 +465,24 @@ export class AgentsService {
       id: Number(a.id),
       publicId: a.publicId,
       name: a.name,
+      firstName: a.firstName ?? '',
+      lastName: a.lastName ?? '',
       company: a.company ?? '',
       email: a.email ?? '',
       phone: a.phone ?? '',
+      country: a.country ?? '',
+      state: a.state ?? '',
+      city: a.city ?? '',
+      address: a.address ?? '',
+      category: a.category ?? '',
+      branchId: Number(a.branchId),
+      pointOfContactId: a.pointOfContactId == null ? null : Number(a.pointOfContactId),
+      logoUrl: a.logoUrl ?? '',
+      idProofUrl: a.idProofUrl ?? '',
+      incorporationCertUrl: a.incorporationCertUrl ?? '',
+      userId: a.userId == null ? null : Number(a.userId),
+      canSubmitApplications: a.canSubmitApplications,
+      autoConvertReferrals: a.autoConvertReferrals,
       commissionRate: fromBps(a.commissionRateBps),
       status: a.status === 'active' ? 'Active' : 'Inactive',
       joined: fmtDate(a.createdAt),
@@ -367,7 +500,12 @@ export class AgentsService {
     note: string | null
     createdAt: Date
     agent: { id: bigint; name: string }
-    application: { id: bigint; student: { name: string; studentNo: string } }
+    application: {
+      id: bigint
+      student: { name: string; studentNo: string }
+      course: { title: string; university: { name: string } } | null
+      intake: { month: number; year: number | null } | null
+    }
     status: { label: string; color: string; isPaid: boolean }
   }) {
     return {
@@ -377,6 +515,9 @@ export class AgentsService {
       applicationId: Number(c.application.id),
       student: c.application.student.name,
       studentNo: c.application.student.studentNo,
+      course: c.application.course?.title ?? '',
+      university: c.application.course?.university.name ?? '',
+      intake: c.application.intake ? `${c.application.intake.month}/${c.application.intake.year ?? ''}` : '',
       amount: fromMinor(c.amountMinor),
       currency: c.currency,
       status: c.status.label,

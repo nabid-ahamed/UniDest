@@ -44,6 +44,11 @@ export class ListLeadsDto {
   @IsString()
   assignedTo?: string
 
+  /** Internal server-side scope; client values are overridden for agents. */
+  @IsOptional()
+  @IsString()
+  agentId?: string
+
   /**
    * Converted leads are hidden by default: after a lead becomes a student its
    * row is kept for funnel reporting, but showing it in the working list would

@@ -27,13 +27,14 @@ import {
   ShieldCheck,
   Settings,
   ChevronDown,
+  Handshake,
 } from 'lucide-react'
 import { cn } from '../lib/cn'
 import { useUI } from '../store/ui'
 import { useAuth } from '../store/auth'
 
 /** Top-level nav items hidden from Staff users (kept for Admin). */
-const STAFF_HIDDEN_ITEMS = new Set(['Referral', 'Staff', 'Backups', 'Roles', 'Settings'])
+const STAFF_HIDDEN_ITEMS = new Set(['Referral', 'Agents', 'Staff', 'Backups', 'Roles', 'Settings'])
 /** Submenu children hidden from Staff (e.g. CMS keeps only Blog Posts / Pages / Newsletter). */
 const STAFF_HIDDEN_CHILDREN = new Set(['Home Page', 'Countries', 'Menu Manager'])
 
@@ -93,6 +94,15 @@ const NAV: NavGroup[] = [
       { label: 'Analytics', icon: LineChart, to: '/analytics' },
       { label: 'Automation', icon: Zap, to: '/automation' },
       { label: 'Staff', icon: User, to: '/staff' },
+      {
+        label: 'Agents',
+        icon: Handshake,
+        children: [
+          { label: 'All Agents', to: '/agents' },
+          { label: 'Referrals', to: '/agents/referrals' },
+          { label: 'Agent Invoices', to: '/agents/invoices' },
+        ],
+      },
     ],
   },
   {

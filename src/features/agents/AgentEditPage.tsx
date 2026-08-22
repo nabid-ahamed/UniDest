@@ -1,0 +1,28 @@
+import { useEffect, useState } from 'react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useAgent, useAssignableStaff, useBranches, useUpdateAgent } from '../../lib/api'
+
+type FormState = {
+  name: string; firstName: string; lastName: string; company: string; email: string; phone: string
+  country: string; state: string; city: string; address: string; category: string
+  branchId: string; pointOfContactId: string; commissionRate: string; password: string
+  canSubmitApplications: boolean; autoConvertReferrals: boolean
+}
+
+const empty: FormState = { name: '', firstName: '', lastName: '', company: '', email: '', phone: '', country: '', state: '', city: '', address: '', category: '', branchId: '', pointOfContactId: '', commissionRate: '', password: '', canSubmitApplications: false, autoConvertReferrals: false }
+
+export default function AgentEditPage() {
+  const id = Number(useParams().id)
+  const navigate = useNavigate()
+  const { data: agent, isLoading } = useAgent(id)
+  const { data: branches = [] } = useBranches()
+  const { data: staff = [] } = useAssignableStaff()
+  const update = useUpdateAgent()
+  const [form, setForm] = useState<FormState>(empty)
+  useEffect(() => { if (agent) setForm({ name: agent.name, firstName: agent.firstName, lastName: agent.lastName, company: agent.company, email: agent.email, phone: agent.phone, country: agent.country, state: agent.state, city: agent.city, address: agent.address, category: agent.category, branchId: String(agent.branchId), pointOfContactId: agent.pointOfContactId ? String(agent.pointOfContactId) : '', commissionRate: String(agent.commissionRate), password: '', canSubmitApplications: agent.canSubmitApplications, autoConvertReferrals: agent.autoConvertReferrals }) }, [agent])
+  const set = (key: keyof FormState, value: string | boolean) => setForm((current) => ({ ...current, [key]: value }))
+  if (isLoading) return <p className="text-sm text-slate-500">Loading agent...</p>
+  if (!agent) return <p className="text-sm text-rose-600">Agent not found.</p>
+  const fields = [['name', 'Name'], ['firstName', 'First name'], ['lastName', 'Last name'], ['company', 'Company'], ['email', 'Email'], ['phone', 'Mobile'], ['country', 'Country'], ['state', 'State'], ['city', 'City'], ['address', 'Address'], ['commissionRate', 'Commission %'], ['password', 'New password']] as const
+  return <section className="mx-auto max-w-3xl rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6"><Link to={`/agents/${id}`} className="text-sm font-semibold text-brand-600 hover:underline">← Back to agent</Link><h1 className="mt-4 text-xl font-bold text-slate-900">Edit {agent.name}</h1><form onSubmit={(event) => { event.preventDefault(); update.mutate({ id, patch: { ...Object.fromEntries(fields.filter(([key]) => key !== 'password').map(([key]) => [key, form[key]])), commissionRate: Number(form.commissionRate) || 0, category: form.category || undefined, branchId: Number(form.branchId), pointOfContactId: form.pointOfContactId ? Number(form.pointOfContactId) : undefined, ...(form.password ? { password: form.password } : {}), canSubmitApplications: form.canSubmitApplications, autoConvertReferrals: form.autoConvertReferrals } }, { onSuccess: () => navigate(`/agents/${id}`) }) }} className="mt-5"><div className="grid gap-4 sm:grid-cols-2">{fields.map(([key, label]) => <label key={key} className="text-sm font-medium text-slate-600">{label}<input required={key === 'name'} type={key === 'password' ? 'password' : key === 'email' ? 'email' : 'text'} value={form[key]} onChange={(event) => set(key, event.target.value)} className="input mt-1 w-full" /></label>)}<label className="text-sm font-medium text-slate-600">Category<select value={form.category} onChange={(event) => set('category', event.target.value)} className="input mt-1 w-full"><option value="">Not set</option><option>Small</option><option>Medium</option><option>Large</option></select></label><label className="text-sm font-medium text-slate-600">Branch<select required value={form.branchId} onChange={(event) => set('branchId', event.target.value)} className="input mt-1 w-full"><option value="">Select branch</option>{branches.map((branch) => <option key={branch.id} value={branch.id}>{branch.name}</option>)}</select></label><label className="text-sm font-medium text-slate-600">Point of contact<select value={form.pointOfContactId} onChange={(event) => set('pointOfContactId', event.target.value)} className="input mt-1 w-full"><option value="">Not assigned</option>{staff.map((person) => <option key={person.id} value={person.id}>{person.name}</option>)}</select></label></div><div className="mt-5 space-y-3 border-t border-slate-100 pt-4"><label className="flex items-center gap-2 text-sm font-semibold text-slate-700"><input type="checkbox" checked={form.canSubmitApplications} onChange={(event) => set('canSubmitApplications', event.target.checked)} /> Allow application submission</label><label className="flex items-center gap-2 text-sm font-semibold text-slate-700"><input type="checkbox" checked={form.autoConvertReferrals} onChange={(event) => set('autoConvertReferrals', event.target.checked)} /> Auto-convert referrals</label></div>{update.error && <p className="mt-3 text-sm text-rose-600">{update.error.message}</p>}<div className="mt-6 flex justify-end gap-2"><Link to={`/agents/${id}`} className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600">Cancel</Link><button disabled={update.isPending} className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{update.isPending ? 'Saving...' : 'Save changes'}</button></div></form></section>
+}

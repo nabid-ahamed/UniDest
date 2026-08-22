@@ -21,7 +21,7 @@ export interface JwtPayload {
  *
  * The API must speak these exact words so routing needs no changes.
  */
-export type UiRole = 'Administrator' | 'Staff' | 'Student'
+export type UiRole = 'Administrator' | 'Staff' | 'Student' | 'Agent'
 
 /**
  * Map a database role name (src/mock/staffStore.ts `staffRoles`) onto the three
@@ -30,6 +30,7 @@ export type UiRole = 'Administrator' | 'Staff' | 'Student'
  */
 export function toUiRole(dbRoleName: string): UiRole {
   if (dbRoleName === 'Student') return 'Student'
+  if (dbRoleName === 'Agent') return 'Agent'
   if (dbRoleName === 'Super Admin' || dbRoleName === 'Branch Manager') return 'Administrator'
   return 'Staff'
 }

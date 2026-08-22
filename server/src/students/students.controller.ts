@@ -11,7 +11,8 @@ import {
   Query,
   Req,
 } from '@nestjs/common'
-import { RequirePermission } from '../auth/guards/permissions.guard'
+import { AllowAgent, RequirePermission } from '../auth/guards/permissions.guard'
+import { AgentScopeService } from '../auth/agent-scope.service'
 import type { JwtPayload } from '../auth/auth.types'
 import {
   BulkStudentsDto,
@@ -24,23 +25,38 @@ import { StudentsService } from './students.service'
 
 @Controller('students')
 export class StudentsController {
-  constructor(@Inject(StudentsService) private readonly students: StudentsService) {}
+  constructor(
+    @Inject(StudentsService) private readonly students: StudentsService,
+    @Inject(AgentScopeService) private readonly scope: AgentScopeService,
+  ) {}
 
   @Get()
   @RequirePermission('view-students')
-  list(@Query() query: ListStudentsDto) {
+  @AllowAgent()
+  async list(@Query() query: ListStudentsDto, @Req() req: { user?: JwtPayload }) {
+    if (this.scope.isAgent(req.user)) {
+      const agentId = await this.scope.requireAgentId(req.user!)
+      return this.students.list({ ...query, agentId: String(agentId) })
+    }
     return this.students.list(query)
   }
 
   @Get(':id')
   @RequirePermission('view-students')
-  get(@Param('id', ParseIntPipe) id: number) {
+  @AllowAgent()
+  async get(@Param('id', ParseIntPipe) id: number, @Req() req: { user?: JwtPayload }) {
+    await this.scope.assertOwnsStudent(req.user, id)
     return this.students.get(id)
   }
 
   @Post()
   @RequirePermission('view-students')
-  create(@Body() dto: CreateStudentDto) {
+  @AllowAgent()
+  async create(@Body() dto: CreateStudentDto, @Req() req: { user?: JwtPayload }) {
+    if (this.scope.isAgent(req.user)) {
+      const agentId = await this.scope.requireAgentId(req.user!)
+      return this.students.createReferral(dto, agentId, req.user!.sub)
+    }
     return this.students.create(dto)
   }
 

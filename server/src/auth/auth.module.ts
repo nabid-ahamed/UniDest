@@ -5,6 +5,7 @@ import { AuthController } from './auth.controller'
 import { AuthService } from './auth.service'
 import { JwtStrategy } from './jwt.strategy'
 import { StudentScopeService } from './student-scope.service'
+import { AgentScopeService } from './agent-scope.service'
 
 @Module({
   imports: [
@@ -14,7 +15,7 @@ import { StudentScopeService } from './student-scope.service'
     JwtModule.register({}),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, StudentScopeService],
-  exports: [AuthService, StudentScopeService],
+  providers: [AuthService, JwtStrategy, StudentScopeService, AgentScopeService],
+  exports: [AuthService, StudentScopeService, AgentScopeService],
 })
 export class AuthModule {}
