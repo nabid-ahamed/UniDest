@@ -9,6 +9,9 @@
  * Run with: npx prisma db seed
  */
 import 'dotenv/config'
+import { mkdir, writeFile } from 'node:fs/promises'
+import { join, resolve } from 'node:path'
+import { randomUUID } from 'node:crypto'
 import { PrismaPg } from '@prisma/adapter-pg'
 import { PrismaClient } from '@prisma/client'
 import argon2 from 'argon2'
@@ -18,6 +21,41 @@ const prisma = new PrismaClient({
 })
 
 const TENANT_ID = 1n
+
+/**
+ * Write a small real PDF into the upload root and return its storage key.
+ *
+ * The seeded resources need a file behind them or the download endpoint 404s
+ * and "verify authenticated downloads" cannot be checked. Key format matches
+ * StorageService.put (`uuid.ext`) so the same read path serves it.
+ */
+async function putFixturePdf(title: string): Promise<string> {
+  const root = resolve(process.env.UPLOAD_DIR ?? join(process.cwd(), 'uploads'))
+  await mkdir(root, { recursive: true })
+  const key = `${randomUUID()}.pdf`
+  // Minimal single-page PDF, hand-built so the seed needs no extra dependency.
+  const text = title.replace(/[()\\]/g, '')
+  const content = `BT /F1 16 Tf 72 720 Td (${text}) Tj ET`
+  const objs = [
+    '<< /Type /Catalog /Pages 2 0 R >>',
+    '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>',
+    `<< /Length ${content.length} >>\nstream\n${content}\nendstream`,
+    '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
+  ]
+  let pdf = '%PDF-1.4\n'
+  const offsets: number[] = []
+  objs.forEach((body, i) => {
+    offsets.push(pdf.length)
+    pdf += `${i + 1} 0 obj\n${body}\nendobj\n`
+  })
+  const xref = pdf.length
+  pdf += `xref\n0 ${objs.length + 1}\n0000000000 65535 f \n`
+  for (const off of offsets) pdf += `${String(off).padStart(10, '0')} 00000 n \n`
+  pdf += `trailer\n<< /Size ${objs.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`
+  await writeFile(join(root, key), Buffer.from(pdf, 'latin1'))
+  return key
+}
 
 /** Slugify a label into a stable lookup key: "New Lead" -> "new-lead". */
 const toKey = (label: string) =>
@@ -783,6 +821,81 @@ async function main() {
     })
   }
   console.log(`  commission statuses: ${COMMISSION_STATUSES.length}`)
+
+
+  // -------------------------------------------------------------------------
+  // Service request statuses (Additional Services)
+  // -------------------------------------------------------------------------
+  // Mirrors the labels the Additional Services screens already used, so the
+  // migrated UI keeps the same vocabulary staff are trained on.
+  const SERVICE_STATUSES = [
+    { key: 'new-file', label: 'New File', color: '#1d4ed8', isClosed: false },
+    { key: 'processing', label: 'Processing', color: '#a16207', isClosed: false },
+    { key: 'completed', label: 'Decision - Completed', color: '#15803d', isClosed: true },
+    { key: 'rejected', label: 'Decision - Rejected', color: '#b91c1c', isClosed: true },
+  ]
+  for (const [i, st] of SERVICE_STATUSES.entries()) {
+    await prisma.serviceRequestStatus.upsert({
+      where: { tenantId_key: { tenantId: TENANT_ID, key: st.key } },
+      update: { label: st.label, color: st.color, isClosed: st.isClosed, sortOrder: i },
+      create: { tenantId: TENANT_ID, ...st, sortOrder: i, isSystem: true },
+    })
+  }
+  console.log(`  service statuses: ${SERVICE_STATUSES.length}`)
+
+  // -------------------------------------------------------------------------
+  // Resource categories and agent-visible resources
+  // -------------------------------------------------------------------------
+  // Keyed by title so re-running the seed updates rather than duplicates:
+  // ResourceCategory has no natural unique key beyond its id.
+  const RESOURCE_CATEGORIES = ['Application Guides', 'Visa & Immigration', 'Partner Marketing']
+  const categoryIdByName = new Map<string, bigint>()
+  for (const name of RESOURCE_CATEGORIES) {
+    const existing = await prisma.resourceCategory.findFirst({
+      where: { tenantId: TENANT_ID, name, deletedAt: null },
+      select: { id: true },
+    })
+    const row = existing
+      ? await prisma.resourceCategory.update({ where: { id: existing.id }, data: { name } })
+      : await prisma.resourceCategory.create({ data: { tenantId: TENANT_ID, name } })
+    categoryIdByName.set(name, row.id)
+  }
+  console.log(`  resource categories: ${RESOURCE_CATEGORIES.length}`)
+
+  // Deliberately general-audience material. Nothing student-private is seeded
+  // here, because agents can read this library.
+  const SEED_RESOURCES = [
+    { title: 'Student Application Checklist', category: 'Application Guides', fileName: 'application-checklist.pdf', mimeType: 'application/pdf', sizeBytes: 184_320 },
+    { title: 'Document Requirements by Country', category: 'Application Guides', fileName: 'document-requirements.pdf', mimeType: 'application/pdf', sizeBytes: 262_144 },
+    { title: 'Student Visa Interview Guide', category: 'Visa & Immigration', fileName: 'visa-interview-guide.pdf', mimeType: 'application/pdf', sizeBytes: 219_136 },
+    { title: 'Agent Partner Brochure', category: 'Partner Marketing', fileName: 'partner-brochure.pdf', mimeType: 'application/pdf', sizeBytes: 401_408 },
+  ]
+  for (const r of SEED_RESOURCES) {
+    const existing = await prisma.studentResource.findFirst({
+      where: { tenantId: TENANT_ID, title: r.title, deletedAt: null },
+      select: { id: true },
+    })
+    // Only write a fixture when the row has no file yet, so re-running the
+    // seed does not litter the upload root with orphaned copies.
+    const current = existing
+      ? await prisma.studentResource.findUnique({
+          where: { id: existing.id },
+          select: { storageKey: true },
+        })
+      : null
+    const storageKey = current?.storageKey ?? (await putFixturePdf(r.title))
+    const data = {
+      title: r.title,
+      categoryId: categoryIdByName.get(r.category) ?? null,
+      fileName: r.fileName,
+      storageKey,
+      mimeType: r.mimeType,
+      sizeBytes: r.sizeBytes,
+    }
+    if (existing) await prisma.studentResource.update({ where: { id: existing.id }, data })
+    else await prisma.studentResource.create({ data: { tenantId: TENANT_ID, ...data } })
+  }
+  console.log(`  resources: ${SEED_RESOURCES.length}`)
 
 
 

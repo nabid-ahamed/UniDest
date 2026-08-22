@@ -4,22 +4,35 @@ import { ArrowLeft, Send, Paperclip, Wrench, Clock } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { StatusPill } from './components/StatusPill'
 import { SectionHead } from './components/SectionHead'
-import { currentStudent, serviceStatusColor } from '../../mock/student/portal'
-import { serviceRequests, updateService, nowStamp, type ServiceMessage, type ServiceRequest } from '../../mock/services'
+import {
+  useServiceRequest,
+  useReplyServiceRequest,
+  type ApiServiceRequest,
+} from '../../lib/api'
 
 /**
- * Route entry: resolves the service request and guards access. Rendering the
- * body as a separate component keeps hooks out of this conditional path — and
- * the `key` remounts it per id, so message/draft state resets between requests.
+ * Route entry: loads the service request and renders the body separately so
+ * hooks stay out of the conditional path — and the `key` remounts it per id, so
+ * draft state resets between requests.
+ *
+ * Ownership is enforced by the API: a student requesting someone else's service
+ * gets a 403, so `service` is null here. The previous client-side comparison
+ * against a shared mock list was not a guard at all.
  */
 export default function StudentServiceDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const me = currentStudent()
-  const service = serviceRequests.find((r) => r.id === Number(id))
+  const { data: service, isPending } = useServiceRequest(id ? Number(id) : undefined)
 
-  // Guard: students only see their own service requests.
-  if (!service || (service.studentEmail !== me.email && service.studentName !== me.name)) {
+  if (isPending) {
+    return (
+      <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center shadow-sm">
+        <p className="text-slate-500">Loading service request…</p>
+      </div>
+    )
+  }
+
+  if (!service) {
     return (
       <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center shadow-sm">
         <p className="text-slate-500">Service request not found.</p>
@@ -37,27 +50,27 @@ export default function StudentServiceDetailPage() {
   return <ServiceDetail key={service.id} service={service} />
 }
 
-function ServiceDetail({ service }: { service: ServiceRequest }) {
+function ServiceDetail({ service }: { service: ApiServiceRequest }) {
   const navigate = useNavigate()
-  const me = currentStudent()
-  const [messages, setMessages] = useState<ServiceMessage[]>(service.messages)
+  const reply = useReplyServiceRequest()
   const [draft, setDraft] = useState('')
 
+  // The thread comes from the server and the cache is invalidated on reply, so
+  // there is no local copy to drift out of sync with it.
+  const messages = service.messages
+
   const send = () => {
-    if (!draft.trim()) return
-    const next: ServiceMessage[] = [
-      ...messages,
-      { text: draft.trim(), notify: null, files: [], at: nowStamp(), by: me.name },
-    ]
-    setMessages(next)
-    updateService({ ...service, messages: next })
+    const body = draft.trim()
+    if (!body || reply.isPending) return
+    reply.mutate({ id: service.id, body })
     setDraft('')
   }
 
-  // Timeline: a derived "created" entry + the request's own activity log.
+  // Timeline: a derived "created" entry plus each staff reply. The server keeps
+  // a full activity log; this view shows the parts a student cares about.
   const activity = [
     { text: 'Service request created', at: service.dateCreated },
-    ...service.activity,
+    ...messages.filter((m) => m.fromStaff).map((m) => ({ text: `Reply from ${m.by}`, at: m.at })),
   ]
 
   return (
@@ -85,11 +98,7 @@ function ServiceDetail({ service }: { service: ServiceRequest }) {
           </p>
           <p className="flex items-center gap-2 text-lg">
             <span className="font-bold">Status:</span>{' '}
-            {service.status ? (
-              <StatusPill label={service.status} color={serviceStatusColor(service.status)} />
-            ) : (
-              '--'
-            )}
+            <StatusPill label={service.status} color={service.statusColor} />
           </p>
           {service.description && (
             <p className="pt-1 text-sm text-slate-600 [overflow-wrap:anywhere]">{service.description}</p>
@@ -104,10 +113,10 @@ function ServiceDetail({ service }: { service: ServiceRequest }) {
             {messages.length === 0 ? (
               <p className="py-8 text-center text-sm text-slate-500">No messages found!</p>
             ) : (
-              messages.map((m, i) => {
-                const mine = m.by === me.name
+              messages.map((m) => {
+                const mine = !m.fromStaff
                 return (
-                  <div key={i} className={cn('flex', mine ? 'justify-end' : 'justify-start')}>
+                  <div key={m.id} className={cn('flex', mine ? 'justify-end' : 'justify-start')}>
                     <div
                       className={cn(
                         'max-w-md rounded-xl px-4 py-3 text-sm shadow-sm',
@@ -137,9 +146,10 @@ function ServiceDetail({ service }: { service: ServiceRequest }) {
               <button
                 type="button"
                 onClick={send}
-                className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-700"
+                disabled={reply.isPending}
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-700 disabled:opacity-60"
               >
-                <Send className="h-4 w-4" /> Send Message
+                <Send className="h-4 w-4" /> {reply.isPending ? 'Sending…' : 'Send Message'}
               </button>
             </div>
             <AttachFiles />

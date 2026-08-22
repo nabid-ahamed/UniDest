@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ComponentType, type MouseEvent } from
 import { createPortal } from 'react-dom'
 import { useLocation } from 'react-router-dom'
 import {
+  Layers,
   LayoutGrid,
   Users,
   Contact,
@@ -72,6 +73,7 @@ const NAV: NavGroup[] = [
       { label: 'Students', icon: Contact, to: '/students' },
       { label: 'Applications', icon: ClipboardList, to: '/applications' },
       { label: 'Support Tickets', icon: LifeBuoy, to: '/support-tickets' },
+      { label: 'Additional Services', icon: Layers, to: '/services' },
       { label: 'Course Finder', icon: Search, to: '/course-finder' },
       { label: 'Broadcast', icon: Radio, to: '/broadcast' },
       { label: 'Webinar & Events', icon: CalendarDays, to: '/webinars' },

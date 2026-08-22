@@ -69,6 +69,20 @@ export interface ApiInvoice {
   payments: ApiPayment[]
 }
 
+/**
+ * A status the server can assign to an invoice.
+ *
+ * Read from the API rather than hardcoded: the server derives status from the
+ * balance and knows about `Partially Paid`, which the old frontend constant
+ * (`['Due', 'Paid']`) omitted — so a part-paid invoice could not be filtered.
+ */
+export interface ApiInvoiceStatus {
+  label: string
+  /** Hex swatch, already contrast-checked server-side. */
+  color: string
+  isPaid: boolean
+}
+
 export interface ApiBusiness {
   id: number
   name: string
@@ -103,6 +117,10 @@ export const invoicesApi = {
   /** GET /invoices/:id */
   get: (id: number): Promise<ApiInvoice | null> =>
     USING_REAL_API ? request<ApiInvoice>(`/invoices/${id}`).catch(() => null) : mocked(() => null),
+
+  /** GET /invoices/statuses — the status vocabulary, in display order. */
+  statuses: (): Promise<ApiInvoiceStatus[]> =>
+    USING_REAL_API ? request<ApiInvoiceStatus[]>('/invoices/statuses') : mocked(() => []),
 
   /** GET /invoices/businesses — billing entities for the issuer picker. */
   businesses: (): Promise<ApiBusiness[]> =>

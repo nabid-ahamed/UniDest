@@ -29,6 +29,18 @@ export function useBusinesses() {
 }
 
 /**
+ * The invoice status vocabulary. Rarely changes, so it is cached like the
+ * business list rather than refetched per screen.
+ */
+export function useInvoiceStatuses() {
+  return useQuery({
+    queryKey: qk.invoices.statuses(),
+    queryFn: invoicesApi.statuses,
+    staleTime: 5 * 60_000,
+  })
+}
+
+/**
  * Invalidate the whole `invoices` branch after any write.
  *
  * A payment changes the invoice's status, its balance, and its row in both

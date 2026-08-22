@@ -1,7 +1,9 @@
 import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
 import { ActivityService } from '../activity/activity.service'
+import { StorageService } from '../documents/storage.service'
 import argon2 from 'argon2'
+import { randomBytes } from 'node:crypto'
 import type {
   CreateAgentDto,
   CreateCommissionDto,
@@ -14,6 +16,17 @@ import type {
 } from './dto/agent.dto'
 
 const TENANT_ID = 1n
+
+/** The three document slots an agent profile carries. */
+export const AGENT_DOCUMENT_SLOTS = ['logo', 'idProof', 'incorporationCert'] as const
+export type AgentDocumentSlot = (typeof AGENT_DOCUMENT_SLOTS)[number]
+
+/** Slot -> the Agent column holding its storage key. */
+const DOC_FIELD: Record<AgentDocumentSlot, string> = {
+  logo: 'logoUrl',
+  idProof: 'idProofUrl',
+  incorporationCert: 'incorporationCertUrl',
+}
 
 /**
  * Commission rate crosses the API as a percent (12.5) and is stored in basis
@@ -35,6 +48,7 @@ export class AgentsService {
   constructor(
     @Inject(PrismaService) private readonly prisma: PrismaService,
     @Inject(ActivityService) private readonly activity: ActivityService,
+    @Inject(StorageService) private readonly storage: StorageService,
   ) {}
 
   private get db() {
@@ -135,6 +149,11 @@ export class AgentsService {
     })
     if (existing) throw new BadRequestException(`An agent named "${dto.name}" already exists.`)
 
+    // Check the email before the transaction rather than letting the users
+    // unique constraint fail: a raw constraint error surfaces as a 500 and
+    // tells the operator nothing about which field clashed.
+    if (dto.email && dto.password) await this.assertEmailFree(dto.email)
+
     const actorId = await this.resolveActorId(actorPublicId)
     const created = await this.db.$transaction(async (tx) => {
       const agent = await tx.agent.create({
@@ -204,7 +223,14 @@ export class AgentsService {
           address: dto.address ?? undefined,
           category: dto.category ?? undefined,
           branchId: dto.branchId != null ? BigInt(dto.branchId) : undefined,
-          pointOfContactId: dto.pointOfContactId != null ? BigInt(dto.pointOfContactId) : undefined,
+          // null clears the assignment, undefined leaves it untouched — the two
+          // must stay distinguishable or the field can never be unset.
+          pointOfContactId:
+            dto.pointOfContactId === undefined
+              ? undefined
+              : dto.pointOfContactId === null
+                ? null
+                : BigInt(dto.pointOfContactId),
           logoUrl: dto.logoUrl ?? undefined,
           idProofUrl: dto.idProofUrl ?? undefined,
           incorporationCertUrl: dto.incorporationCertUrl ?? undefined,
@@ -219,6 +245,7 @@ export class AgentsService {
         include: this.relations,
       })
       if (current?.userId && (dto.password || dto.email)) {
+        if (dto.email) await this.assertEmailFree(dto.email, current.userId)
         await tx.user.update({ where: { id: current.userId }, data: { email: dto.email?.toLowerCase().trim() ?? undefined, passwordHash: dto.password ? await argon2.hash(dto.password) : undefined } })
       }
       await this.activity.recordWithActorId(
@@ -416,6 +443,169 @@ export class AgentsService {
     return first.id
   }
 
+  /**
+   * Create or reset the agent's portal login.
+   *
+   * There is no mail transport in this project, so this cannot literally send
+   * an email. It provisions the account and returns a one-time password for the
+   * operator to pass on out of band; wiring a provider later means replacing
+   * the return value with a send, not restructuring this.
+   */
+  async invite(id: number, actorPublicId?: string) {
+    const agent = await this.db.agent.findFirst({
+      where: { id: BigInt(id), tenantId: TENANT_ID, deletedAt: null },
+      select: { id: true, name: true, email: true, branchId: true, userId: true },
+    })
+    if (!agent) throw new NotFoundException(`Agent ${id} not found.`)
+    if (!agent.email) {
+      throw new BadRequestException('Add an email address before inviting this agent.')
+    }
+
+    const actorId = await this.resolveActorId(actorPublicId)
+    // Readable but not guessable — it is shown once and meant to be changed.
+    const tempPassword = `Ag-${randomBytes(6).toString('base64url')}`
+    const passwordHash = await argon2.hash(tempPassword)
+    const reset = agent.userId != null
+
+    if (!reset) await this.assertEmailFree(agent.email)
+
+    await this.db.$transaction(async (tx) => {
+      if (agent.userId != null) {
+        await tx.user.update({
+          where: { id: agent.userId },
+          data: { email: agent.email!.toLowerCase().trim(), passwordHash },
+        })
+      } else {
+        const role = await tx.role.findFirst({
+          where: { tenantId: TENANT_ID, name: 'Agent', deletedAt: null },
+        })
+        if (!role) throw new NotFoundException('Agent role is not configured.')
+        const user = await tx.user.create({
+          data: {
+            tenantId: TENANT_ID,
+            name: agent.name,
+            email: agent.email!.toLowerCase().trim(),
+            passwordHash,
+            roleId: role.id,
+            branchId: agent.branchId,
+          },
+        })
+        await tx.agent.update({ where: { id: agent.id }, data: { userId: user.id } })
+      }
+      await this.activity.recordWithActorId(
+        {
+          action: reset ? 'agent.invitation_resent' : 'agent.invited',
+          entity: 'agent',
+          entityId: agent.id,
+          meta: { email: agent.email },
+        },
+        actorId,
+        tx,
+      )
+    })
+
+    return { ok: true, reset, email: agent.email, tempPassword }
+  }
+
+  /**
+   * Attach a document to an agent.
+   *
+   * The three slots are fixed fields on the agent rather than a document table:
+   * each is single-valued and replacing one should drop the old file, which a
+   * generic list would not express.
+   */
+  async uploadDocument(
+    id: number,
+    slot: AgentDocumentSlot,
+    file: Express.Multer.File,
+    actorPublicId?: string,
+  ) {
+    if (!file?.buffer?.length) throw new BadRequestException('No file was uploaded.')
+    const agent = await this.db.agent.findFirst({
+      where: { id: BigInt(id), tenantId: TENANT_ID, deletedAt: null },
+      select: { id: true, [DOC_FIELD[slot]]: true } as { id: true },
+    })
+    if (!agent) throw new NotFoundException(`Agent ${id} not found.`)
+
+    const previous = (agent as Record<string, unknown>)[DOC_FIELD[slot]] as string | null
+    const key = await this.storage.put(file.buffer, file.originalname)
+    const actorId = await this.resolveActorId(actorPublicId)
+
+    await this.db.$transaction(async (tx) => {
+      await tx.agent.update({
+        where: { id: BigInt(id) },
+        data: { [DOC_FIELD[slot]]: key },
+      })
+      await this.activity.recordWithActorId(
+        {
+          action: 'agent.document_uploaded',
+          entity: 'agent',
+          entityId: BigInt(id),
+          meta: { slot, fileName: file.originalname },
+        },
+        actorId,
+        tx,
+      )
+    })
+
+    // Replacing a document leaves the old blob orphaned otherwise.
+    if (previous) await this.storage.remove(previous)
+    return this.get(id)
+  }
+
+  /** A readable stream for one of an agent's documents. */
+  async documentFile(id: number, slot: AgentDocumentSlot) {
+    const agent = await this.db.agent.findFirst({
+      where: { id: BigInt(id), tenantId: TENANT_ID, deletedAt: null },
+    })
+    if (!agent) throw new NotFoundException(`Agent ${id} not found.`)
+    const key = (agent as Record<string, unknown>)[DOC_FIELD[slot]] as string | null
+    if (!key) throw new NotFoundException(`This agent has no ${slot} on file.`)
+    const stream = this.storage.read(key)
+    if (!stream) throw new NotFoundException('The stored file is no longer available.')
+    return { stream, name: key }
+  }
+
+  /** Remove a document from an agent, deleting the stored blob. */
+  async removeDocument(id: number, slot: AgentDocumentSlot, actorPublicId?: string) {
+    const agent = await this.db.agent.findFirst({
+      where: { id: BigInt(id), tenantId: TENANT_ID, deletedAt: null },
+    })
+    if (!agent) throw new NotFoundException(`Agent ${id} not found.`)
+    const key = (agent as Record<string, unknown>)[DOC_FIELD[slot]] as string | null
+
+    const actorId = await this.resolveActorId(actorPublicId)
+    await this.db.$transaction(async (tx) => {
+      await tx.agent.update({ where: { id: BigInt(id) }, data: { [DOC_FIELD[slot]]: null } })
+      await this.activity.recordWithActorId(
+        { action: 'agent.document_removed', entity: 'agent', entityId: BigInt(id), meta: { slot } },
+        actorId,
+        tx,
+      )
+    })
+    if (key) await this.storage.remove(key)
+    return this.get(id)
+  }
+
+  /**
+   * Refuse an email already used by another login.
+   *
+   * `exceptUserId` lets an agent keep their own address on update — otherwise
+   * saving the form unchanged would report a clash with itself.
+   */
+  private async assertEmailFree(email: string, exceptUserId?: bigint): Promise<void> {
+    const taken = await this.db.user.findFirst({
+      where: {
+        tenantId: TENANT_ID,
+        email: email.toLowerCase().trim(),
+        deletedAt: null,
+        ...(exceptUserId ? { NOT: { id: exceptUserId } } : {}),
+      },
+      select: { id: true },
+    })
+    if (taken) throw new BadRequestException(`The email "${email}" is already in use.`)
+  }
+
   private async resolveActorId(publicId?: string): Promise<bigint | null> {
     if (!publicId) return null
     const user = await this.db.user.findFirst({
@@ -426,6 +616,10 @@ export class AgentsService {
   }
 
   private readonly relations = {
+    // Joined so the DTO can return names, not bare ids: a detail screen showing
+    // "Branch ID 3" makes the reader do a lookup the server already can.
+    branch: { select: { name: true } },
+    pointOfContact: { select: { name: true } },
     _count: {
       select: {
         applications: { where: { deletedAt: null } },
@@ -450,6 +644,8 @@ export class AgentsService {
     category: string | null
     branchId: bigint
     pointOfContactId: bigint | null
+    branch?: { name: string } | null
+    pointOfContact?: { name: string } | null
     logoUrl: string | null
     idProofUrl: string | null
     incorporationCertUrl: string | null
@@ -476,7 +672,9 @@ export class AgentsService {
       address: a.address ?? '',
       category: a.category ?? '',
       branchId: Number(a.branchId),
+      branch: a.branch?.name ?? '',
       pointOfContactId: a.pointOfContactId == null ? null : Number(a.pointOfContactId),
+      pointOfContact: a.pointOfContact?.name ?? null,
       logoUrl: a.logoUrl ?? '',
       idProofUrl: a.idProofUrl ?? '',
       incorporationCertUrl: a.incorporationCertUrl ?? '',

@@ -8,15 +8,22 @@ import { pickTextColor } from '../../lib/contrast'
 import {
   currentStudent,
   myApplications,
-  myInvoices,
-  myServices,
   documentRequests,
-  invoiceAmountLabel,
-  invoiceStatus,
   documentStatusColor,
-  serviceStatusColor,
-  invoiceStatusColor,
 } from '../../mock/student/portal'
+import { useInvoices, useServiceRequests, formatMoney } from '../../lib/api'
+
+/**
+ * Pill colour per invoice status. Mirrors StudentFeesPage rather than the
+ * portal mock's map, which covered only the two states the fake invoices had —
+ * the API also reports "Partially Paid".
+ */
+const INVOICE_STATUS_COLORS: Record<string, string> = {
+  Paid: '#15803d',
+  'Partially Paid': '#a16207',
+  Due: '#b91c1c',
+}
+const invoiceStatusColor = (s: string) => INVOICE_STATUS_COLORS[s] ?? '#475569'
 import { ensureCourseSuggestionsSeed, loadCfSuggestions } from '../../mock/courseSuggestions'
 
 /** Small circular icon tile in a brand tint. */
@@ -30,8 +37,9 @@ function IconTile({ children }: { children: ReactNode }) {
 
 export default function StudentDashboardPage() {
   const applications = myApplications()
-  const invoices = myInvoices()
-  const services = myServices()
+  // Both scoped to this student by the API, same as the pages they link to.
+  const { data: invoices = [] } = useInvoices('student')
+  const { data: services = [] } = useServiceRequests()
   // Course suggestions share the admin store, so they match the Course
   // Suggestions page (seeded once, idempotently).
   const [courseSuggestions] = useState(() => {
@@ -130,18 +138,17 @@ export default function StudentDashboardPage() {
             <PortalEmpty text="No invoices yet." />
           ) : (
             <ul className="divide-y divide-slate-100">
-              {invoices.map((inv) => {
-                const status = invoiceStatus(inv)
-                return (
-                  <li key={inv.id} className="grid grid-cols-[1fr_1fr_auto] items-center gap-3 py-3">
-                    <span className="text-sm font-semibold text-slate-800">{inv.id}</span>
-                    <span className="text-sm text-slate-600">{invoiceAmountLabel(inv)}</span>
-                    <span className="justify-self-end">
-                      <StatusPill label={status} color={invoiceStatusColor(status)} />
-                    </span>
-                  </li>
-                )
-              })}
+              {invoices.map((inv) => (
+                <li key={inv.id} className="grid grid-cols-[1fr_1fr_auto] items-center gap-3 py-3">
+                  <span className="text-sm font-semibold text-slate-800">{inv.invoiceNo}</span>
+                  <span className="text-sm text-slate-600">
+                    {formatMoney(inv.currency, inv.grandTotal)}
+                  </span>
+                  <span className="justify-self-end">
+                    <StatusPill label={inv.status} color={invoiceStatusColor(inv.status)} />
+                  </span>
+                </li>
+              ))}
             </ul>
           )}
         </PortalCard>
@@ -164,7 +171,7 @@ export default function StudentDashboardPage() {
                       <p className="truncate text-xs text-slate-500">{sv.country}</p>
                     </div>
                   </div>
-                  <StatusPill label={sv.status} color={serviceStatusColor(sv.status)} />
+                  <StatusPill label={sv.status} color={sv.statusColor} />
                 </li>
               ))}
             </ul>

@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -10,12 +11,18 @@ import {
   Post,
   Query,
   Req,
+  Res,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common'
+import { FileInterceptor } from '@nestjs/platform-express'
+import type { Response } from 'express'
+import { MAX_FILE_BYTES } from '../documents/documents.service'
 import { RequirePermission } from '../auth/guards/permissions.guard'
 import { AllowAgent } from '../auth/guards/permissions.guard'
 import { AgentScopeService } from '../auth/agent-scope.service'
 import type { JwtPayload } from '../auth/auth.types'
-import { AgentsService } from './agents.service'
+import { AGENT_DOCUMENT_SLOTS, AgentsService, type AgentDocumentSlot } from './agents.service'
 import {
   CreateAgentDto,
   CreateCommissionDto,
@@ -26,6 +33,14 @@ import {
   UpdateCommissionDto,
   UpdateSubmissionSettingDto,
 } from './dto/agent.dto'
+
+/** Reject an unknown slot with a 400 rather than letting it reach a lookup. */
+function parseSlot(slot: string): AgentDocumentSlot {
+  if ((AGENT_DOCUMENT_SLOTS as readonly string[]).includes(slot)) return slot as AgentDocumentSlot
+  throw new BadRequestException(
+    `Unknown document slot "${slot}". Expected one of: ${AGENT_DOCUMENT_SLOTS.join(', ')}.`,
+  )
+}
 
 @Controller('agents')
 export class AgentsController {
@@ -75,6 +90,58 @@ export class AgentsController {
     @Req() req: { user?: JwtPayload },
   ) {
     return this.agents.update(id, dto, req.user?.sub)
+  }
+
+  /**
+   * Provision or reset the agent's portal login.
+   *
+   * Returns a one-time password rather than sending mail — the project has no
+   * mail transport yet.
+   */
+  @Post(':id/invite')
+  @RequirePermission('agent-management')
+  invite(@Param('id', ParseIntPipe) id: number, @Req() req: { user?: JwtPayload }) {
+    return this.agents.invite(id, req.user?.sub)
+  }
+
+  /**
+   * Attach a document (logo / idProof / incorporationCert).
+   *
+   * Uploading over an existing slot replaces it and deletes the old blob.
+   */
+  @Post(':id/documents/:slot')
+  @RequirePermission('agent-management')
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: MAX_FILE_BYTES } }))
+  uploadDocument(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('slot') slot: string,
+    @UploadedFile() file: Express.Multer.File,
+    @Req() req: { user?: JwtPayload },
+  ) {
+    return this.agents.uploadDocument(id, parseSlot(slot), file, req.user?.sub)
+  }
+
+  /** Served through an authenticated route, never a static mount. */
+  @Get(':id/documents/:slot/file')
+  @RequirePermission('agent-management')
+  async documentFile(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('slot') slot: string,
+    @Res() res: Response,
+  ) {
+    const { stream, name } = await this.agents.documentFile(id, parseSlot(slot))
+    res.setHeader('Content-Disposition', `inline; filename="${name.replace(/"/g, '')}"`)
+    stream.pipe(res)
+  }
+
+  @Delete(':id/documents/:slot')
+  @RequirePermission('agent-management')
+  removeDocument(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('slot') slot: string,
+    @Req() req: { user?: JwtPayload },
+  ) {
+    return this.agents.removeDocument(id, parseSlot(slot), req.user?.sub)
   }
 
   @Delete(':id')

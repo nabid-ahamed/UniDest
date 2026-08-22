@@ -21,16 +21,13 @@ import { ExportButtons } from '../../components/ExportButtons'
 import { Field, PageBtn, SingleSelect } from '../../components/DataTableUI'
 import { HighlightMatch } from '../../components/ui/HighlightMatch'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
-import { applications, applicationStatuses, applicationChannels, intakes } from '../../mock/applications'
+import { applicationStatuses, applicationChannels, intakes, type Application } from '../../mock/applications'
+import { isInvoiceable } from '../../mock/invoices'
+import { invoiceCurrencies, paymentLabels } from '../../lib/constants'
 import {
-  invoiceUniversities,
-  invoiceStatuses,
-  invoiceCurrencies,
-  paymentLabels,
-  isInvoiceable,
-} from '../../mock/invoices'
-import {
+  useApplications,
   useInvoices,
+  useInvoiceStatuses,
   useCreateInvoice,
   useRecordPayment,
   useDeleteInvoice,
@@ -125,6 +122,16 @@ function InvoicesTab({
   // Staff can view invoices but not delete them (admin-only action).
   const canManage = useAuth((s) => s.user?.role !== 'Staff')
   const { data: universityInvoices = [], isPending } = useInvoices('university')
+  // Status options come from the server, which knows about `Partially Paid` —
+  // the old hardcoded ['Due', 'Paid'] left part-paid invoices unfilterable.
+  const { data: invoiceStatuses = [] } = useInvoiceStatuses()
+
+  // Derived from the invoices actually loaded, not a mock fixture: a filter
+  // offering universities that appear in no row is worse than no filter.
+  const invoiceUniversities = useMemo(
+    () => [...new Set(universityInvoices.map((inv) => inv.university).filter(Boolean))].sort(),
+    [universityInvoices],
+  )
   const recordPaymentM = useRecordPayment()
   const removeInvoice = useDeleteInvoice()
   const [search, setSearch] = useState('')
@@ -227,7 +234,7 @@ function InvoicesTab({
           >
             <option value="">All</option>
             {invoiceStatuses.map((s) => (
-              <option key={s}>{s}</option>
+              <option key={s.label}>{s.label}</option>
             ))}
           </select>
         </Field>
@@ -457,9 +464,12 @@ function ApplicationsTab({
   const [tableSearch, setTableSearch] = useState('')
   const [pageSize, setPageSize] = useState(25)
   const [page, setPage] = useState(1)
-  const [createFor, setCreateFor] = useState<(typeof eligible)[number] | null>(null)
+  const [createFor, setCreateFor] = useState<Application | null>(null)
 
-  const eligible = useMemo(() => applications.filter(isInvoiceable), [])
+  // Eligible applications come from the API, not the mock fixture: this tab is
+  // where a real invoice gets created, so it must offer real applications.
+  const { data: apiApplications = [], isPending: appsPending } = useApplications()
+  const eligible = useMemo(() => apiApplications.filter(isInvoiceable), [apiApplications])
 
   const clearFilters = () => {
     setIntake('')
@@ -652,7 +662,7 @@ function ApplicationsTab({
             {pageRows.length === 0 && (
               <tr>
                 <td colSpan={7} className="px-4 py-12 text-center text-sm text-slate-500">
-                  No applications ready for invoicing.
+                  {appsPending ? 'Loading applications…' : 'No applications ready for invoicing.'}
                 </td>
               </tr>
             )}
@@ -953,7 +963,7 @@ function CreateInvoiceModal({
   onClose,
   onCreate,
 }: {
-  application: (typeof applications)[number]
+  application: Application
   onClose: () => void
   onCreate: (payload: {
     currency: string

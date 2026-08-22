@@ -7,8 +7,9 @@
  */
 export { API_BASE_URL, USING_REAL_API, ApiError } from './client'
 export { qk } from './keys'
-export type { ApiAgent, ApiReferral, ApiCommission } from './resources/agents'
-export { useAgents, useAgent, useCreateAgent, useUpdateAgent, useDeleteAgent, useAgentSubmissionSetting, useUpdateAgentSubmissionSetting, useAgentReferrals, useAgentCommissions } from './hooks/useAgents'
+export type { ApiAgent, ApiReferral, ApiCommission, AgentDocumentSlot } from './resources/agents'
+export { agentsApi } from './resources/agents'
+export { useAgents, useAgent, useCreateAgent, useUpdateAgent, useDeleteAgent, useAgentSubmissionSetting, useUpdateAgentSubmissionSetting, useAgentReferrals, useAgentCommissions, useInviteAgent, useUploadAgentDocument, useRemoveAgentDocument } from './hooks/useAgents'
 
 export type { Lead } from './resources/leads'
 export type { Student } from './resources/students'
@@ -84,15 +85,31 @@ export {
 export type {
   ApiInvoice,
   ApiInvoiceItem,
+  ApiInvoiceStatus,
   ApiPayment,
   ApiBusiness,
   InvoiceItemInput,
 } from './resources/invoices'
 export { invoicesApi, formatMoney } from './resources/invoices'
 export {
+  useServiceRequests,
+  useServiceRequest,
+  useServiceStatuses,
+  useCreateServiceRequest,
+  useUpdateServiceRequest,
+  useReplyServiceRequest,
+  useDeleteServiceRequest,
+} from './hooks/useServices'
+export type {
+  ApiServiceRequest,
+  ApiServiceMessage,
+  ApiServiceStatus,
+} from './resources/services'
+export {
   useInvoices,
   useInvoice,
   useBusinesses,
+  useInvoiceStatuses,
   useCreateInvoice,
   useUpdateInvoice,
   useRecordPayment,

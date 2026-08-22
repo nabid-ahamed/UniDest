@@ -1,16 +1,18 @@
 import { useNavigate } from 'react-router-dom'
 import { ArrowRight } from 'lucide-react'
 import { StatusPill } from './components/StatusPill'
-import { myServices, serviceStatusColor } from '../../mock/student/portal'
+import { useServiceRequests } from '../../lib/api'
 
 /**
- * "Additional Services" — the student's own service/visa requests, derived live
- * from the admin `services` module (filtered via `myServices()`). Matches
- * demo.eductrl.com/cn4/service-and-visa/applications.
+ * "Additional Services" — the student's own service/visa requests.
+ *
+ * The list is scoped server-side to the caller's student record, so no filter
+ * is applied here: a client-side owner check against a shared list would not be
+ * a guard at all. Matches demo.eductrl.com/cn4/service-and-visa/applications.
  */
 export default function StudentServicesPage() {
   const navigate = useNavigate()
-  const services = myServices()
+  const { data: services = [], isPending } = useServiceRequests()
 
   return (
     <div className="space-y-6">
@@ -19,7 +21,9 @@ export default function StudentServicesPage() {
       <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div className="bg-brand-600 px-6 py-4 text-lg font-bold text-white">Additional Services</div>
 
-        {services.length === 0 ? (
+        {isPending ? (
+          <div className="px-6 py-16 text-center text-sm text-slate-500">Loading services…</div>
+        ) : services.length === 0 ? (
           <div className="px-6 py-16 text-center text-sm text-slate-500">
             You have no service requests yet.
           </div>
@@ -48,7 +52,7 @@ export default function StudentServicesPage() {
                       {sv.description || '--'}
                     </td>
                     <td className="px-6 py-5 align-top">
-                      {sv.status ? <StatusPill label={sv.status} color={serviceStatusColor(sv.status)} /> : '--'}
+                      <StatusPill label={sv.status} color={sv.statusColor} />
                     </td>
                     <td className="px-6 py-5 align-top">
                       <button

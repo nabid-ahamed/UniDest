@@ -79,6 +79,21 @@ function generateIntakes(months = 24): string[] {
 export const intakes = generateIntakes()
 export const followupDateOptions = ['Today', 'Tomorrow', 'This Week', 'This Month', 'Overdue']
 export const leadSources = ['Facebook', 'Website', 'Walk-in', 'Referral', 'Agent', 'Other']
+/**
+ * The Additional Services catalogue — the seven types the reference offers
+ * (demo.eductrl.com/cn4/admin/service-and-visa/list). Distinct from `services`
+ * below, which is the longer visa list used elsewhere.
+ */
+export const serviceTypes = [
+  'Insurance',
+  'Work Visa',
+  'Visa On Time',
+  'Transport Services',
+  'Accommodation',
+  'Visitor Visa',
+  'English Language training',
+]
+
 export const services = [
   'Study Visa',
   'Work Visa',

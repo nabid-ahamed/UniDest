@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { agentsApi } from '../resources/agents'
+import { agentsApi, type AgentDocumentSlot } from '../resources/agents'
 import { qk } from '../keys'
 
 export function useAgents() {
@@ -40,4 +40,30 @@ export function useUpdateAgentSubmissionSetting() {
 export function useDeleteAgent() {
   const qc = useQueryClient()
   return useMutation({ mutationFn: agentsApi.remove, onSuccess: () => qc.invalidateQueries({ queryKey: qk.agents.all }) })
+}
+/** Provision or reset the agent's portal login. */
+export function useInviteAgent() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: number) => agentsApi.invite(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.agents.all }),
+  })
+}
+
+export function useUploadAgentDocument() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, slot, file }: { id: number; slot: AgentDocumentSlot; file: File }) =>
+      agentsApi.uploadDocument(id, slot, file),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.agents.all }),
+  })
+}
+
+export function useRemoveAgentDocument() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, slot }: { id: number; slot: AgentDocumentSlot }) =>
+      agentsApi.removeDocument(id, slot),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.agents.all }),
+  })
 }

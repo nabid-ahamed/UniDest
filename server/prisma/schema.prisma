@@ -105,26 +105,28 @@ model User {
   updatedAt    DateTime  @updatedAt
   deletedAt    DateTime?
 
-  branch           Branch?   @relation(fields: [branchId], references: [id])
-  role             Role      @relation(fields: [roleId], references: [id])
-  assignedLeads       Lead[]                     @relation("LeadAssignee")
-  assignedStudents    Student[]                  @relation("StudentAssignee")
-  assignedApplications Application[]             @relation("ApplicationAssignee")
-  agentContacts       Agent[]                    @relation("AgentPointOfContact")
-  statusChanges       ApplicationStatusHistory[] @relation("StatusChangedBy")
+  branch               Branch?                    @relation(fields: [branchId], references: [id])
+  role                 Role                       @relation(fields: [roleId], references: [id])
+  assignedLeads        Lead[]                     @relation("LeadAssignee")
+  assignedStudents     Student[]                  @relation("StudentAssignee")
+  assignedApplications Application[]              @relation("ApplicationAssignee")
+  agentContacts        Agent[]                    @relation("AgentPointOfContact")
+  statusChanges        ApplicationStatusHistory[] @relation("StatusChangedBy")
 
   /// The student record this login belongs to, when the user is a student.
-  studentProfile      Student?                   @relation("StudentPortalAccount")
-  agentProfile        Agent?                     @relation("AgentPortalAccount")
-  activityLog         ActivityLog[]              @relation("ActivityActor")
-  assignedTickets     Ticket[]                   @relation("TicketAssignee")
-  ticketMessages      TicketMessage[]            @relation("TicketMessageAuthor")
-  recordedPayments    Payment[]                  @relation("PaymentRecordedBy")
-  announcements       Announcement[]             @relation("AnnouncementAuthor")
-  notificationReads   NotificationRead[]         @relation("NotificationReader")
-  cmsContent          CmsContent[]               @relation("CmsAuthor")
-  mediaUploads        MediaItem[]                @relation("MediaUploader")
-  resourceUploads     StudentResource[]          @relation("ResourceUploader")
+  studentProfile          Student?                @relation("StudentPortalAccount")
+  agentProfile            Agent?                  @relation("AgentPortalAccount")
+  activityLog             ActivityLog[]           @relation("ActivityActor")
+  assignedTickets         Ticket[]                @relation("TicketAssignee")
+  ticketMessages          TicketMessage[]         @relation("TicketMessageAuthor")
+  recordedPayments        Payment[]               @relation("PaymentRecordedBy")
+  announcements           Announcement[]          @relation("AnnouncementAuthor")
+  notificationReads       NotificationRead[]      @relation("NotificationReader")
+  cmsContent              CmsContent[]            @relation("CmsAuthor")
+  mediaUploads            MediaItem[]             @relation("MediaUploader")
+  resourceUploads         StudentResource[]       @relation("ResourceUploader")
+  assignedServiceRequests ServiceRequest[]        @relation("ServiceRequestAssignee")
+  serviceRequestMessages  ServiceRequestMessage[] @relation("ServiceRequestMessageAuthor")
 
   @@unique([tenantId, email])
   @@index([tenantId, roleId])
@@ -203,9 +205,9 @@ model ApplicationStatus {
   updatedAt  DateTime  @updatedAt
   deletedAt  DateTime?
 
-  applications  Application[]
-  historyFrom   ApplicationStatusHistory[] @relation("HistoryFrom")
-  historyTo     ApplicationStatusHistory[] @relation("HistoryTo")
+  applications Application[]
+  historyFrom  ApplicationStatusHistory[] @relation("HistoryFrom")
+  historyTo    ApplicationStatusHistory[] @relation("HistoryTo")
 
   @@unique([tenantId, key])
   @@index([tenantId, sortOrder])
@@ -231,9 +233,9 @@ model Country {
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
-  interestedLeads    Lead[]    @relation("LeadPrimaryInterest")
-  residentStudents   Student[] @relation("StudentResidence")
-  interestedStudents Student[] @relation("StudentInterest")
+  interestedLeads    Lead[]       @relation("LeadPrimaryInterest")
+  residentStudents   Student[]    @relation("StudentResidence")
+  interestedStudents Student[]    @relation("StudentInterest")
   universities       University[]
 
   @@index([tenantId])
@@ -241,24 +243,24 @@ model Country {
 }
 
 model University {
-  id        BigInt    @id @default(autoincrement())
-  publicId  String    @unique @default(uuid()) @db.Uuid
-  tenantId  BigInt?
-  countryId BigInt
-  name      String
-  city      String?
-  website   String?
-  logoUrl   String?
+  id          BigInt    @id @default(autoincrement())
+  publicId    String    @unique @default(uuid()) @db.Uuid
+  tenantId    BigInt?
+  countryId   BigInt
+  name        String
+  city        String?
+  website     String?
+  logoUrl     String?
   /// 'Public' | 'Private'
   type        String?
   established Int?
   ranking     Int?
-  showToAgent Boolean @default(true)
+  showToAgent Boolean   @default(true)
   /// 'Active' | 'Inactive'
-  status    String    @default("Active")
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
+  status      String    @default("Active")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
 
   country Country  @relation(fields: [countryId], references: [id])
   courses Course[]
@@ -304,8 +306,8 @@ model Course {
   universityId BigInt
   categoryId   BigInt?
 
-  title      String
-  studyLevel String?
+  title          String
+  studyLevel     String?
   /// Kept alongside durationMonths because the UI shows years.
   durationYears  Int?
   durationMonths Int?
@@ -326,14 +328,14 @@ model Course {
   entryRequirements String?
   websiteUrl        String?
   /// 'Enabled' | 'Disabled'
-  status String @default("Enabled")
+  status            String  @default("Enabled")
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
-  university   University      @relation(fields: [universityId], references: [id])
-  category     CourseCategory? @relation(fields: [categoryId], references: [id])
+  university   University        @relation(fields: [universityId], references: [id])
+  category     CourseCategory?   @relation(fields: [categoryId], references: [id])
   intakes      Intake[]
   applications Application[]
   resources    StudentResource[]
@@ -440,7 +442,7 @@ model ApplicationStatusHistory {
   changedById   BigInt?
   changedAt     DateTime @default(now())
 
-  application Application       @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  application Application        @relation(fields: [applicationId], references: [id], onDelete: Cascade)
   fromStatus  ApplicationStatus? @relation("HistoryFrom", fields: [fromStatusId], references: [id])
   toStatus    ApplicationStatus  @relation("HistoryTo", fields: [toStatusId], references: [id])
   changedBy   User?              @relation("StatusChangedBy", fields: [changedById], references: [id])
@@ -461,11 +463,11 @@ model ApplicationDocument {
   fileUrl       String?
   fileSize      Int?
   /// 'Uploaded' | 'Pending Review' | 'Verified' | 'Rejected'
-  status     String    @default("Pending Review")
-  uploadedAt DateTime  @default(now())
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
-  deletedAt  DateTime?
+  status        String    @default("Pending Review")
+  uploadedAt    DateTime  @default(now())
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
 
   application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
 
@@ -570,10 +572,10 @@ model Student {
   gender    String?
   source    String?
 
-  branchId     BigInt?
-  assignedToId BigInt?
+  branchId          BigInt?
+  assignedToId      BigInt?
   referredByAgentId BigInt?
-  statusId     BigInt
+  statusId          BigInt
 
   residenceCountryId BigInt?
   interestCountryId  BigInt?
@@ -614,10 +616,11 @@ model Student {
   user             User?         @relation("StudentPortalAccount", fields: [userId], references: [id])
 
   /// Back-reference for Lead.convertedStudent.
-  convertedFromLeads Lead[]        @relation("LeadConversion")
+  convertedFromLeads Lead[]           @relation("LeadConversion")
   applications       Application[]
-  tickets            Ticket[]      @relation("TicketStudent")
+  tickets            Ticket[]         @relation("TicketStudent")
   invoices           Invoice[]
+  serviceRequests    ServiceRequest[]
 
   @@index([tenantId, statusId])
   @@index([tenantId, assignedToId])
@@ -746,9 +749,9 @@ model TicketMessage {
   publicId String @unique @default(uuid()) @db.Uuid
   tenantId BigInt @default(1)
 
-  ticketId BigInt
+  ticketId   BigInt
   /// NULL when the requester wrote it — they are not a staff user.
-  authorId BigInt?
+  authorId   BigInt?
   /// Kept alongside authorId so a requester's message still shows a name.
   authorName String
   fromStaff  Boolean @default(false)
@@ -809,16 +812,16 @@ model Invoice {
   /// Human-facing number shown on the document, e.g. "387499".
   invoiceNo String
 
-  studentId  BigInt
-  businessId BigInt?
+  studentId     BigInt
+  businessId    BigInt?
   /// Set for university invoices, null for student invoices.
   applicationId BigInt?
 
-  currency String @default("USD")
+  currency      String @default("USD")
   /// Sum of the line items, in minor units.
-  subtotalMinor Int @default(0)
+  subtotalMinor Int    @default(0)
   /// Discount applied to the subtotal, in minor units.
-  discountMinor Int @default(0)
+  discountMinor Int    @default(0)
 
   /// Which instalment this covers ("1st Payment"), university invoices only.
   paymentLabel String?
@@ -884,7 +887,7 @@ model InvoiceItem {
   description String
   /// Minor units, as everywhere else.
   amountMinor Int
-  sortOrder   Int @default(0)
+  sortOrder   Int    @default(0)
 
   createdAt DateTime @default(now())
 
@@ -904,7 +907,7 @@ model Payment {
 
   invoiceId   BigInt
   amountMinor Int
-  method      String  @default("Cash") // Cash | Card | Bank Transfer | Online
+  method      String   @default("Cash") // Cash | Card | Bank Transfer | Online
   note        String?
   paidAt      DateTime @default(now())
 
@@ -934,25 +937,25 @@ model Agent {
   publicId String @unique @default(uuid()) @db.Uuid
   tenantId BigInt @default(1)
 
-  name    String
-  firstName String?
-  lastName  String?
-  company String?
-  email   String?
-  phone   String?
-  country String?
-  state   String?
-  city    String?
-  address String?
-  category String?
-  branchId BigInt
-  pointOfContactId BigInt?
-  logoUrl String?
-  idProofUrl String?
-  incorporationCertUrl String?
-  userId BigInt? @unique
+  name                  String
+  firstName             String?
+  lastName              String?
+  company               String?
+  email                 String?
+  phone                 String?
+  country               String?
+  state                 String?
+  city                  String?
+  address               String?
+  category              String?
+  branchId              BigInt
+  pointOfContactId      BigInt?
+  logoUrl               String?
+  idProofUrl            String?
+  incorporationCertUrl  String?
+  userId                BigInt? @unique
   canSubmitApplications Boolean @default(false)
-  autoConvertReferrals Boolean @default(false)
+  autoConvertReferrals  Boolean @default(false)
 
   /// Percent of the application fee this agent earns, e.g. 12.5 for 12.5%.
   /// Stored in basis points (1250) so the arithmetic stays in integers, for
@@ -965,11 +968,11 @@ model Agent {
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
-  branch         Branch @relation(fields: [branchId], references: [id])
-  pointOfContact User? @relation("AgentPointOfContact", fields: [pointOfContactId], references: [id])
-  user           User?  @relation("AgentPortalAccount", fields: [userId], references: [id])
-  leads          Lead[] @relation("AgentLeads")
-  students       Student[] @relation("AgentStudents")
+  branch         Branch        @relation(fields: [branchId], references: [id])
+  pointOfContact User?         @relation("AgentPointOfContact", fields: [pointOfContactId], references: [id])
+  user           User?         @relation("AgentPortalAccount", fields: [userId], references: [id])
+  leads          Lead[]        @relation("AgentLeads")
+  students       Student[]     @relation("AgentStudents")
   applications   Application[]
   commissions    Commission[]
 
@@ -1109,13 +1112,13 @@ model Webinar {
   publicId String @unique @default(uuid()) @db.Uuid
   tenantId BigInt @default(1)
 
-  topic        String
-  startsAt     DateTime
-  venue        String?
+  topic         String
+  startsAt      DateTime
+  venue         String?
   /// Student | Agent | Student / Agent
-  audienceType String  @default("Student")
-  webinarLink  String?
-  description  String?
+  audienceType  String   @default("Student")
+  webinarLink   String?
+  description   String?
   notifiedEmail String?
 
   createdAt DateTime  @default(now())
@@ -1141,7 +1144,7 @@ model WebinarEnrollment {
   email     String
   phone     String?
   /// Student | Agent
-  userType  String @default("Student")
+  userType  String  @default("Student")
 
   createdAt DateTime @default(now())
 
@@ -1193,9 +1196,9 @@ model NewsletterSubscriber {
   publicId String @unique @default(uuid()) @db.Uuid
   tenantId BigInt @default(1)
 
-  email        String
-  name         String?
-  subscribedAt DateTime  @default(now())
+  email          String
+  name           String?
+  subscribedAt   DateTime  @default(now())
   unsubscribedAt DateTime?
 
   @@unique([tenantId, email])
@@ -1276,4 +1279,95 @@ model StudentResource {
   @@index([tenantId, categoryId])
   @@index([tenantId, deletedAt])
   @@map("student_resources")
+}
+
+// ---------------------------------------------------------------------------
+// Additional services (insurance, visas, accommodation, …)
+// ---------------------------------------------------------------------------
+
+/// A service request raised for a student — the "Additional Services" module.
+///
+/// Ownership is deliberately derived rather than duplicated: a request belongs
+/// to a student, and an agent may see it when that student is one of their
+/// referrals (`student.referredByAgentId`). Storing an `agentId` here too would
+/// let the two disagree the moment a referral is reassigned.
+model ServiceRequest {
+  id       BigInt @id @default(autoincrement())
+  publicId String @unique @default(uuid()) @db.Uuid
+  tenantId BigInt @default(1)
+
+  studentId BigInt
+  statusId  BigInt
+
+  /// Free text rather than a lookup: the catalogue is marketing copy that
+  /// changes per campaign, and no report groups on it.
+  service     String
+  country     String @default("")
+  description String @default("")
+  notes       String @default("")
+
+  assignedToId BigInt?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  student    Student              @relation(fields: [studentId], references: [id])
+  status     ServiceRequestStatus @relation(fields: [statusId], references: [id])
+  assignedTo User?                @relation("ServiceRequestAssignee", fields: [assignedToId], references: [id])
+
+  messages ServiceRequestMessage[]
+
+  @@index([tenantId, statusId])
+  @@index([tenantId, studentId])
+  @@index([tenantId, deletedAt])
+  @@map("service_requests")
+}
+
+/// Status lookup, not a Postgres ENUM — same reasoning as TicketStatus: these
+/// get renamed per office, and ALTER TYPE in production is a migration nobody
+/// wants. `isClosed` is the flag reports read, never the label.
+model ServiceRequestStatus {
+  id        BigInt    @id @default(autoincrement())
+  publicId  String    @unique @default(uuid()) @db.Uuid
+  tenantId  BigInt    @default(1)
+  key       String
+  label     String
+  color     String
+  sortOrder Int       @default(0)
+  /// Reached a decision — nothing further is expected from staff.
+  isClosed  Boolean   @default(false)
+  isSystem  Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  requests ServiceRequest[]
+
+  @@unique([tenantId, key])
+  @@index([tenantId, sortOrder])
+  @@map("service_request_statuses")
+}
+
+/// One message in a service-request thread.
+model ServiceRequestMessage {
+  id       BigInt @id @default(autoincrement())
+  publicId String @unique @default(uuid()) @db.Uuid
+  tenantId BigInt @default(1)
+
+  requestId  BigInt
+  /// NULL when the student wrote it — they are not a staff user.
+  authorId   BigInt?
+  /// Kept alongside authorId so a student's message still shows a name.
+  authorName String
+  fromStaff  Boolean @default(false)
+  body       String
+
+  createdAt DateTime @default(now())
+
+  request ServiceRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  author  User?          @relation("ServiceRequestMessageAuthor", fields: [authorId], references: [id])
+
+  @@index([tenantId, requestId])
+  @@map("service_request_messages")
 }

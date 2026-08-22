@@ -50,6 +50,13 @@ export const qk = {
     list: (kind: string) => [...qk.invoices.all, 'list', kind] as const,
     detail: (id: number) => [...qk.invoices.all, 'detail', id] as const,
     businesses: () => [...qk.invoices.all, 'businesses'] as const,
+    statuses: () => [...qk.invoices.all, 'statuses'] as const,
+  },
+  services: {
+    all: ['services'] as const,
+    list: () => [...qk.services.all, 'list'] as const,
+    detail: (id: number) => [...qk.services.all, 'detail', id] as const,
+    statuses: () => [...qk.services.all, 'statuses'] as const,
   },
   notifications: {
     all: ['notifications'] as const,

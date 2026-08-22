@@ -20,9 +20,9 @@ import { ExportButtons } from '../../components/ExportButtons'
 import { Field, PageBtn } from '../../components/DataTableUI'
 import { HighlightMatch } from '../../components/ui/HighlightMatch'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
-import { studentInvoiceStatuses } from '../../mock/studentInvoices'
 import {
   useInvoices,
+  useInvoiceStatuses,
   useRecordPayment,
   useDeleteInvoice,
   formatMoney,
@@ -36,6 +36,8 @@ export default function StudentInvoicesPage() {
   // invoiceDue helpers — and the `rev` counter that forced a re-read of the
   // mutable mock array — are both gone.
   const { data: invoices = [], isPending } = useInvoices('student')
+  // Server-derived vocabulary; includes `Partially Paid`.
+  const { data: invoiceStatuses = [] } = useInvoiceStatuses()
   const recordPaymentM = useRecordPayment()
   const removeInvoice = useDeleteInvoice()
 
@@ -142,8 +144,8 @@ export default function StudentInvoicesPage() {
             className="input"
           >
             <option value="">All</option>
-            {studentInvoiceStatuses.map((s) => (
-              <option key={s}>{s}</option>
+            {invoiceStatuses.map((s) => (
+              <option key={s.label}>{s.label}</option>
             ))}
           </select>
         </Field>

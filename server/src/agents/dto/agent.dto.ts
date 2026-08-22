@@ -1,4 +1,4 @@
-import { IsBoolean, IsIn, IsInt, IsNumber, IsOptional, IsString, MinLength } from 'class-validator'
+import { ValidateIf, IsBoolean, IsIn, IsInt, IsNumber, IsOptional, IsString, MinLength } from 'class-validator'
 
 export class ListAgentsDto {
   @IsOptional() @IsString() search?: string
@@ -20,7 +20,8 @@ export class CreateAgentDto {
   @IsOptional() @IsString() address?: string
   @IsOptional() @IsIn(['Small', 'Medium', 'Large']) category?: string
   @IsOptional() @IsInt() branchId?: number
-  @IsOptional() @IsInt() pointOfContactId?: number
+  /** null clears the point of contact; omit the field to leave it unchanged. */
+  @IsOptional() @ValidateIf((_o, v) => v !== null) @IsInt() pointOfContactId?: number | null
   @IsOptional() @IsString() logoUrl?: string
   @IsOptional() @IsString() idProofUrl?: string
   @IsOptional() @IsString() incorporationCertUrl?: string
