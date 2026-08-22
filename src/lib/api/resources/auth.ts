@@ -28,12 +28,12 @@ export interface AuthTokens {
 }
 
 /**
- * The three demo logins the login page advertises. Name, role and permissions
+ * The four demo logins the login page advertises. Name, role and permissions
  * are copied from what POST /auth/login actually returns for the seeded users
  * (server/prisma/seed.ts), so demo mode and API mode gate the UI identically.
  *
- * Super Admin holds the '*' wildcard rather than an enumerated list, and
- * Student holds none — a student's portal routes are gated by role, not by
+ * Super Admin holds the '*' wildcard rather than an enumerated list, while
+ * Student and Agent hold none — their portal routes are gated by role, not by
  * permission ids.
  */
 const DEMO_USERS: Record<string, { name: string; role: ApiAuthUser['role']; permissions: string[] }> = {
@@ -44,6 +44,9 @@ const DEMO_USERS: Record<string, { name: string; role: ApiAuthUser['role']; perm
     permissions: mockRoles.find((r) => r.name === 'Counsellor')?.permissions ?? [],
   },
   'student@gmail.com': { name: 'Rohan Das', role: 'Student', permissions: [] },
+  // Like students, agents are ownership-scoped rather than permission-based, so
+  // permissions stay empty (mirrors the Agent role in server/prisma/seed.ts).
+  'agent@gmail.com': { name: 'Demo Agent', role: 'Agent', permissions: [] },
 }
 
 function mockLogin(email: string, password: string): AuthTokens {
