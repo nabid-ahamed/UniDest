@@ -696,6 +696,7 @@ export default function StudentsPage() {
                       assignedTo={student.assignedTo}
                       selected={selected.has(student.id)}
                       locked={view !== 'all'}
+                      highlight={search}
                       onToggle={() => toggleOne(student.id)}
                       onAction={(type, payload) => rowAction(type, student, payload)}
                     />

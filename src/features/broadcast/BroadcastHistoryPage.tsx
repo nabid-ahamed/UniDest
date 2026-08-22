@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight, Search, Undo2 } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { ExportButtons } from '../../components/ExportButtons'
 import { PageBtn } from '../../components/DataTableUI'
+import { HighlightMatch } from '../../components/ui/HighlightMatch'
 import { loadBroadcasts } from '../../mock/broadcast'
 
 const PAGE_SIZES = [25, 50, 100]
@@ -120,7 +121,9 @@ export default function BroadcastHistoryPage() {
           <tbody>
             {pageRows.map((r) => (
               <tr key={r.id} className="border-b border-slate-100 align-top text-sm">
-                <td className="whitespace-nowrap px-4 py-4 text-slate-700">{r.dateTime}</td>
+                <td className="whitespace-nowrap px-4 py-4 text-slate-700">
+                  <HighlightMatch text={r.dateTime} query={search} />
+                </td>
                 <td className="px-4 py-4">
                   <span
                     className={cn(
@@ -128,21 +131,23 @@ export default function BroadcastHistoryPage() {
                       r.type === 'email' ? 'bg-brand-50 text-brand-700' : 'bg-amber-50 text-amber-700',
                     )}
                   >
-                    {r.type}
+                    <HighlightMatch text={r.type} query={search} />
                   </span>
                 </td>
                 <td className="min-w-36 px-4 py-4 font-medium text-slate-800 [overflow-wrap:anywhere]">
-                  {r.subject}
+                  <HighlightMatch text={r.subject} query={search} />
                 </td>
                 <td className="max-w-md px-4 py-4 text-slate-600">
                   <p className="line-clamp-4 whitespace-pre-line [overflow-wrap:anywhere]">
-                    {r.message}
+                    <HighlightMatch text={r.message} query={search} />
                   </p>
                 </td>
                 <td className="max-w-sm px-4 py-4 text-slate-600 [overflow-wrap:anywhere]">
-                  {r.sentTo.join(', ')}
+                  <HighlightMatch text={r.sentTo.join(', ')} query={search} />
                 </td>
-                <td className="whitespace-nowrap px-4 py-4 text-slate-700">{r.staff}</td>
+                <td className="whitespace-nowrap px-4 py-4 text-slate-700">
+                  <HighlightMatch text={r.staff} query={search} />
+                </td>
               </tr>
             ))}
             {pageRows.length === 0 && (

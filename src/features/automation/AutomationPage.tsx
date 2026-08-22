@@ -17,6 +17,7 @@ import {
 import { cn } from '../../lib/cn'
 import { PageBtn } from '../../components/DataTableUI'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
+import { HighlightMatch } from '../../components/ui/HighlightMatch'
 import {
   workflows,
   campaigns,
@@ -237,24 +238,28 @@ function Pagination({
   )
 }
 
-const ModePill = ({ mode }: { mode: string }) => {
+const ModePill = ({ mode, query = '' }: { mode: string; query?: string }) => {
   const color =
     mode === 'Email'
       ? 'bg-sky-50 text-sky-700'
       : mode === 'SMS'
         ? 'bg-violet-50 text-violet-700'
         : 'bg-emerald-50 text-emerald-700'
-  return <span className={cn('rounded-md px-2.5 py-1 text-xs font-semibold', color)}>{mode}</span>
+  return (
+    <span className={cn('rounded-md px-2.5 py-1 text-xs font-semibold', color)}>
+      <HighlightMatch text={mode} query={query} />
+    </span>
+  )
 }
 
-const StatusBadge = ({ active }: { active: boolean }) => (
+const StatusBadge = ({ active, query = '' }: { active: boolean; query?: string }) => (
   <span
     className={cn(
       'rounded-md px-2.5 py-1 text-xs font-semibold',
       active ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700',
     )}
   >
-    {active ? 'Active' : 'Inactive'}
+    <HighlightMatch text={active ? 'Active' : 'Inactive'} query={query} />
   </span>
 )
 
@@ -329,16 +334,18 @@ function WorkflowsTab({ onToast }: { onToast: (msg: string) => void }) {
                     href={`/automation/workflow/${w.id}`}
                     className="font-bold text-slate-800 hover:text-brand-600 hover:underline [overflow-wrap:anywhere]"
                   >
-                    {w.title}
+                    <HighlightMatch text={w.title} query={search} />
                   </a>
                 </td>
                 <td className="px-4 py-4">
-                  <ModePill mode={w.mode} />
+                  <ModePill mode={w.mode} query={search} />
                 </td>
-                <td className="px-4 py-4 text-slate-600">{w.type}</td>
+                <td className="px-4 py-4 text-slate-600">
+                  <HighlightMatch text={w.type} query={search} />
+                </td>
                 <td className="px-4 py-4 tabular-nums text-slate-600">{messageCount(w)}</td>
                 <td className="px-4 py-4">
-                  <StatusBadge active={w.status === 'Active'} />
+                  <StatusBadge active={w.status === 'Active'} query={search} />
                 </td>
                 <td className="px-4 py-4">
                   <RowActions
@@ -532,18 +539,20 @@ function CampaignsTab() {
                     href={`/automation/campaign/${c.id}`}
                     className="font-bold text-slate-800 hover:text-brand-600 hover:underline [overflow-wrap:anywhere]"
                   >
-                    {c.title}
+                    <HighlightMatch text={c.title} query={search} />
                   </a>
                   <p className="text-xs text-slate-500">{audienceSummary(c.audience)}</p>
                 </td>
                 <td className="px-4 py-4">
                   <span className={cn('rounded-md px-2.5 py-1 text-xs font-semibold', campaignStatusColor[c.status])}>
-                    {c.status}
+                    <HighlightMatch text={c.status} query={search} />
                   </span>
                 </td>
-                <td className="whitespace-nowrap px-4 py-4 text-slate-600">{c.scheduledAt}</td>
+                <td className="whitespace-nowrap px-4 py-4 text-slate-600">
+                  <HighlightMatch text={c.scheduledAt} query={search} />
+                </td>
                 <td className="px-4 py-4">
-                  <ModePill mode={c.mode} />
+                  <ModePill mode={c.mode} query={search} />
                 </td>
                 <td className="px-4 py-4 tabular-nums text-slate-600">{c.sentTo}</td>
                 <td className="px-4 py-4">

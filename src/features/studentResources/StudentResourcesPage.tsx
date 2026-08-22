@@ -18,6 +18,7 @@ import {
 import { cn } from '../../lib/cn'
 import { ExportButtons } from '../../components/ExportButtons'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
+import { HighlightMatch } from '../../components/ui/HighlightMatch'
 import {
   allowedExtensions,
   maxFileMb,
@@ -323,16 +324,18 @@ export default function StudentResourcesPage() {
                           <meta.icon className="h-4 w-4" />
                         </span>
                         <div className="min-w-0">
-                          <p className="font-bold text-slate-800 [overflow-wrap:anywhere]">{r.title}</p>
+                          <p className="font-bold text-slate-800 [overflow-wrap:anywhere]">
+                            <HighlightMatch text={r.title} query={search} />
+                          </p>
                           <p className="mt-0.5 text-xs text-slate-500">
-                            {r.fileName} · {formatFileSize(r.fileSize)}
+                            <HighlightMatch text={r.fileName} query={search} /> · {formatFileSize(r.fileSize)}
                           </p>
                         </div>
                       </div>
                     </td>
                     <td className="px-4 py-4">
                       <span className="whitespace-nowrap rounded-md bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">
-                        {r.category}
+                        <HighlightMatch text={r.category} query={search} />
                       </span>
                     </td>
                     <td className="px-4 py-4">
@@ -345,7 +348,7 @@ export default function StudentResourcesPage() {
                       )}
                     </td>
                     <td className="whitespace-nowrap px-4 py-4 text-slate-600">
-                      {r.uploadedBy}
+                      <HighlightMatch text={r.uploadedBy} query={search} />
                       <span className="mt-0.5 block text-xs text-slate-400">{r.uploadedAt}</span>
                     </td>
                     <td className="px-4 py-4">

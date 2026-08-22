@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 import { cn } from '../lib/cn'
 import { pickTextColor } from '../lib/contrast'
+import { HighlightMatch } from './ui/HighlightMatch'
 import { useAuth } from '../store/auth'
 import { avatarColor, initials } from '../mock/staff'
 import { contactsFor, type Contact, type ContactKind } from '../mock/messenger'
@@ -433,14 +434,18 @@ export function SidebarMessenger() {
                           onClick={() => openChat(c)}
                           className="min-w-0 flex-1 text-left"
                         >
-                          <p className="truncate text-[13px] font-semibold text-slate-800">{c.name}</p>
+                          <p className="truncate text-[13px] font-semibold text-slate-800">
+                            <HighlightMatch text={c.name} query={search} />
+                          </p>
                           {last ? (
                             <>
                               <p className="truncate text-[11px] text-slate-500">You › {last.text}</p>
                               <p className="text-[10px] text-slate-400">{relativeTime(last.at)}</p>
                             </>
                           ) : (
-                            <p className="truncate text-[11px] text-slate-500">{c.email}</p>
+                            <p className="truncate text-[11px] text-slate-500">
+                              <HighlightMatch text={c.email} query={search} />
+                            </p>
                           )}
                         </button>
                         <button

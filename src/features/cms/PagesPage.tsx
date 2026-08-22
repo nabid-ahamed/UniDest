@@ -3,6 +3,7 @@ import { showSuccessDialog } from '../../store/successDialog'
 import { Search, Plus, Pencil, Trash2, Lock, FileText, Boxes } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
+import { HighlightMatch } from '../../components/ui/HighlightMatch'
 import { useCmsList, useDeleteCms, type ApiCmsContent } from '../../lib/api'
 
 /**
@@ -84,17 +85,17 @@ export default function PagesPage() {
                 <td className="px-4 py-3.5">
                   <a href={`/cms/pages/${p.id}/edit`} className="inline-flex items-center gap-2 font-semibold text-slate-800 hover:text-brand-600 hover:underline">
                     {isSystemPage(p) ? <Boxes className="h-4 w-4 text-slate-400" /> : <FileText className="h-4 w-4 text-slate-400" />}
-                    {p.title}
+                    <HighlightMatch text={p.title} query={search} />
                   </a>
                 </td>
                 <td className="px-4 py-3.5">
                   <span className="text-slate-600">
-                    {pageType(p)}
+                    <HighlightMatch text={pageType(p)} query={search} />
                     {pageModule(p) && <span className="text-slate-400"> — {pageModule(p)}</span>}
                   </span>
                 </td>
                 <td className="px-4 py-3.5">
-                  <span className={cn('rounded-md px-2.5 py-1 text-xs font-semibold', STATUS_BADGE[p.status])}>{p.status}</span>
+                  <span className={cn('rounded-md px-2.5 py-1 text-xs font-semibold', STATUS_BADGE[p.status])}><HighlightMatch text={p.status} query={search} /></span>
                 </td>
                 <td className="px-4 py-3.5">
                   <div className="flex items-center gap-1.5">

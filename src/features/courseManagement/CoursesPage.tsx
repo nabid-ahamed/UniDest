@@ -17,6 +17,7 @@ import { cn } from '../../lib/cn'
 import { ExportButtons } from '../../components/ExportButtons'
 import { PageBtn } from '../../components/DataTableUI'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
+import { HighlightMatch } from '../../components/ui/HighlightMatch'
 import {
   courses,
   universityNames,
@@ -226,20 +227,20 @@ export default function CoursesPage() {
                     </span>
                     <div>
                       <a href={`/courses/${c.id}`} className="font-bold text-slate-800 hover:text-brand-600 hover:underline">
-                        {c.title}
+                        <HighlightMatch text={c.title} query={search} />
                       </a>
-                      <p className="mt-0.5 text-xs text-slate-500">{c.disciplineArea}</p>
+                      <p className="mt-0.5 text-xs text-slate-500"><HighlightMatch text={c.disciplineArea} query={search} /></p>
                     </div>
                   </div>
                 </td>
-                <td className="px-4 py-4 text-slate-600 [overflow-wrap:anywhere]">{c.university}</td>
-                <td className="whitespace-nowrap px-4 py-4 text-slate-600">{c.country}</td>
+                <td className="px-4 py-4 text-slate-600 [overflow-wrap:anywhere]"><HighlightMatch text={c.university} query={search} /></td>
+                <td className="whitespace-nowrap px-4 py-4 text-slate-600"><HighlightMatch text={c.country} query={search} /></td>
                 <td className="px-4 py-4">
                   <span className="whitespace-nowrap rounded-md bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">
-                    {c.studyLevel}
+                    <HighlightMatch text={c.studyLevel} query={search} />
                   </span>
                 </td>
-                <td className="px-4 py-4 text-slate-600">{c.studyArea}</td>
+                <td className="px-4 py-4 text-slate-600"><HighlightMatch text={c.studyArea} query={search} /></td>
                 <td className="px-4 py-4">
                   <span
                     className={cn(

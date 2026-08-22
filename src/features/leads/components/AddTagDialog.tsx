@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { X, ChevronDown, Plus } from 'lucide-react'
 import { cn } from '../../../lib/cn'
+import { HighlightMatch } from '../../../components/ui/HighlightMatch'
 import type { Lead } from '../../../mock/leads'
 
 /**
@@ -147,7 +148,7 @@ export function AddTagDialog({
                       }}
                       className="block w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-brand-50 hover:text-brand-700"
                     >
-                      {t}
+                      <HighlightMatch text={t} query={value} />
                     </button>
                   ))
                 ) : (

@@ -4,6 +4,7 @@ import { Search, Plus, Pencil, Trash2, ChevronLeft, ChevronRight, Users } from '
 import { cn } from '../../lib/cn'
 import { PageBtn } from '../../components/DataTableUI'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
+import { HighlightMatch } from '../../components/ui/HighlightMatch'
 import { audienceCount, type AnnouncementArea } from '../../mock/announcements'
 import {
   useAnnouncements,
@@ -96,18 +97,18 @@ export default function AnnouncementsPage() {
               <tr key={a.id} className="border-b border-slate-100 align-top text-sm">
                 <td className="px-4 py-4">
                   <a href={`/announcements/${a.id}`} className="font-bold text-slate-800 hover:text-brand-600 hover:underline [overflow-wrap:anywhere]">
-                    {a.title}
+                    <HighlightMatch text={a.title} query={search} />
                   </a>
                 </td>
                 <td className="px-4 py-4">
                   <span className={cn('inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-semibold', AREA_BADGE[a.area as AnnouncementArea])}>
-                    {a.area}
+                    <HighlightMatch text={a.area} query={search} />
                     <span className="inline-flex items-center gap-0.5 opacity-70">
                       <Users className="h-3 w-3" /> {audienceCount(a.area as AnnouncementArea)}
                     </span>
                   </span>
                 </td>
-                <td className="whitespace-nowrap px-4 py-4 text-slate-600">{a.createdBy}</td>
+                <td className="whitespace-nowrap px-4 py-4 text-slate-600"><HighlightMatch text={a.createdBy} query={search} /></td>
                 <td className="whitespace-nowrap px-4 py-4 text-slate-600">{a.publishedAtLabel}</td>
                 <td className="px-4 py-4">
                   <div className="flex items-center gap-1.5">

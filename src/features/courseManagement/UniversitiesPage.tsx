@@ -6,6 +6,7 @@ import { cn } from '../../lib/cn'
 import { ExportButtons } from '../../components/ExportButtons'
 import { PageBtn } from '../../components/DataTableUI'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
+import { HighlightMatch } from '../../components/ui/HighlightMatch'
 import {
   universities,
   universityTypes,
@@ -186,13 +187,13 @@ export default function UniversitiesPage() {
                       </span>
                       <div>
                         <a href={`/universities/${u.id}`} className="font-bold text-slate-800 hover:text-brand-600 hover:underline">
-                          {u.name}
+                          <HighlightMatch text={u.name} query={search} />
                         </a>
-                        <p className="mt-0.5 text-xs text-slate-500">{u.city}</p>
+                        <p className="mt-0.5 text-xs text-slate-500"><HighlightMatch text={u.city} query={search} /></p>
                       </div>
                     </div>
                   </td>
-                  <td className="whitespace-nowrap px-4 py-4 text-slate-600">{u.country}</td>
+                  <td className="whitespace-nowrap px-4 py-4 text-slate-600"><HighlightMatch text={u.country} query={search} /></td>
                   <td className="px-4 py-4">
                     <span className="rounded-md bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">{u.type}</span>
                   </td>

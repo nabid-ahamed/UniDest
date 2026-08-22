@@ -3,6 +3,7 @@ import { showSuccessDialog } from '../../store/successDialog'
 import { Search, Trash2, Mail, Users } from 'lucide-react'
 import { ExportButtons } from '../../components/ExportButtons'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
+import { HighlightMatch } from '../../components/ui/HighlightMatch'
 import { useSubscribers, useUnsubscribe, type ApiSubscriber } from '../../lib/api'
 
 export default function NewsletterPage() {
@@ -74,12 +75,12 @@ export default function NewsletterPage() {
                 <td className="px-4 py-3.5 text-slate-500">{i + 1}</td>
                 <td className="px-4 py-3.5">
                   <a href={`mailto:${s.email}`} className="inline-flex items-center gap-1.5 font-medium text-slate-700 hover:text-brand-600 [overflow-wrap:anywhere]">
-                    <Mail className="h-3.5 w-3.5 shrink-0 text-slate-400" /> {s.email}
+                    <Mail className="h-3.5 w-3.5 shrink-0 text-slate-400" /> <HighlightMatch text={s.email} query={search} />
                   </a>
                 </td>
                 <td className="whitespace-nowrap px-4 py-3.5 text-slate-600">{s.subscribedAt}</td>
                 <td className="whitespace-nowrap px-4 py-3.5">
-                  <span className="text-slate-600">{s.name || '—'}</span>
+                  <span className="text-slate-600">{s.name ? <HighlightMatch text={s.name} query={search} /> : '—'}</span>
                 </td>
                 <td className="px-4 py-3.5 text-right">
                   <button

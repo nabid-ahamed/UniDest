@@ -5,6 +5,7 @@ import { cn } from '../../lib/cn'
 import { PageBtn } from '../../components/DataTableUI'
 import { ExportButtons } from '../../components/ExportButtons'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
+import { HighlightMatch } from '../../components/ui/HighlightMatch'
 import { postStatuses } from '../../mock/cms'
 
 /** Fallback cover tints, picked by id so a post keeps the same one. */
@@ -143,10 +144,10 @@ export default function BlogPostsPage() {
                 </td>
                 <td className="max-w-md px-4 py-3.5">
                   <a href={`/cms/blog/${p.id}/edit`} className="font-bold text-slate-800 hover:text-brand-600 hover:underline [overflow-wrap:anywhere]">
-                    {p.title}
+                    <HighlightMatch text={p.title} query={search} />
                   </a>
-                  <p className="mt-0.5 text-xs text-slate-400 [overflow-wrap:anywhere]">{p.slug}</p>
-                  <p className="mt-0.5 text-xs text-slate-500">by {p.author}</p>
+                  <p className="mt-0.5 text-xs text-slate-400 [overflow-wrap:anywhere]"><HighlightMatch text={p.slug} query={search} /></p>
+                  <p className="mt-0.5 text-xs text-slate-500">by <HighlightMatch text={p.author} query={search} /></p>
                 </td>
                 <td className="px-4 py-3.5">
                   <span className={cn('rounded-md px-2.5 py-1 text-xs font-semibold', STATUS_BADGE[p.status])}>{p.status}</span>

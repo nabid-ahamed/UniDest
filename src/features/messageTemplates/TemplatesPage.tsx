@@ -4,6 +4,7 @@ import { Search, Plus, Pencil, Trash2, Lock, Mail, MessageSquare, Zap } from 'lu
 import { cn } from '../../lib/cn'
 import { ExportButtons } from '../../components/ExportButtons'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
+import { HighlightMatch } from '../../components/ui/HighlightMatch'
 import {
   channelMeta,
   templatesFor,
@@ -114,7 +115,7 @@ export default function TemplatesPage({ channel }: { channel: TemplateChannel })
                 <tr key={t.id} className="border-b border-slate-100 align-top text-sm">
                   <td className="max-w-[220px] px-4 py-3.5">
                     <a href={`/message-templates/${channel}/${t.id}/edit`} className="font-semibold text-slate-800 hover:text-brand-600 hover:underline [overflow-wrap:anywhere]">
-                      {t.name}
+                      <HighlightMatch text={t.name} query={search} />
                     </a>
                     {t.system && (
                       <span className="ml-1.5 inline-flex items-center gap-0.5 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold text-slate-500">
@@ -124,15 +125,17 @@ export default function TemplatesPage({ channel }: { channel: TemplateChannel })
                   </td>
                   <td className="max-w-md px-4 py-3.5 text-slate-600">
                     {meta.hasSubject ? (
-                      t.subject || '—'
+                      t.subject ? <HighlightMatch text={t.subject} query={search} /> : '—'
                     ) : (
-                      <span className="line-clamp-2 [overflow-wrap:anywhere]">{t.body}</span>
+                      <span className="line-clamp-2 [overflow-wrap:anywhere]">
+                        <HighlightMatch text={t.body} query={search} />
+                      </span>
                     )}
                   </td>
                   <td className="max-w-xs px-4 py-3.5 text-slate-500">
                     {ev ? (
                       <span>
-                        {t.details}{' '}
+                        <HighlightMatch text={t.details} query={search} />{' '}
                         <a href={ev.route} className="font-semibold text-brand-600 hover:underline">
                           ({ev.module})
                         </a>

@@ -4,6 +4,7 @@ import { Search, X, ChevronLeft, ChevronRight, BadgeDollarSign } from 'lucide-re
 import { cn } from '../../lib/cn'
 import { ExportButtons } from '../../components/ExportButtons'
 import { PageBtn } from '../../components/DataTableUI'
+import { HighlightMatch } from '../../components/ui/HighlightMatch'
 import {
   referralSignups,
   referralCurrency,
@@ -123,15 +124,19 @@ export default function ReferralSignupsPage() {
                 <td className="px-4 py-4 tabular-nums text-slate-600">
                   {(currentPage - 1) * pageSize + i + 1}
                 </td>
-                <td className="whitespace-nowrap px-4 py-4 text-slate-600">{r.date}</td>
+                <td className="whitespace-nowrap px-4 py-4 text-slate-600">
+                  <HighlightMatch text={r.date} query={search} />
+                </td>
                 <td className="px-4 py-4">
                   <a
                     href={`/students/${r.studentId}`}
                     className="font-bold text-slate-800 hover:text-brand-600 hover:underline [overflow-wrap:anywhere]"
                   >
-                    {r.student}
+                    <HighlightMatch text={r.student} query={search} />
                   </a>
-                  <p className="text-xs tabular-nums text-slate-500">ID: {r.studentId}</p>
+                  <p className="text-xs tabular-nums text-slate-500">
+                    ID: <HighlightMatch text={String(r.studentId)} query={search} />
+                  </p>
                 </td>
                 <td className="px-4 py-4">
                   {r.referrer ? (
@@ -139,12 +144,14 @@ export default function ReferralSignupsPage() {
                       href={`/students/${r.referrerId}`}
                       className="font-medium text-slate-700 hover:text-brand-600 hover:underline [overflow-wrap:anywhere]"
                     >
-                      {r.referrer}
+                      <HighlightMatch text={r.referrer} query={search} />
                     </a>
                   ) : (
                     <span className="text-slate-400">—</span>
                   )}
-                  <p className="text-xs tabular-nums text-slate-500">ID: {r.referrerId ?? '--'}</p>
+                  <p className="text-xs tabular-nums text-slate-500">
+                    ID: <HighlightMatch text={String(r.referrerId ?? '--')} query={search} />
+                  </p>
                 </td>
                 <td className="whitespace-nowrap px-4 py-4">
                   {r.commission != null ? (

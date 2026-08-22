@@ -23,6 +23,7 @@ import { pickTextColor } from '../../lib/contrast'
 import { ExportButtons } from '../../components/ExportButtons'
 import { PageBtn } from '../../components/DataTableUI'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
+import { HighlightMatch } from '../../components/ui/HighlightMatch'
 import {
   users,
   userRoles,
@@ -211,7 +212,7 @@ export default function UserManagementPage() {
                       </span>
                       <div>
                         <a href={`/user-management/${u.id}`} className="font-bold text-slate-800 hover:text-brand-600 hover:underline">
-                          {u.name}
+                          <HighlightMatch text={u.name} query={search} />
                         </a>
                         {u.isSuperAdmin && (
                           <span className="ml-1.5 inline-flex items-center gap-0.5 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-700">
@@ -223,22 +224,22 @@ export default function UserManagementPage() {
                   </td>
                   <td className="px-3 py-4">
                     <a href={`mailto:${u.email}`} className="flex items-center gap-1.5 text-slate-600 hover:text-brand-600 [overflow-wrap:anywhere]">
-                      <Mail className="h-3.5 w-3.5 shrink-0 text-slate-400" /> {u.email}
+                      <Mail className="h-3.5 w-3.5 shrink-0 text-slate-400" /> <HighlightMatch text={u.email} query={search} />
                     </a>
                     <span className="mt-0.5 flex items-center gap-1.5 text-xs text-slate-500">
-                      <Phone className="h-3.5 w-3.5 shrink-0 text-slate-400" /> {u.mobile || '—'}
+                      <Phone className="h-3.5 w-3.5 shrink-0 text-slate-400" /> {u.mobile ? <HighlightMatch text={u.mobile} query={search} /> : '—'}
                     </span>
                   </td>
                   <td className="max-w-[220px] px-3 py-4">
                     <div className="flex flex-wrap gap-1">
                       {u.roles.map((r) => (
                         <span key={r} className="inline-flex items-center gap-1 rounded-md bg-brand-50 px-2 py-0.5 text-xs font-semibold text-brand-600">
-                          <Briefcase className="h-3 w-3" /> {r}
+                          <Briefcase className="h-3 w-3" /> <HighlightMatch text={r} query={search} />
                         </span>
                       ))}
                     </div>
                     <p className="mt-1.5 text-xs text-slate-500">
-                      <span className="font-semibold text-slate-600">Branch:</span> {u.branches.join(', ')}
+                      <span className="font-semibold text-slate-600">Branch:</span> <HighlightMatch text={u.branches.join(', ')} query={search} />
                     </p>
                     {manager && (
                       <p className="mt-0.5 flex items-center gap-1 text-xs text-slate-500">

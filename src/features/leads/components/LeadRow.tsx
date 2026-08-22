@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 import { cn } from '../../../lib/cn'
 import { pickTextColor } from '../../../lib/contrast'
+import { HighlightMatch } from '../../../components/ui/HighlightMatch'
 import { type Lead } from '../../../mock/leads'
 import { leadStatuses } from '../../../lib/constants'
 
@@ -27,6 +28,7 @@ export function LeadRow({
   tags,
   assignedTo,
   selected,
+  highlight = '',
   onToggle,
   onAction,
   onRemoveTag,
@@ -38,6 +40,8 @@ export function LeadRow({
   tags: string[]
   assignedTo: string | null
   selected: boolean
+  /** The active table-search query; matches in the searched fields are marked. */
+  highlight?: string
   onToggle: () => void
   onAction: (type: string) => void
   onRemoveTag: (tag: string) => void
@@ -69,7 +73,9 @@ export function LeadRow({
       </td>
 
       {/* ID */}
-      <td className="px-3 py-3 text-sm font-medium tabular-nums text-slate-700">{lead.id}</td>
+      <td className="px-3 py-3 text-sm font-medium tabular-nums text-slate-700">
+        <HighlightMatch text={String(lead.id)} query={highlight} />
+      </td>
 
       {/* Lead — 3 compact tiers: identity+actions / details / meta */}
       <td className="px-3 py-3">
@@ -78,7 +84,7 @@ export function LeadRow({
           onClick={() => onAction('View')}
           className="text-sm font-bold text-slate-900 hover:text-brand-600 hover:underline"
         >
-          {lead.name}
+          <HighlightMatch text={lead.name} query={highlight} />
         </button>
 
         {/* Tags — removable chips, then the add button */}
@@ -121,8 +127,8 @@ export function LeadRow({
           </span>
           <span className="inline-flex items-center gap-1">
             <Phone className="h-3.5 w-3.5 text-slate-400" />
-            {lead.phone}
-            <span className="text-slate-400">· {lead.phoneNote}</span>
+            <HighlightMatch text={lead.phone} query={highlight} />
+            <span className="text-slate-400">· <HighlightMatch text={lead.phoneNote} query={highlight} /></span>
           </span>
         </p>
 

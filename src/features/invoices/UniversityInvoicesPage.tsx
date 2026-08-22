@@ -19,6 +19,7 @@ import { useAuth } from '../../store/auth'
 import { pickTextColor } from '../../lib/contrast'
 import { ExportButtons } from '../../components/ExportButtons'
 import { Field, PageBtn, SingleSelect } from '../../components/DataTableUI'
+import { HighlightMatch } from '../../components/ui/HighlightMatch'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { applications, applicationStatuses, applicationChannels, intakes } from '../../mock/applications'
 import {
@@ -311,14 +312,14 @@ function InvoicesTab({
                 </td>
                 <td className="px-4 py-4 text-slate-700">
                   <p className="font-bold text-slate-800 [overflow-wrap:anywhere]">
-                    {inv.university}, {inv.country}
+                    <HighlightMatch text={inv.university} query={search} />, <HighlightMatch text={inv.country} query={search} />
                   </p>
                   {inv.agent && <p className="text-slate-500">(Master Agent)</p>}
                   <p className="text-slate-500">({inv.paymentLabel})</p>
                   <p className="text-slate-500">Appl ID: {inv.applicationId}</p>
-                  <p className="text-slate-500">University: {inv.university}</p>
-                  <p className="text-slate-500">Student: {inv.student}</p>
-                  {inv.agent && <p className="text-slate-500">Agent: {inv.agent}</p>}
+                  <p className="text-slate-500">University: <HighlightMatch text={inv.university} query={search} /></p>
+                  <p className="text-slate-500">Student: <HighlightMatch text={inv.student} query={search} /></p>
+                  {inv.agent && <p className="text-slate-500">Agent: <HighlightMatch text={inv.agent} query={search} /></p>}
                   {inv.dueDate && <p className="mt-1 text-slate-400">Due: {inv.dueDate}</p>}
                 </td>
                 <td className="whitespace-nowrap px-4 py-4 font-semibold text-slate-800">

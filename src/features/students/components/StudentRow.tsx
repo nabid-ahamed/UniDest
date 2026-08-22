@@ -21,6 +21,7 @@ import {
 import { cn } from '../../../lib/cn'
 import { pickTextColor } from '../../../lib/contrast'
 import { Avatar } from '../../../components/Avatar'
+import { HighlightMatch } from '../../../components/ui/HighlightMatch'
 import { type Student } from '../../../mock/students'
 import { studentStatuses } from '../../../lib/constants'
 
@@ -29,6 +30,7 @@ export function StudentRow({
   assignedTo,
   selected,
   locked = false,
+  highlight = '',
   onToggle,
   onAction,
 }: {
@@ -37,6 +39,8 @@ export function StudentRow({
   selected: boolean
   /** Archived / Deleted views are read-only: no status-change or re-assign. */
   locked?: boolean
+  /** The active table-search query; matches in the searched fields are marked. */
+  highlight?: string
   onToggle: () => void
   onAction: (type: string, payload?: string) => void
 }) {
@@ -64,7 +68,9 @@ export function StudentRow({
       </td>
 
       {/* ID */}
-      <td className="px-3 py-3 text-sm font-medium tabular-nums text-slate-700">{student.id}</td>
+      <td className="px-3 py-3 text-sm font-medium tabular-nums text-slate-700">
+        <HighlightMatch text={String(student.id)} query={highlight} />
+      </td>
 
       {/* Student — identity / contact / meta, same 3-tier rhythm as LeadRow */}
       <td className="px-3 py-3">
@@ -81,20 +87,22 @@ export function StudentRow({
           onClick={() => onAction('View')}
           className="text-sm font-bold text-slate-900 hover:text-brand-600 hover:underline"
         >
-          {student.name}
+          <HighlightMatch text={student.name} query={highlight} />
         </button>
-        <p className="text-xs tabular-nums text-slate-500">{student.studentNo}</p>
+        <p className="text-xs tabular-nums text-slate-500">
+          <HighlightMatch text={student.studentNo} query={highlight} />
+        </p>
 
         {/* overflow-wrap:anywhere lets long emails break when the sidebar
             squeezes the table, instead of forcing the row past the card. */}
         <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-slate-500 [overflow-wrap:anywhere]">
           <span className="inline-flex items-center gap-1">
             <Mail className="h-3.5 w-3.5 text-slate-400" />
-            {student.email}
+            <HighlightMatch text={student.email} query={highlight} />
           </span>
           <span className="inline-flex items-center gap-1">
             <Phone className="h-3.5 w-3.5 text-slate-400" />
-            {student.phone}
+            <HighlightMatch text={student.phone} query={highlight} />
             <span className="text-slate-400">· {student.phoneNote}</span>
           </span>
         </p>

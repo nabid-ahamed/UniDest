@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { X } from 'lucide-react'
+import { HighlightMatch } from './ui/HighlightMatch'
 
 /**
  * Searchable multi-select. Selected values sit inside the box as removable
@@ -111,7 +112,7 @@ export function MultiSelect({
                   onClick={() => add(o)}
                   className="block w-full px-3 py-1.5 text-left text-sm text-slate-700 hover:bg-brand-50 hover:text-brand-600"
                 >
-                  {o}
+                  <HighlightMatch text={o} query={query} />
                 </button>
               ))
             ) : (

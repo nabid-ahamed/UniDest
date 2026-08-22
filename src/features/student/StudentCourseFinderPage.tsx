@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { SingleSelect } from '../../components/DataTableUI'
+import { HighlightMatch } from '../../components/ui/HighlightMatch'
 import { showSuccessDialog } from '../../store/successDialog'
 import { currentStudent } from '../../mock/student/portal'
 import {
@@ -201,6 +202,7 @@ export default function StudentCourseFinderPage() {
               <CourseCard
                 key={c.id}
                 course={c}
+                query={keyword}
                 bookmarked={bookmarks.includes(c.id)}
                 onBookmark={() => onBookmark(c)}
                 onApply={() => onApply(c)}
@@ -249,11 +251,13 @@ function Fact({
 
 function CourseCard({
   course: c,
+  query,
   bookmarked,
   onBookmark,
   onApply,
 }: {
   course: FinderCourse
+  query: string
   bookmarked: boolean
   onBookmark: () => void
   onApply: () => void
@@ -277,9 +281,13 @@ function CourseCard({
         </div>
 
         <div className="min-w-0">
-          <h2 className="text-xl font-bold text-brand-600 [overflow-wrap:anywhere]">{c.title}</h2>
+          <h2 className="text-xl font-bold text-brand-600 [overflow-wrap:anywhere]">
+            <HighlightMatch text={c.title} query={query} />
+          </h2>
           <p className="mt-1 text-sm text-slate-600">
-            <span className="font-semibold text-slate-800">{c.university}</span> · {c.city}, {c.country}
+            <span className="font-semibold text-slate-800">
+              <HighlightMatch text={c.university} query={query} />
+            </span> · {c.city}, {c.country}
           </p>
 
           <div className="mt-4 grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-3">

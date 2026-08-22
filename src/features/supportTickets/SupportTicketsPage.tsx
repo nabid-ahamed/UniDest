@@ -501,6 +501,7 @@ export default function SupportTicketsPage() {
                       key={ticket.id}
                       ticket={ticket}
                       selected={selected.has(ticket.id)}
+                      highlight={search}
                       onToggle={() => toggleOne(ticket.id)}
                       onAction={(type, payload) => rowAction(type, ticket, payload)}
                     />

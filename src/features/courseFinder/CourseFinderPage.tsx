@@ -20,6 +20,7 @@ import { cn } from '../../lib/cn'
 import { MultiSelect } from '../../components/MultiSelect'
 import { ExportButtons } from '../../components/ExportButtons'
 import { DotsLoader, Field, PageBtn, SingleSelect } from '../../components/DataTableUI'
+import { HighlightMatch } from '../../components/ui/HighlightMatch'
 import { intakes } from '../../lib/constants'
 import {
   finderCountries,
@@ -486,6 +487,7 @@ export default function CourseFinderPage() {
               <CourseCard
                 key={c.id}
                 course={c}
+                query={applied.keyword}
                 selected={selected.has(c.id)}
                 onToggle={() => toggleOne(c.id)}
                 onSuggest={() => setSuggestCourse(c)}
@@ -662,6 +664,7 @@ function CardField({
 
 function CourseCard({
   course: c,
+  query,
   selected,
   onToggle,
   onSuggest,
@@ -669,6 +672,8 @@ function CourseCard({
   onShowCommission,
 }: {
   course: FinderCourse
+  /** The applied keyword; its matches in title/university are marked. */
+  query: string
   selected: boolean
   onToggle: () => void
   onSuggest: () => void
@@ -705,13 +710,17 @@ function CourseCard({
 
         {/* Details */}
         <div className="min-w-0">
-          <h2 className="text-xl font-bold text-brand-600 [overflow-wrap:anywhere]">{c.title}</h2>
+          <h2 className="text-xl font-bold text-brand-600 [overflow-wrap:anywhere]">
+            <HighlightMatch text={c.title} query={query} />
+          </h2>
           <div className="mt-4 grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-3">
             <div className="text-sm">
               <span className="font-semibold text-slate-700">Id:</span>{' '}
               <span className="font-bold text-slate-900 tabular-nums">{c.id}</span>
             </div>
-            <CardField icon={Landmark} label="">{c.university}</CardField>
+            <CardField icon={Landmark} label="">
+              <HighlightMatch text={c.university} query={query} />
+            </CardField>
             <CardField icon={Globe} label="">{c.country}</CardField>
             <CardField icon={GraduationCap} label="Study Level:">{c.studyLevel}</CardField>
             <CardField icon={Clock} label="Duration:">

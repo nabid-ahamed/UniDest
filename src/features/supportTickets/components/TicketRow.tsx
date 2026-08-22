@@ -16,16 +16,20 @@ import {
   type TicketStatus,
   type TicketPriority,
 } from '../../../mock/supportTickets'
+import { HighlightMatch } from '../../../components/ui/HighlightMatch'
 import { StatusBadge, PriorityBadge } from './TicketBadges'
 
 export function TicketRow({
   ticket,
   selected,
+  highlight = '',
   onToggle,
   onAction,
 }: {
   ticket: Ticket
   selected: boolean
+  /** The active table-search query; matches in the searched fields are marked. */
+  highlight?: string
   onToggle: () => void
   onAction: (type: string, payload?: string) => void
 }) {
@@ -55,7 +59,7 @@ export function TicketRow({
       </td>
 
       {/* ID */}
-      <td className="px-3 py-3 text-sm font-medium tabular-nums text-slate-700">#{ticket.id}</td>
+      <td className="px-3 py-3 text-sm font-medium tabular-nums text-slate-700">#<HighlightMatch text={String(ticket.id)} query={highlight} /></td>
 
       {/* Subject + category + last message */}
       <td className="px-3 py-3">
@@ -64,11 +68,11 @@ export function TicketRow({
           onClick={() => onAction('View')}
           className="text-left text-sm font-bold text-slate-900 hover:text-brand-600 hover:underline"
         >
-          {ticket.subject}
+          <HighlightMatch text={ticket.subject} query={highlight} />
         </button>
         <p className="mt-0.5 flex items-center gap-1.5 text-xs text-slate-500">
           <span className="rounded bg-slate-100 px-1.5 py-0.5 font-medium text-slate-600">
-            {ticket.category}
+            <HighlightMatch text={ticket.category} query={highlight} />
           </span>
           <span className="inline-flex items-center gap-1">
             <MessageSquare className="h-3 w-3" />
@@ -82,8 +86,12 @@ export function TicketRow({
 
       {/* Requester */}
       <td className="px-3 py-3">
-        <p className="text-sm font-semibold text-slate-800">{ticket.requester}</p>
-        <p className="text-xs tabular-nums text-slate-500">{ticket.requesterNo}</p>
+        <p className="text-sm font-semibold text-slate-800">
+          <HighlightMatch text={ticket.requester} query={highlight} />
+        </p>
+        <p className="text-xs tabular-nums text-slate-500">
+          <HighlightMatch text={ticket.requesterNo} query={highlight} />
+        </p>
         <span
           className={cn(
             'mt-1 inline-block rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide',

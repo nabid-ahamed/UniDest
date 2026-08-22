@@ -10,18 +10,22 @@ import {
 } from 'lucide-react'
 import { cn } from '../../../lib/cn'
 import { pickTextColor } from '../../../lib/contrast'
+import { HighlightMatch } from '../../../components/ui/HighlightMatch'
 import { applicationStatuses, type Application } from '../../../mock/applications'
 
 export function ApplicationRow({
   app,
   assignedTo,
   selected,
+  highlight = '',
   onToggle,
   onAction,
 }: {
   app: Application
   assignedTo: string | null
   selected: boolean
+  /** The active table-search query; matches in the searched fields are marked. */
+  highlight?: string
   onToggle: () => void
   onAction: (type: string, payload?: string) => void
 }) {
@@ -49,7 +53,9 @@ export function ApplicationRow({
       </td>
 
       {/* ID */}
-      <td className="px-3 py-3 text-sm font-medium tabular-nums text-slate-700">{app.id}</td>
+      <td className="px-3 py-3 text-sm font-medium tabular-nums text-slate-700">
+        <HighlightMatch text={String(app.id)} query={highlight} />
+      </td>
 
       {/* Date Created */}
       <td className="px-3 py-3 text-sm tabular-nums text-slate-500">{app.dateCreated}</td>
@@ -61,24 +67,32 @@ export function ApplicationRow({
           onClick={() => onAction('View')}
           className="text-left text-sm font-bold text-slate-900 hover:text-brand-600 hover:underline"
         >
-          {app.student}
+          <HighlightMatch text={app.student} query={highlight} />
         </button>
-        <p className="text-xs tabular-nums text-slate-500">{app.studentNo}</p>
+        <p className="text-xs tabular-nums text-slate-500">
+          <HighlightMatch text={app.studentNo} query={highlight} />
+        </p>
       </td>
 
       {/* Country */}
-      <td className="px-3 py-3 text-sm text-slate-700">{app.country}</td>
+      <td className="px-3 py-3 text-sm text-slate-700">
+        <HighlightMatch text={app.country} query={highlight} />
+      </td>
 
       {/* Details — University / Course / Intake / agent / channel */}
       <td className="px-3 py-3">
         <div className="space-y-0.5 text-xs">
           <p>
             <span className="text-slate-500">University:</span>{' '}
-            <span className="font-medium text-slate-700">{app.university}</span>
+            <span className="font-medium text-slate-700">
+              <HighlightMatch text={app.university} query={highlight} />
+            </span>
           </p>
           <p>
             <span className="text-slate-500">Course:</span>{' '}
-            <span className="text-slate-700">{app.course}</span>
+            <span className="text-slate-700">
+              <HighlightMatch text={app.course} query={highlight} />
+            </span>
           </p>
           <p>
             <span className="text-slate-500">Intake:</span>{' '}

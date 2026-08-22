@@ -18,6 +18,7 @@ import { cn } from '../../lib/cn'
 import { ExportButtons } from '../../components/ExportButtons'
 import { PageBtn } from '../../components/DataTableUI'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
+import { HighlightMatch } from '../../components/ui/HighlightMatch'
 import { Avatar } from '../../components/Avatar'
 import {
   staffRoles,
@@ -194,24 +195,24 @@ export default function StaffPage() {
                     <div className="flex items-center gap-3">
                       <Avatar name={s.name} src={s.avatar} className="h-9 w-9" fontClassName="text-xs font-bold" />
                       <a href={`/staff/${s.id}`} className="font-bold text-slate-800 hover:text-brand-600 hover:underline">
-                        {s.name}
+                        <HighlightMatch text={s.name} query={search} />
                       </a>
                     </div>
                   </td>
                   <td className="px-4 py-4">
                     <a href={`mailto:${s.email}`} className="flex items-center gap-1.5 text-slate-600 hover:text-brand-600 [overflow-wrap:anywhere]">
-                      <Mail className="h-3.5 w-3.5 shrink-0 text-slate-400" /> {s.email}
+                      <Mail className="h-3.5 w-3.5 shrink-0 text-slate-400" /> <HighlightMatch text={s.email} query={search} />
                     </a>
                     <span className="mt-0.5 flex items-center gap-1.5 text-xs text-slate-500">
-                      <Phone className="h-3.5 w-3.5 shrink-0 text-slate-400" /> {s.phone}
+                      <Phone className="h-3.5 w-3.5 shrink-0 text-slate-400" /> <HighlightMatch text={s.phone} query={search} />
                     </span>
                   </td>
                   <td className="px-4 py-4">
                     <span className="whitespace-nowrap rounded-md bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">
-                      {s.role}
+                      <HighlightMatch text={s.role} query={search} />
                     </span>
                   </td>
-                  <td className="whitespace-nowrap px-4 py-4 text-slate-600">{s.branch}</td>
+                  <td className="whitespace-nowrap px-4 py-4 text-slate-600"><HighlightMatch text={s.branch} query={search} /></td>
                   <td className="px-4 py-4">
                     <div className="flex flex-wrap gap-1.5 text-xs">
                       <span className="rounded-md bg-sky-50 px-2 py-1 font-semibold text-sky-700" title="Assigned leads">

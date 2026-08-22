@@ -3,6 +3,7 @@ import { showSuccessDialog } from '../../store/successDialog'
 import { Search, Plus, Pencil, Trash2, Lock, ShieldCheck, Users } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
+import { HighlightMatch } from '../../components/ui/HighlightMatch'
 import {
   roles,
   deleteRole,
@@ -81,7 +82,7 @@ export default function RolesPage() {
                 <tr key={r.id} className="border-b border-slate-100 align-top text-sm">
                   <td className="whitespace-nowrap px-4 py-4">
                     <span className="inline-flex items-center gap-1.5 font-bold text-slate-800">
-                      {r.name}
+                      <HighlightMatch text={r.name} query={search} />
                       {r.system && (
                         <span className="inline-flex items-center gap-0.5 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-700">
                           <Lock className="h-2.5 w-2.5" /> System

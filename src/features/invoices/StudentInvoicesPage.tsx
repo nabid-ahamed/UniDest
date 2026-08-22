@@ -18,6 +18,7 @@ import { cn } from '../../lib/cn'
 import { useAuth } from '../../store/auth'
 import { ExportButtons } from '../../components/ExportButtons'
 import { Field, PageBtn } from '../../components/DataTableUI'
+import { HighlightMatch } from '../../components/ui/HighlightMatch'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { studentInvoiceStatuses } from '../../mock/studentInvoices'
 import {
@@ -218,10 +219,12 @@ export default function StudentInvoicesPage() {
               const { currency, status: st, due } = inv
               return (
                 <tr key={inv.id} className="border-b border-slate-100 align-top text-sm">
-                  <td className="px-4 py-4 font-bold text-slate-800">{inv.invoiceNo}</td>
+                  <td className="px-4 py-4 font-bold text-slate-800">
+                    <HighlightMatch text={inv.invoiceNo} query={search} />
+                  </td>
                   <td className="whitespace-nowrap px-4 py-4 text-slate-600">{inv.date}</td>
                   <td className="px-4 py-4 font-bold text-slate-800 [overflow-wrap:anywhere]">
-                    {inv.student}
+                    <HighlightMatch text={inv.student} query={search} />
                   </td>
                   <td className="whitespace-nowrap px-4 py-4 font-semibold text-slate-800">
                     {formatMoney(currency, inv.grandTotal)}

@@ -627,6 +627,7 @@ export default function LeadsPage() {
                       tags={leadTags[lead.id] ?? []}
                       assignedTo={assignees[lead.id] ?? null}
                       selected={selected.has(lead.id)}
+                      highlight={search}
                       onToggle={() => toggleOne(lead.id)}
                       onAction={(type) => rowAction(type, lead)}
                       onRemoveTag={(tag) => removeTag(lead.id, tag)}

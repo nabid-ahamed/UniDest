@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from 'react'
 import { Search, UploadCloud, Image as ImageIcon, Film, Play } from 'lucide-react'
 import { cn } from '../../lib/cn'
+import { HighlightMatch } from '../../components/ui/HighlightMatch'
 import {
   allowedMediaExtensions,
   maxMediaMb,
@@ -172,7 +173,7 @@ export default function MediaLibraryPage() {
         ) : (
           <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
             {filtered.map((m) => (
-              <MediaTile key={m.id} item={m} />
+              <MediaTile key={m.id} item={m} query={search} />
             ))}
           </div>
         )}
@@ -188,7 +189,7 @@ export default function MediaLibraryPage() {
 }
 
 /** A clickable thumbnail — real preview for uploaded images, gradient tile otherwise. */
-export function MediaTile({ item }: { item: ApiMediaItem }) {
+export function MediaTile({ item, query = '' }: { item: ApiMediaItem; query?: string }) {
   return (
     <a
       href={`/media-library/${item.id}`}
@@ -215,7 +216,9 @@ export function MediaTile({ item }: { item: ApiMediaItem }) {
         )}
       </div>
       <div className="p-2.5">
-        <p className="truncate text-sm font-semibold text-slate-800" title={item.name}>{item.name}</p>
+        <p className="truncate text-sm font-semibold text-slate-800" title={item.name}>
+          <HighlightMatch text={item.name} query={query} />
+        </p>
         <p className="mt-0.5 text-xs text-slate-400">{formatFileSize(item.size)}</p>
       </div>
     </a>

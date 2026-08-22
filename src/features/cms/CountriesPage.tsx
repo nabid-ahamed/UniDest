@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { Search, Pencil, Eye, Globe2, Building2 } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { ExportButtons } from '../../components/ExportButtons'
+import { HighlightMatch } from '../../components/ui/HighlightMatch'
 import { countryStatuses, universitiesInCountry, type CountryStatus } from '../../mock/cms'
 import { useCmsList, useUpdateCms } from '../../lib/api'
 
@@ -99,9 +100,9 @@ export default function CountriesPage() {
               const unis = universitiesInCountry(c.title)
               return (
                 <tr key={c.id} className="border-b border-slate-100 text-sm">
-                  <td className="whitespace-nowrap px-4 py-3.5 font-semibold text-slate-800">{c.title}</td>
+                  <td className="whitespace-nowrap px-4 py-3.5 font-semibold text-slate-800"><HighlightMatch text={c.title} query={search} /></td>
                   <td className="px-4 py-3.5">
-                    <code className="rounded bg-slate-50 px-1.5 py-0.5 text-xs text-rose-600">/study-in/{c.slug}</code>
+                    <code className="rounded bg-slate-50 px-1.5 py-0.5 text-xs text-rose-600">/study-in/<HighlightMatch text={c.slug} query={search} /></code>
                   </td>
                   <td className="px-4 py-3.5">
                     <span className="inline-flex items-center gap-1 text-slate-600">

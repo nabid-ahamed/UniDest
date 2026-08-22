@@ -496,6 +496,7 @@ export default function ApplicationsPage() {
                       app={app}
                       assignedTo={app.assignedTo}
                       selected={selected.has(app.id)}
+                      highlight={search}
                       onToggle={() => toggleOne(app.id)}
                       onAction={(type, payload) => rowAction(type, app, payload)}
                     />
