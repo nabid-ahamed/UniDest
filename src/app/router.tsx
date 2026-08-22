@@ -103,6 +103,7 @@ import AgentStudentsPage from '../features/agent/AgentStudentsPage'
 import AgentEditPage from '../features/agents/AgentEditPage'
 import AgentInvoicesPortalPage from '../features/agent/AgentInvoicesPortalPage'
 import AgentServicesPage from '../features/agent/AgentServicesPage'
+import AgentDetailPage from '../features/agents/AgentDetailPage'
 import { useAuth } from '../store/auth'
 
 const isStudent = (role?: string) => role === 'Student'
@@ -251,7 +252,7 @@ export const router = createBrowserRouter([
           { path: '/agents', element: <AgentsPage /> },
           { path: '/agents/referrals', element: <AgentReferralsPage /> },
           { path: '/agents/invoices', element: <AgentInvoicesPage /> },
-          { path: '/agents/:id', element: <AgentsPage /> },
+          { path: '/agents/:id', element: <AgentDetailPage /> },
           { path: '/agents/:id/edit', element: <AgentEditPage /> },
           { path: '/courses', element: <CoursesPage /> },
           { path: '/courses/new', element: <CourseFormPage /> },

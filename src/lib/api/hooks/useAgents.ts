@@ -36,3 +36,8 @@ export function useUpdateAgentSubmissionSetting() {
   const qc = useQueryClient()
   return useMutation({ mutationFn: agentsApi.updateSubmissionSetting, onSuccess: () => qc.invalidateQueries({ queryKey: [...qk.agents.all, 'submission-setting'] }) })
 }
+
+export function useDeleteAgent() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: agentsApi.remove, onSuccess: () => qc.invalidateQueries({ queryKey: qk.agents.all }) })
+}

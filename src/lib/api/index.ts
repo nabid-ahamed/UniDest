@@ -8,7 +8,7 @@
 export { API_BASE_URL, USING_REAL_API, ApiError } from './client'
 export { qk } from './keys'
 export type { ApiAgent, ApiReferral, ApiCommission } from './resources/agents'
-export { useAgents, useAgent, useCreateAgent, useUpdateAgent, useAgentSubmissionSetting, useUpdateAgentSubmissionSetting, useAgentReferrals, useAgentCommissions } from './hooks/useAgents'
+export { useAgents, useAgent, useCreateAgent, useUpdateAgent, useDeleteAgent, useAgentSubmissionSetting, useUpdateAgentSubmissionSetting, useAgentReferrals, useAgentCommissions } from './hooks/useAgents'
 
 export type { Lead } from './resources/leads'
 export type { Student } from './resources/students'

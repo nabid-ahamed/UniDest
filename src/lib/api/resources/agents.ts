@@ -65,6 +65,7 @@ export const agentsApi = {
   create: (data: {
     name: string; firstName?: string; lastName?: string; company?: string; email?: string; phone?: string
     country?: string; state?: string; city?: string; address?: string; category?: string
+    branchId?: number; pointOfContactId?: number
     commissionRate?: number; password?: string; canSubmitApplications?: boolean; autoConvertReferrals?: boolean
   }) =>
     request<ApiAgent>('/agents', { method: 'POST', body: JSON.stringify(data) }),
@@ -75,6 +76,7 @@ export const agentsApi = {
     canSubmitApplications?: boolean; autoConvertReferrals?: boolean
   }) =>
     request<ApiAgent>(`/agents/${id}`, { method: 'PATCH', body: JSON.stringify(patch) }),
+  remove: (id: number) => request<{ ok: boolean }>(`/agents/${id}`, { method: 'DELETE' }),
   submissionSetting: () => request<{ enabled: boolean }>('/agents/settings/submission'),
   updateSubmissionSetting: (enabled: boolean) =>
     request<{ enabled: boolean }>('/agents/settings/submission', { method: 'PATCH', body: JSON.stringify({ enabled }) }),
